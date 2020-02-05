@@ -9,6 +9,9 @@
 /[Bb]uilds/
 /[Ll]ogs/
 
+# Packages folder, since npm is being used directly instead.
+/[Pp]ackages/
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
