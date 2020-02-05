@@ -1,0 +1,24 @@
+{
+    "name": "jnelsis.root-gen",
+    "version": "1.0.0",
+    "displayName": "RootGen",
+    "description": "Hex-based landscape generation tool.",
+    "unity": "2019.1",
+    "unityRelease": "7f1",
+    "dependencies": {
+        "com.unity.textmeshpro": "2.0.1",
+        "studioroot.root-events": "github:jordanstudioroot/RootEvents-UnityCSharp-Development-Github"
+    },
+    "keywords": [
+        "root",
+        "gen",
+        "generation",
+        "hex",
+        "map"
+    ],
+    "author": {
+        "name": "Jordan Nelson",
+        "email": "jordannelson@protonmail.com",
+        "url": "https://www.github.com/jordanstudioroot"
+    }
+}
