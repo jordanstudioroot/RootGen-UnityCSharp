@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM/issues"
   },
-  "homepage": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM#readme"
+  "homepage": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM#readme",
+  "dependencies": {
+    "studiorootgames.root-events": "github:jordanstudioroot/RootEvents-UnityCSharp-NPM"
+  }
 }
