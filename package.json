@@ -1,29 +1,37 @@
 {
-  "name": "rootgen-unitycsharp-npm",
-  "version": "1.0.0",
-  "description": "NPM package for RootGen, a procedural hex based map generator for Unity3D.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM.git"
-  },
-  "keywords": [
-    "Root"
-  ],
-  "files": [
-    "scripts",
-    "Assets/Runtime"
-  ],
-  "author": "Jordan Nelson",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM/issues"
-  },
-  "homepage": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM#readme",
-  "dependencies": {
-    "studiorootgames.root-events": "github:jordanstudioroot/RootEvents-UnityCSharp-NPM"
-  }
+    "name":"rootgen-unitycsharp",
+    "version":"1.0.0",
+    "description":"NPM package for RootGen, a procedural hex based map generator for Unity3D.",
+    "main":"index.js",
+    "scripts":
+    {
+        "test":"echo \"Error: no test specified\" && exit 1",
+        "postinstall":"node scripts/postinstall.js rootgen-unitycsharp"
+    },
+    "repository":
+    {
+        "type":"git",
+        "url":"git+https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM.git"
+    },
+    "keywords":["Root"],
+    "files":
+    [
+        "scripts",
+        "Assets/Runtime",
+        "Assets/rootgen-unitycsharp",
+        "scripts"
+    ],
+    "author":"Jordan Nelson",
+    "license":"MIT",
+    "bugs":
+    {
+        "url":"https://github.com/jordanstudioroot/RootGen-UnityCSharp/issues"
+    },
+    "homepage":"https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM#readme",
+    "dependencies":
+    {
+        "studiorootgames.root-events":"github:jordanstudioroot/RootEvents-UnityCSharp-NPM",
+        "ncp":"^2.0.0",
+        "mkdirp":"^0.5.1"
+    }
 }
