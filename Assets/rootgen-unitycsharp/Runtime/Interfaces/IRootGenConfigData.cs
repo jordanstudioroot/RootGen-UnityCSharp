@@ -1,10 +1,4 @@
 using System;
-public enum HemisphereMode
-{
-    Both,
-    North,
-    South
-}
 
 public interface IRootGenConfigData {
     int Width { get; set; }

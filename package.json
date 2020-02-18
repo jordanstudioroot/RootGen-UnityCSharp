@@ -29,7 +29,9 @@
     "dependencies": {
         "mkdirp": "^0.5.1",
         "ncp": "^2.0.0",
+        "rootevents-unitycsharp": "github:jordanstudioroot/RootEvents-UnityCSharp-NPM",
         "rootextensions-unitycsharp": "github:jordanstudioroot/RootExtensions-UnityCSharp",
+        "rootutils-unitycsharp": "github:jordanstudioroot/RootUtils-UnityCSharp",
         "studiorootgames.root-events": "github:jordanstudioroot/RootEvents-UnityCSharp-NPM"
     }
 }

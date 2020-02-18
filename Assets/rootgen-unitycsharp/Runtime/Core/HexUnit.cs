@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using RootExtensions;
+using RootUtils;
+
 public class HexUnit : MonoBehaviour
 {
 // FIELDS ~~~~~~~~~~

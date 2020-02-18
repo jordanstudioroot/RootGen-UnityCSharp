@@ -1,4 +1,5 @@
 using UnityEngine;
+using RootEvents;
 
 // Main runtime monobehavior for RootGen.
 public class RootGen : MonoBehaviour {
