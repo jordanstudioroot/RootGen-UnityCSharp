@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using RootExtensions;
 using RootUtils;
+using RootLogging;
 
 public class LoadConfigMenu : MonoBehaviour
 {
@@ -50,13 +51,13 @@ public class LoadConfigMenu : MonoBehaviour
 
     public void Show() {
         _active = true;
-        Logger.Log("Setting LoadConfig to active.");
+        RootLog.Log("Setting LoadConfig to active.");
         this.gameObject.SetActive(true);
     }
 
     public void Hide() {
         _active = false;
-        Logger.Log("Setting LoadConfig to active.");
+        RootLog.Log("Setting LoadConfig to active.");
         this.gameObject.SetActive(false);
     }
 
@@ -115,7 +116,7 @@ public class LoadConfigMenu : MonoBehaviour
 
     public void LoadItem(string name) {
         _activeData = RootGenConfigData.Load(name);
-        Logger.Log(name + " loaded.", Severity.Information, "LoadConfigMenu");
+        RootLog.Log(name + " loaded.", Severity.Information, "LoadConfigMenu");
     }
 
     private void ClearItems() {
@@ -129,7 +130,11 @@ public class LoadConfigMenu : MonoBehaviour
             RootGen.GenerateMap(this, _activeData);
         }
         else {
-            Logger.Log("No active data to load.", Severity.Warning, "LoadConfigMenu");
+            RootLog.Log(
+                "No active data to load.",
+                Severity.Warning,
+                "LoadConfigMenu"
+            );
         }
     }
 }

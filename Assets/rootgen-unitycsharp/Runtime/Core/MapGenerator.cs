@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using RootLogging;
 
 public class MapGenerator : MonoBehaviour
 {
@@ -196,7 +197,7 @@ public class MapGenerator : MonoBehaviour
             }
         }
         if (landBudget > 0) {
-            Logger.Log(
+            RootLog.Log(
                 "Failed to use up " + landBudget + " land budget.",
                 Severity.Warning,
                 "MapGenerator"

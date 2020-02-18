@@ -1,5 +1,6 @@
 using UnityEngine;
 using RootEvents;
+using RootLogging;
 
 // Main runtime monobehavior for RootGen.
 public class RootGen : MonoBehaviour {
@@ -175,7 +176,7 @@ public class RootGen : MonoBehaviour {
 
         args.Response = response;
 
-        Logger.Log(
+        RootLog.Log(
             "Map generated.",
             Severity.Information,
             "RootGen"
@@ -199,7 +200,7 @@ public class RootGen : MonoBehaviour {
 
         args.Response = response;
         
-        Logger.Log(
+        RootLog.Log(
             "Empty map generated.",
             Severity.Information,
             "RootGen"

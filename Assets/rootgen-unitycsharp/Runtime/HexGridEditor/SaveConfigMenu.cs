@@ -2,6 +2,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using RootLogging;
 
 public class SaveConfigMenu : MonoBehaviour
 {
@@ -222,7 +223,7 @@ public class SaveConfigMenu : MonoBehaviour
             _activeData.Save(_fileName);
         }
         else {
-            Logger.Log(
+            RootLog.Log(
                 "Blank or duplicate file name.",
                 Severity.Warning,
                 "SaveConfigMenu"

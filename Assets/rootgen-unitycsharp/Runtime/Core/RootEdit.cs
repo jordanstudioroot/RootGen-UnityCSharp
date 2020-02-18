@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using RootEvents;
+using RootLogging;
 
 public class RootEdit : MonoBehaviour {
     // FIELDS ~~~~~~~~~~
@@ -194,7 +195,7 @@ public class RootEdit : MonoBehaviour {
         T[] existing = GetExisting<T>();
 
         if (existing.Length > 1) {
-            Logger.Log(
+            RootLog.Log(
                 "Single instance validation of " + typeof(T) + " failed. " + 
                     "Multiple instances.", 
                 Severity.Critical,
@@ -203,7 +204,7 @@ public class RootEdit : MonoBehaviour {
         }
 
         if(existing.Length > 0) {
-            Logger.Log(
+            RootLog.Log(
                 "Single instance validation of " + typeof(T) + " succeeded.",
                 Severity.Information,
                 "RootEdit"
@@ -211,7 +212,7 @@ public class RootEdit : MonoBehaviour {
             return existing[0];
         }
 
-        Logger.Log(
+        RootLog.Log(
             "Single instance validation of " + typeof(T) + " failed. " +
                 "No instances.",
             Severity.Warning,

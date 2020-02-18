@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using RootLogging;
 
 public class HexGrid : MonoBehaviour
 {
@@ -235,7 +236,7 @@ public class HexGrid : MonoBehaviour
             x <= 0 || x % HexMetrics.chunkSizeX != 0 ||
             z <= 0 || z % HexMetrics.chunkSizeZ != 0
         ) {
-            Logger.Log(
+            RootLog.Log(
                 "Unsupported or empty map size. Setting map size to minimum chunk size.",
                 Severity.Warning,
                 "HexGrid"

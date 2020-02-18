@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using UnityEngine;
+using RootLogging;
 
 [Serializable]
 public class RootGenConfigData : IRootGenConfigData {
@@ -468,8 +469,8 @@ public class RootGenConfigData : IRootGenConfigData {
     public void Save(string name) {
         string json = JsonUtility.ToJson(this, true);
         string path = Path.Combine(Application.persistentDataPath, name + ".json");
-        Logger.Log("RootGenConfig saved: " + path);
-        Logger.Log(json);
+        RootLog.Log("RootGenConfig saved: " + path);
+        RootLog.Log(json);
         StreamWriter sw = new StreamWriter(path, false);
         sw.Write(json);
         sw.Close();

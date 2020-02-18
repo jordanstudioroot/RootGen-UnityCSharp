@@ -29,6 +29,7 @@
         "ncp": "^2.0.0",
         "rootevents-unitycsharp": "github:jordanstudioroot/RootEvents-UnityCSharp",
         "rootextensions-unitycsharp": "github:jordanstudioroot/RootExtensions-UnityCSharp",
+        "rootlog-unitycsharp": "github:jordanstudioroot/RootLog-UnityCSharp",
         "rootutils-unitycsharp": "github:jordanstudioroot/RootUtils-UnityCSharp"
     }
 }
