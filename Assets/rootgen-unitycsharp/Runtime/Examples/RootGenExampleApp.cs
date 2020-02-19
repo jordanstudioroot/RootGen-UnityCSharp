@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ExampleApp : MonoBehaviour
+public class RootGenExampleApp : MonoBehaviour
 {
     void Awake() {
         
