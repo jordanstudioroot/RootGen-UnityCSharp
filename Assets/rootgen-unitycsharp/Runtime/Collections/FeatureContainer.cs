@@ -120,7 +120,7 @@ public class FeatureContainer : MonoBehaviour
 * will not be changed when the cell is refreshed.
 */
 
-        RootHash rootHash = HexMetrics.SampleHashGrid(position);
+        RootGenHash rootHash = HexMetrics.SampleHashGrid(position);
 
         Transform prefab = PickPrefab(
             urbanCollections, cell.UrbanLevel, rootHash.a, rootHash.d
@@ -320,7 +320,7 @@ public class FeatureContainer : MonoBehaviour
                 bool hasTower = false;
 
                 if (leftCell.Elevation == rightCell.Elevation) {
-                    RootHash rootHash = HexMetrics.SampleHashGrid (
+                    RootGenHash rootHash = HexMetrics.SampleHashGrid (
                         (pivot + left + right) * 1f / 3f
                     );
 
@@ -412,7 +412,7 @@ public class FeatureContainer : MonoBehaviour
     public void AddSpecialFeature(HexCell cell, Vector3 position) {
         Transform instance = Instantiate(special[cell.SpecialIndex - 1]);
         instance.localPosition = HexMetrics.Perturb(position);
-        RootHash rootHash = HexMetrics.SampleHashGrid(position);
+        RootGenHash rootHash = HexMetrics.SampleHashGrid(position);
         instance.localRotation = Quaternion.Euler(0f, 360f * rootHash.e, 0f);
         instance.SetParent(_container, false);
     }

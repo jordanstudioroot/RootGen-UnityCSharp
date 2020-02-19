@@ -5,7 +5,7 @@
 * Should consider creating classes for
 * this at some point.
 */
-public struct RootHash
+public struct RootGenHash
 {
     public float a;
     public float b;
@@ -13,9 +13,9 @@ public struct RootHash
     public float d;
     public float e;
 
-    public static RootHash Create()
+    public static RootGenHash Create()
     {
-        RootHash rootHash;
+        RootGenHash rootHash;
         // Multiply by 0.999f to clamp between 0 and 1
         rootHash.a = Random.value * 0.999f;
         rootHash.b = Random.value * 0.999f;

@@ -2,280 +2,134 @@ using UnityEngine;
 using RootEvents;
 using RootLogging;
 
-// Main runtime monobehavior for RootGen.
-public class RootGen : MonoBehaviour {
+/// <summary>
+/// Facade for the RootGen library encapsulating the
+/// process of generating a map according to a RootGenConfig scriptable
+/// object or an object implementing the IRootGenConfigData interface.
+/// </summary>
+public class RootGen {
 // FIELDS ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
     private MapGenerator _mapGenerator;
 
 // CONSTRUCTORS ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
+    public RootGen() {
+        // Instantiate map generator.
+        _mapGenerator = new MapGenerator();
+    }
 
 // DESTRUCTORS ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
 // DELEGATES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
 
 // EVENTS ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-    
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-    private static RootEvent<IRootGenConfigData, HexGrid> raiseGenerateMapEvent;
-    private static RootEvent<Vector2, bool, HexGrid> raiseGenerateEmptyMapEvent;
-
-// ENUMS
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
+// ENUMS ~~~~~~~~~~
 
 // INTERFACES ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
 // PROPERTIES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
 
 // INDEXERS ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
 // METHODS ~~~~~~~~~
+    /// <summary>
+    /// Generate a hex map using the provided configuration. 
+    /// </summary>
+    /// <param name="source">The instance that requested the map.</param>
+    /// <param name="config">A RootGenConfig scriptable object.</param>
+    /// <returns>
+    ///     A HexGrid generated according to the config settings.
+    /// </returns>
+    public HexGrid GenerateMap(object source, RootGenConfig config) {
+        Clear<HexGrid>();
+        Clear<HexGridCamera>();
 
-// ~ Static
+        HexGrid result = _mapGenerator.GenerateMap(config.GetData());
+        HexGridCamera camera = HexGridCamera.GetCamera(result);
 
-// ~~ public
+        RootLog.Log(
+            "Map request from " + source + " processed.",
+            Severity.Information,
+            "RootGen"
+        );
 
-    public static HexGrid GenerateMap(object source, RootGenConfig config) {
-        return raiseGenerateMapEvent.Publish(source, config.GetData()).Response;
+        return result;
     }
 
-    public static HexGrid GenerateMap(object source, IRootGenConfigData configData) {
-        return raiseGenerateMapEvent.Publish(source, configData).Response;
-    }
+    /// <summary>
+    /// Generate a hex map using the provided configuration data.
+    /// </summary>
+    /// <param name="source">The instance that requested the map.</param>
+    /// <param name="data">A class implementing IRootGenConfigData.</param>
+    /// <returns>
+    ///     A HexGrid generated according to the config settings.
+    /// </returns>
 
-    public static HexGrid GenerateEmptyMap(object source, Vector2 size, bool wrapping) {
-        return raiseGenerateEmptyMapEvent.Publish(source, size, wrapping).Response;
-    }
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-    private void Clear<T>() where T : UnityEngine.MonoBehaviour {
-        foreach(T t in GameObject.FindObjectsOfType<T>()) {
-            Destroy(t.transform.gameObject);
-        }
-    }
-
-    private void HandleGenerateMap(
-        object source, 
-        CustomEventArgs<IRootGenConfigData, HexGrid> args
+    public HexGrid GenerateMap(
+        object source,
+        IRootGenConfigData configData
     ) {
         Clear<HexGrid>();
         Clear<HexGridCamera>();
 
-        HexGrid response = _mapGenerator.GenerateMap(args.Argument);
-        HexGridCamera camera = HexGridCamera.GetCamera(response);
-
-        args.Response = response;
+        HexGrid result = _mapGenerator.GenerateMap(configData);
+        HexGridCamera camera = HexGridCamera.GetCamera(result);
 
         RootLog.Log(
-            "Map generated.",
+            "Map request from " + source + " processed.",
             Severity.Information,
             "RootGen"
         );
+
+        return result;
     }
 
-    private void HandleGenerateEmptyMap(
+    /// <summary>
+    /// Generate a blank hex map.
+    /// </summary>
+    /// <param name="source">The instance that requested the map.</param>
+    /// <param name="size">
+    ///     A Vector2 specifying the width and heigth of the map.
+    /// </param>
+    /// <param name="wrapping">
+    ///     Should the map wrap when panned by the camera?
+    /// </param>
+    /// <returns>
+    ///     A blank hex map generated according to the specified dimensions.
+    /// </returns>
+    public HexGrid GenerateEmptyMap(
         object source,
-        CustomEventArgs<Vector2, bool, HexGrid> args
+        Vector2 size,
+        bool wrapping
     ) {
         Clear<HexGrid>();
         Clear<HexGridCamera>();
 
         HexGrid response = HexGrid.GetGrid(
-            (int)args.Argument1.x, 
-            (int)args.Argument1.y, 
-            args.Argument2
+            (int)size.x,
+            (int)size.y,
+            wrapping
         );
 
         HexGridCamera camera = HexGridCamera.GetCamera(response);
 
-        args.Response = response;
-        
         RootLog.Log(
-            "Empty map generated.",
+            "Map request from " + source + " processed.",
             Severity.Information,
             "RootGen"
         );
+        
+        return response;
     }
 
-    private void PublishGenerateMap(Vector2 size, bool wrapping) {
-        
-    }
-
-    private void Awake() {
-        _mapGenerator = MapGenerator.GetMapGenerator();
-        raiseGenerateMapEvent = new RootEvent<IRootGenConfigData, HexGrid>();
-        raiseGenerateEmptyMapEvent = new RootEvent<Vector2, bool, HexGrid>();
-        raiseGenerateMapEvent.Subscribe(HandleGenerateMap);
-        raiseGenerateEmptyMapEvent.Subscribe(HandleGenerateEmptyMap);
-    }
-    
-    private void OnEnable() {
-    
-    }
-    
-    private void Reset() {
-    
-    }
-    
-    private void Start() {
-        
-    }
-    
-    private void FixedUpdate() {
-    
-    }
-    
-    private void Update() {
-    
-    }
-    
-    private void LateUpdate() {
-    
-    }
-    
-    private void OnDisable() {
-    
-    }
-    
-    private void OnDestroy() {
-    
+    private void Clear<T>() where T : UnityEngine.MonoBehaviour {
+        foreach(T t in GameObject.FindObjectsOfType<T>()) {
+            GameObject.Destroy(t.transform.gameObject);
+        }
     }
 
 // STRUCTS ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
 // CLASSES ~~~~~~~~~~
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
 }

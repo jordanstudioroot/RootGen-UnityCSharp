@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using RootLogging;
+using RootCollections;
 
 public class HexGrid : MonoBehaviour
 {
@@ -215,7 +216,6 @@ public class HexGrid : MonoBehaviour
     ) {
         GameObject resultObj = new GameObject("HexGrid");
         HexGrid resultMono = resultObj.AddComponent<HexGrid>();
-        resultMono.Initialize(x, z, wrapping);
         resultMono.EditMode = editMode;
         return resultMono;
     }
@@ -237,7 +237,8 @@ public class HexGrid : MonoBehaviour
             z <= 0 || z % HexMetrics.chunkSizeZ != 0
         ) {
             RootLog.Log(
-                "Unsupported or empty map size. Setting map size to minimum chunk size.",
+                "Unsupported or empty map size. Setting map size to minimum " +
+                "chunk size.",
                 Severity.Warning,
                 "HexGrid"
             );

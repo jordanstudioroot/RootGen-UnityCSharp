@@ -2,8 +2,9 @@
 using UnityEngine;
 using Random = UnityEngine.Random;
 using RootLogging;
+using RootCollections;
 
-public class MapGenerator : MonoBehaviour
+public class MapGenerator
 {
     private int _cellCount;
     private int _landCells;
@@ -34,12 +35,6 @@ public class MapGenerator : MonoBehaviour
         new Biome(0, 0), new Biome(1, 0), new Biome(1, 1), new Biome(1, 2),
         new Biome(0, 0), new Biome(1, 1), new Biome(1, 2), new Biome(1, 3)
     };
-
-    public static MapGenerator GetMapGenerator() {
-        GameObject resultObj = new GameObject("Map Generator");
-        MapGenerator resultMono = resultObj.AddComponent<MapGenerator>();
-        return resultMono;
-    }
 
     public HexGrid GenerateMap(
         IRootGenConfigData config
