@@ -42,13 +42,31 @@ public class RootGen {
     /// </returns>
     public HexGrid GenerateMap(object source, RootGenConfig config) {
         Clear<HexGrid>();
-        Clear<HexGridCamera>();
 
         HexGrid result = _mapGenerator.GenerateMap(config.GetData());
         HexGridCamera camera = HexGridCamera.GetCamera(result);
 
         RootLog.Log(
             "Map request from " + source + " processed.",
+            Severity.Information,
+            "RootGen"
+        );
+
+        return result;
+    }
+
+    public HexGrid GenerateHistoricalBoard(
+        object source,
+        int width,
+        int height
+    ) {
+        Clear<HexGrid>();
+
+        HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
+        HexGridCamera camera = HexGridCamera.GetCamera(result);
+
+        RootLog.Log(
+            "Historical Board request from " + source + " processed.",
             Severity.Information,
             "RootGen"
         );
@@ -70,7 +88,6 @@ public class RootGen {
         IRootGenConfigData configData
     ) {
         Clear<HexGrid>();
-        Clear<HexGridCamera>();
 
         HexGrid result = _mapGenerator.GenerateMap(configData);
         HexGridCamera camera = HexGridCamera.GetCamera(result);
@@ -103,7 +120,6 @@ public class RootGen {
         bool wrapping
     ) {
         Clear<HexGrid>();
-        Clear<HexGridCamera>();
 
         HexGrid response = HexGrid.GetGrid(
             (int)size.x,

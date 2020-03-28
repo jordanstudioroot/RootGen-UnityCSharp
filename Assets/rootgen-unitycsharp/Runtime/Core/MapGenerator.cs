@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using RootLogging;
@@ -35,6 +36,110 @@ public class MapGenerator
         new Biome(0, 0), new Biome(1, 0), new Biome(1, 1), new Biome(1, 2),
         new Biome(0, 0), new Biome(1, 1), new Biome(1, 2), new Biome(1, 3)
     };
+
+    public HexGrid GenerateHistoricalBoard(
+        int width,
+        int height,
+        int tileLimit
+    ) {
+        HexGrid result = HexGrid.GetGrid();
+        
+        _cellCount = width * height;
+        result.Initialize(width, height, true);
+
+        for (int i = 0; i < _cellCount; i++) {
+            result.GetCell(i).TerrainTypeIndex = 0;
+        }
+
+        List<HexCell> region = new List<HexCell>();
+
+        int terrainIndex = 0;
+
+        HexCell current = result.GetCell((height * width) / 2);
+        region.Add(current);
+        current.Elevation = 2;
+        current.TerrainTypeIndex = terrainIndex;
+
+        
+
+        foreach (HexCell neighbor in current.Neighbors) {
+            region.Add(neighbor);
+            neighbor.TerrainTypeIndex = terrainIndex;
+            neighbor.Elevation = 2;
+        }
+
+        List<HexCell> toGrow = GrowRegion(
+            region, 
+            tileLimit,
+            ++terrainIndex
+        );
+
+        return result;
+    }
+
+    private List<HexCell> GrowRegion(
+        List<HexCell> region,
+        int tileLimit,
+        int currTerrain
+    ) {
+        if (currTerrain > 4) {
+            currTerrain = 0;
+        }
+        if (region.Count >= tileLimit) {
+            return region;
+        }
+        else {
+            System.Random rand = new System.Random();
+            double probability = rand.NextDouble();
+            int growthThreshold;
+
+            if (probability > 0.5f) {
+                growthThreshold = 2;
+            }
+            else {
+                growthThreshold = 3;
+            }
+            HexCell expansion = GetValidExpansion(region, growthThreshold);
+            for (int i = 0; i < 6; ++i) {
+                HexCell neighbor = expansion.GetNeighbor((HexDirection)i);
+                TryAddToRegion(region, neighbor, currTerrain);
+            }
+            return GrowRegion(region, tileLimit, ++currTerrain);
+        }
+    }
+
+    private HexCell GetValidExpansion(List<HexCell> region, int growthThreshold) {
+        HexCell result = null;
+
+        System.Random random = new System.Random();
+
+        while(result == null) {
+            HexCell expansionCandidate = region[random.Next(region.Count)];
+            int numOutsideRegion = 0;
+            foreach (HexCell neighbor in expansionCandidate.Neighbors) {
+                if (!region.Contains(neighbor)) {
+                    numOutsideRegion++;
+                } 
+            }
+
+            if (numOutsideRegion >= growthThreshold) {
+                result = expansionCandidate;
+            }
+        }
+
+        return result;
+    }
+
+    private void TryAddToRegion(List<HexCell> region, HexCell cell, int terrainType) {
+        if (region.Contains(cell)) {
+
+        }
+        else {
+            region.Add(cell);
+            cell.Elevation = 2;
+            cell.TerrainTypeIndex = terrainType;
+        }
+    }
 
     public HexGrid GenerateMap(
         IRootGenConfigData config

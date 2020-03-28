@@ -4,6 +4,14 @@ using UnityEngine;
 
 public class RootGenExampleApp : MonoBehaviour
 {
+    public enum GenerationType {
+        Standard,
+        TwoThreeAlgorithm
+    }
+
+    public GenerationType generationType;
+
+    private RootGen _rootGen;
     void Awake() {
         
     }
@@ -15,17 +23,34 @@ public class RootGenExampleApp : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        RootGen rootGen = new RootGen();
+        _rootGen = new RootGen();
 
-        rootGen.GenerateMap(
-            this,
-            Resources.Load("defaultconfig") as RootGenConfig
-        );
+
+        if (generationType == GenerationType.Standard) {
+            _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
+        }
+        else if (generationType == GenerationType.TwoThreeAlgorithm) {  
+            _rootGen.GenerateHistoricalBoard(
+                this,
+                75, 75
+            );
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (Input.GetKeyUp(KeyCode.R)) {
+
+            if (generationType == GenerationType.Standard) {
+                _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
+            }
+            else if (generationType == GenerationType.TwoThreeAlgorithm) {  
+                _rootGen.GenerateHistoricalBoard(
+                    this,
+                    75, 75
+                );
+            }
+        }
     }
 }

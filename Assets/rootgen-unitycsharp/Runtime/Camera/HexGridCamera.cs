@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine.EventSystems;
 using RootExtensions;
+using RootLogging;
 
 public class HexGridCamera : MonoBehaviour
 {  
@@ -177,8 +178,25 @@ public class HexGridCamera : MonoBehaviour
 
 // ~~ public
     public static HexGridCamera GetCamera(HexGrid grid) {
+        HexGridCamera resultMono;
+
+        if (GameObject.FindObjectOfType<HexGridCamera>()) {
+            resultMono = GameObject.FindObjectOfType<HexGridCamera>();
+            resultMono.transform.SetParent(grid.transform, false);
+            resultMono.TargetGrid = grid;
+            resultMono.enabled = true;
+
+            RootLog.Log(
+                "Camera already exists. Returning first instnace.",
+                Severity.Information,
+                "HexGridCamera"
+            );
+
+            return GameObject.FindObjectOfType<HexGridCamera>();
+        }
+
         GameObject resultObj = new GameObject("HexGridCamera");
-        HexGridCamera resultMono = resultObj.AddComponent<HexGridCamera>();
+        resultMono = resultObj.AddComponent<HexGridCamera>();
         
         GameObject swivelObj = new GameObject("Swivel");
         swivelObj.SetParent(resultObj, false);

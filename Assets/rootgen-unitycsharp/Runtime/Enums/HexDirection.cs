@@ -1,11 +1,11 @@
 ﻿public enum HexDirection
 {
-    Northeast,
-    East,
-    SouthEast,
-    SouthWest,
-    West,
-    Northwest
+    Northeast = 0,
+    East = 1,
+    SouthEast = 2,
+    SouthWest = 3,
+    West = 4,
+    Northwest = 5
 }
 
 public static class HexDirectionExtensions

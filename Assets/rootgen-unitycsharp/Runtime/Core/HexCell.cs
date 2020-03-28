@@ -479,6 +479,24 @@ public class HexCell : MonoBehaviour
     public int ColumnIndex { get; set; }
     public bool IsExplorable { get; set; }
 
+    /// <summary>
+    /// A new list composed of the neighbors of the cell.
+    /// </summary>
+    /// <value></value>
+    public List<HexCell> Neighbors {
+        get {
+            List<HexCell> result = new List<HexCell>();
+
+            for (int i = 0; i < 6; i++) {
+                if (GetNeighbor((HexDirection)i)) {
+                    result.Add(GetNeighbor((HexDirection)i));
+                }
+            }
+
+            return result;
+        }
+    }
+
 // ~~ private
 
 // INDEXERS ~~~~~~~~~~
