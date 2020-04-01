@@ -2,11 +2,6 @@ using UnityEngine;
 using RootEvents;
 using RootLogging;
 
-/// <summary>
-/// Facade for the RootGen library encapsulating the
-/// process of generating a map according to a RootGenConfig scriptable
-/// object or an object implementing the IRootGenConfigData interface.
-/// </summary>
 public class RootGen {
 // FIELDS ~~~~~~~~~~
     private MapGenerator _mapGenerator;
