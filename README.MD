@@ -8,7 +8,7 @@ Initialize new or existing Unity3D project as npm package.
 cd to new or existing project directory and `npm install jordanstudioroot/RootGen-UnityCSharp`.
 
 ## TODO
-- [ ] Finish extracting RootEdit to separate package.
+- [x] Finish extracting RootEdit to separate package.
 - [ ] Separate data generation and rendering into separate libraries or packages.
 
 ## Criticisms, Suggestions, Pull Requests
