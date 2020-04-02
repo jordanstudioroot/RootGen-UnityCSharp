@@ -1,12 +1,19 @@
 ﻿using UnityEngine;
+using RootLogging;
+using System.IO;
+using System.Text.RegularExpressions;
 
 [CreateAssetMenu(menuName = "RootGenConfig/Default Config")]
 public class RootGenConfig : ScriptableObject
 {
     public int width;
+
     public int height;
+
     public bool wrapping;
+
     public bool useFixedSeed;
+
     public int seed;
 
     [Range(0f, 0.5f)]
@@ -31,7 +38,7 @@ public class RootGenConfig : ScriptableObject
     public float sinkProbability = 0.2f;
 
     [Range(-4, 0)]
-    public int elevationMinimum = -2;
+    public int elevationMin = -2;
 
     [Range(6, 10)]
     public int elevationMax = 8;
@@ -93,7 +100,7 @@ public class RootGenConfig : ScriptableObject
         result.ChunkSizeMax = chunkSizeMax;
         result.ChunkSizeMin = chunkSizeMin;
         result.ElevationMax = elevationMax;
-        result.ElevationMin = elevationMinimum;
+        result.ElevationMin = elevationMin;
         result.ErosionPercentage = erosionPercentage;
         result.EvaporationFactor = evaporationFactor;
         result.ExtraLakeProbability = extraLakeProbability;
@@ -124,5 +131,73 @@ public class RootGenConfig : ScriptableObject
         result.Wrapping = wrapping;
 
         return result;
+    }
+
+/// <summary>
+/// Serializes the instance to JSON and saves to Application.persistentDataPath.
+/// </summary>
+/// <param fileName="configName">The name of the config.</param>
+    public void ToJson(string fileName) {
+        if (HasDigits(fileName)) {
+            RootLog.Log(
+                "Attempted to serialize a RootGenConfig to JSON with a" +
+                " file name containing digits. Removing digits from file name."
+            );
+
+            fileName = RemoveDigits(fileName);
+        }
+        
+        string json = JsonUtility.ToJson(this, true);
+        string path = Path.Combine(Application.persistentDataPath, fileName + ".json");
+        int numDuplicate = 0;
+
+        while (File.Exists(path)) {
+            numDuplicate++;
+            path = Path.Combine(Application.persistentDataPath, fileName + numDuplicate + ".json");
+
+            RootLog.Log(
+                "Serialized RootGenConfig data with file name " + fileName + " already exists. Attempting to " +
+                " write as " + fileName + numDuplicate,
+                Severity.Warning
+            );
+        }
+
+        StreamWriter sw = new StreamWriter(path, false);
+        sw.Write(json);
+
+        string instances = numDuplicate > 0 ? numDuplicate.ToString() : "";
+
+        RootLog.Log(
+            "RootGenConfigData serialized to " + Application.persistentDataPath + " as " + fileName + instances,
+            Severity.Information
+        );
+
+        sw.Close();
+    }
+
+/// <summary>
+/// Instantiates a new instance of the RootGenConfig scriptable object with the default parameters, and attempts to
+/// populate its fields with JSON data.
+/// </summary>
+/// <param name="path">The path of the JSON file containing the desired data.</param>
+/// <returns>
+///     A new instance of the RootGenConfig scriptable object, populated with the desired JSON data if the path exists or
+///     the default parameters for RootGenConfig if it does not.
+/// </returns>
+    public static RootGenConfig FromJson(string configName) {
+        RootGenConfig result = ScriptableObject.CreateInstance<RootGenConfig>();
+        string path = Path.Combine(Application.persistentDataPath, configName + ".json");
+
+        JsonUtility.FromJsonOverwrite(path, result);
+        
+        return result;
+    }
+
+    private bool HasDigits(string toCheck) {
+        return Regex.Match(toCheck, @"[\d]").Length > 0 ? true : false;
+    }
+
+    private string RemoveDigits(string toRemove) {
+        return Regex.Replace(toRemove, @"[\d]", string.Empty);
     }
 }

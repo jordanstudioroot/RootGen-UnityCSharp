@@ -38,7 +38,7 @@ public class RootGen {
     public HexGrid GenerateMap(object source, RootGenConfig config) {
         Clear<HexGrid>();
 
-        HexGrid result = _mapGenerator.GenerateMap(config.GetData());
+        HexGrid result = _mapGenerator.GenerateMap(config);
         HexGridCamera camera = HexGridCamera.GetCamera(result);
 
         RootLog.Log(
@@ -69,32 +69,6 @@ public class RootGen {
         return result;
     }
 
-    /// <summary>
-    /// Generate a hex map using the provided configuration data.
-    /// </summary>
-    /// <param name="source">The instance that requested the map.</param>
-    /// <param name="data">A class implementing IRootGenConfigData.</param>
-    /// <returns>
-    ///     A HexGrid generated according to the config settings.
-    /// </returns>
-
-    public HexGrid GenerateMap(
-        object source,
-        IRootGenConfigData configData
-    ) {
-        Clear<HexGrid>();
-
-        HexGrid result = _mapGenerator.GenerateMap(configData);
-        HexGridCamera camera = HexGridCamera.GetCamera(result);
-
-        RootLog.Log(
-            "Map request from " + source + " processed.",
-            Severity.Information,
-            "RootGen"
-        );
-
-        return result;
-    }
 
     /// <summary>
     /// Generate a blank hex map.
