@@ -4,7 +4,7 @@ using UnityEngine;
 using RootLogging;
 
 [Serializable]
-public class RootGenConfigData : IRootGenConfigData {
+public class RootGenConfigData {
     [SerializeField]
     private int _width = (int)Defaults.SmallMapSize.x;
     public int Width {
