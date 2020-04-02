@@ -95,44 +95,6 @@ public class RootGenConfig : ScriptableObject
 
     public HemisphereMode hemisphere;
 
-    public RootGenConfigData GetData() {
-        RootGenConfigData result = new RootGenConfigData();
-        result.ChunkSizeMax = chunkSizeMax;
-        result.ChunkSizeMin = chunkSizeMin;
-        result.ElevationMax = elevationMax;
-        result.ElevationMin = elevationMin;
-        result.ErosionPercentage = erosionPercentage;
-        result.EvaporationFactor = evaporationFactor;
-        result.ExtraLakeProbability = extraLakeProbability;
-        result.Height = height;
-        result.Hemisphere = hemisphere;
-        result.HighRiseProbability = highRiseProbability;
-        result.HighTemperature = highTemperature;
-        result.JitterProbability = jitterProbability;
-        result.LandPercentage = landPercentage;
-        result.LowTemperature = lowTemperature;
-        result.MapBorderX = mapBorderX;
-        result.MapBorderZ = mapBorderZ;
-        result.PrecipitationFactor = precipitationFactor;
-        result.RegionBorder = regionBorder;
-        result.RegionCount = regionCount;
-        result.RiverPercentage = riverPercentage;
-        result.RunoffFactor = runoffFactor;
-        result.Seed = seed;
-        result.SeepageFactor = seepageFactor;
-        result.SinkProbability = sinkProbability;
-        result.StartingMoisture = startingMoisture;
-        result.TemperatureJitter = temperatureJitter;
-        result.UseFixedSeed = useFixedSeed;
-        result.WaterLevel = waterLevel;
-        result.Width = width;
-        result.WindDirection = windDirection;
-        result.WindStrength = windStrength;
-        result.Wrapping = wrapping;
-
-        return result;
-    }
-
 /// <summary>
 /// Serializes the instance to JSON and saves to Application.persistentDataPath.
 /// </summary>
