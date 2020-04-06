@@ -1,6 +1,6 @@
 using UnityEngine;
-using RootEvents;
 using RootLogging;
+using RootUtils;
 
 public class RootGen {
 // FIELDS ~~~~~~~~~~
@@ -27,68 +27,44 @@ public class RootGen {
 // INDEXERS ~~~~~~~~~~
 
 // METHODS ~~~~~~~~~
-    /// <summary>
-    /// Generate a hex map using the provided configuration. 
-    /// </summary>
-    /// <param name="source">The instance that requested the map.</param>
-    /// <param name="config">A RootGenConfig scriptable object.</param>
-    /// <returns>
-    ///     A HexGrid generated according to the config settings.
-    /// </returns>
+/// <summary>
+/// Generate a hex map using the provided configuration. 
+/// </summary>
+/// <param name="config">A RootGenConfig scriptable object.</param>
+/// <returns>
+///     A HexGrid generated according to the config settings.
+/// </returns>
     public HexGrid GenerateMap(object source, RootGenConfig config) {
-        Clear<HexGrid>();
+        Destroy.DestroyAll<HexGrid>();
 
         HexGrid result = _mapGenerator.GenerateMap(config);
         HexGridCamera camera = HexGridCamera.GetCamera(result);
-
-        RootLog.Log(
-            "Map request from " + source + " processed.",
-            Severity.Information,
-            "RootGen"
-        );
-
         return result;
     }
 
-    public HexGrid GenerateHistoricalBoard(
-        object source,
-        int width,
-        int height
-    ) {
-        Clear<HexGrid>();
+    public HexGrid GenerateHistoricalBoard(int width, int height) {
+        Destroy.DestroyAll<HexGrid>();
 
         HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
         HexGridCamera camera = HexGridCamera.GetCamera(result);
-
-        RootLog.Log(
-            "Historical Board request from " + source + " processed.",
-            Severity.Information,
-            "RootGen"
-        );
-
         return result;
     }
 
 
-    /// <summary>
-    /// Generate a blank hex map.
-    /// </summary>
-    /// <param name="source">The instance that requested the map.</param>
-    /// <param name="size">
-    ///     A Vector2 specifying the width and heigth of the map.
-    /// </param>
-    /// <param name="wrapping">
-    ///     Should the map wrap when panned by the camera?
-    /// </param>
-    /// <returns>
-    ///     A blank hex map generated according to the specified dimensions.
-    /// </returns>
-    public HexGrid GenerateEmptyMap(
-        object source,
-        Vector2 size,
-        bool wrapping
-    ) {
-        Clear<HexGrid>();
+/// <summary>
+/// Generate a blank hex map.
+/// </summary>
+/// <param name="size">
+///     A Vector2 specifying the width and heigth of the map.
+/// </param>
+/// <param name="wrapping">
+///     Should the map wrap when panned by the camera?
+/// </param>
+/// <returns>
+///     A blank hex map generated according to the specified dimensions.
+/// </returns>
+    public HexGrid GenerateEmptyMap(Vector2 size, bool wrapping) {
+        Destroy.DestroyAll<HexGrid>();
 
         HexGrid response = HexGrid.GetGrid(
             (int)size.x,
@@ -97,20 +73,7 @@ public class RootGen {
         );
 
         HexGridCamera camera = HexGridCamera.GetCamera(response);
-
-        RootLog.Log(
-            "Map request from " + source + " processed.",
-            Severity.Information,
-            "RootGen"
-        );
-        
         return response;
-    }
-
-    private void Clear<T>() where T : UnityEngine.MonoBehaviour {
-        foreach(T t in GameObject.FindObjectsOfType<T>()) {
-            GameObject.Destroy(t.transform.gameObject);
-        }
     }
 
 // STRUCTS ~~~~~~~~~~

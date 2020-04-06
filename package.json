@@ -25,7 +25,7 @@
     },
     "homepage": "https://github.com/jordanstudioroot/RootGen-UnityCSharp-NPM#readme",
     "dependencies": {
-        "mkdirp": "^0.5.1",
+        "mkdirp": "^0.5.5",
         "ncp": "^2.0.0",
         "rootadapt-unitycsharp": "github:jordanstudioroot/rootadapt-unitycsharp",
         "rootcollections-unitycsharp": "github:jordanstudioroot/rootcollections-unitycsharp",

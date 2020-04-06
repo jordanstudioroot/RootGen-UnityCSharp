@@ -30,10 +30,7 @@ public class RootGenExampleApp : MonoBehaviour
             _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
         }
         else if (generationType == GenerationType.TwoThreeAlgorithm) {  
-            _rootGen.GenerateHistoricalBoard(
-                this,
-                75, 75
-            );
+            _rootGen.GenerateHistoricalBoard(75, 75);
         }
     }
 
@@ -46,10 +43,7 @@ public class RootGenExampleApp : MonoBehaviour
                 _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
             }
             else if (generationType == GenerationType.TwoThreeAlgorithm) {  
-                _rootGen.GenerateHistoricalBoard(
-                    this,
-                    75, 75
-                );
+                _rootGen.GenerateHistoricalBoard(75, 75);
             }
         }
     }
