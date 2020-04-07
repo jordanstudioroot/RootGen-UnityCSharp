@@ -5,21 +5,119 @@ using Random = UnityEngine.Random;
 using RootLogging;
 using RootCollections;
 
+
+/// <summary>
+/// Class encapsulating the RootGen map generation algorithms.
+/// </summary>
 public class MapGenerator
 {
+/// <summary>
+/// The number of cells in the map.
+/// </summary>
     private int _cellCount;
+
+/// <summary>
+/// The number of land cells in the map.
+/// </summary>
     private int _landCells;
+
+/// <summary>
+/// A queue containing all the cells on the A* search frontier.
+/// </summary>
     private CellPriorityQueue _searchFrontier;
+
+/// <summary>
+/// The current A* search phase.
+/// </summary>
+/// TODO:
+///     This variable is reassigned unnecessarily.
     private int _searchFrontierPhase;
 
+/// <summary>
+/// A collection of all the map regions.
+/// </summary>
     private List<MapRegion> _regions;
 
+/// <summary>
+/// A collection of structs defining the current climate data.
+/// </summary>
+/// TODO: 
+///     Indirect coupling between _climate and HexGrid in GenerateClimate() and
+///     StepClimate() requiring both the list of HexCells in HexGrid and _climate
+///     to maintain the same order.
+/// 
+///     Need to either make this dependency explicit or elimnate the coupling.
+/// 
+///     This list is cleared and reused.
+/// 
+///     Might be possible to somehow elimate this list entirely by using functional
+///     programming principles instead of reusing the same list.
     private List<ClimateData> _climate = new List<ClimateData>();
+
+/// <summary>
+/// A collection of structs defining the next climate data.
+/// </summary>
+/// TODO: 
+///     Indirect coupling between _nextClimate and HexGrid in GenerateClimate() and
+///     StepClimate() requiring both the list of HexCells in HexGrid and _nextClimate
+///     to maintain the same order.
+/// 
+///     Need to either make this dependency explicit or elimnate the coupling.
+///     
+///     This list is cleared and reused.
+/// 
+///     Might be possible to somehow elimate this list entirely by using functional
+///     programming principles instead of reusing the same list.
     private List<ClimateData> _nextClimate = new List<ClimateData>();
+
+/// <summary>
+/// A collection of HexDirections representing possible flow directions for
+///     a given river at a particular growth step.
+/// </summary>
+/// TODO:
+///     This list is cleared and reused.
+///     
+///     Might be possible to somehow eliminate this list entirely by using functional
+///     programming principles instead of reusing the same list.
     private List<HexDirection> _flowDirections = new List<HexDirection>();
+
+/// <summary>
+/// An integer value representing the selected noise channel to use when
+///     determining temperature jitter.
+/// </summary>
+/// TODO:
+///     This variable creates an indirect dependency between SetTerrainTypes()
+///     and GenerateTemperature. Need to either make this dependency explicit
+///     or eliminate the coupling.
+/// 
+///     This variable is reassigned.
+/// 
+///     Might be possible to somehow eliminate this variable entirely by
+///     using functional programming principles instead of reassigning
+///     the variable.
+/// 
+///     Extract with other climate modeling data and algorithms into a separate
+///     class.
     private int _temperatureJitterChannel;
 
+/// <summary>
+///     An array of floats representing thresholds for different temperature bands.
+///     Used along with moisture bands to determine the index of biomes to be used
+///     for the biome of a specific cell.
+/// </summary>
+/// TODO:
+///     Extract with other climate modeling data and algorithms into a separate
+///     class.
     private static float[] temperatureBands = { 0.1f, 0.3f, 0.6f };
+
+/// <summary>
+///     An array of floats representing thresholds for different moisture bands.
+///     Used along with moisture bands to determine the index of biomes to be
+///     used for the biome of a specific cell.
+/// </summary>
+/// TODO:
+///     Extract with other climate modeling data and algorithms into a separate
+///     class.
     private static float[] moistureBands = { 0.12f, 0.28f, 0.85f };
 
     /* Array representing a matrix of biomes along the temperature bands:
@@ -30,6 +128,13 @@ public class MapGenerator
         *      [desert][grass, sparse flora][grass, average flora][grass, dense flora]
         *  Temperature/Moisture | 0.12 | 0.28 | 0.85
         * */
+/// <summary>
+///     An array of Biome structs representing a matrix of possible biomes
+///     for a particular cell, indexed by its temperature and moisture.
+/// </summary>
+/// TODO:
+///     Extract with other climate modeling data and algoritms into a
+///     separate class.
     private static Biome[] biomes = {
         new Biome(0, 0), new Biome(4, 0), new Biome(4, 0), new Biome(4, 0),
         new Biome(0, 0), new Biome(2, 0), new Biome(2, 1), new Biome(2, 2),
@@ -58,9 +163,7 @@ public class MapGenerator
         HexCell current = result.GetCell((height * width) / 2);
         region.Add(current);
         current.Elevation = 2;
-        current.TerrainTypeIndex = terrainIndex;
-
-        
+        current.TerrainTypeIndex = terrainIndex;        
 
         foreach (HexCell neighbor in current.Neighbors) {
             region.Add(neighbor);
@@ -141,12 +244,25 @@ public class MapGenerator
         }
     }
 
+/// <summary>
+/// Generate a HexGrid using the standard RootGen algorithm.
+/// </summary>
+/// <param name="config">
+///     The configuration data for the map to be generated.
+/// </param>
+/// <returns>
+///     A randomly generated HexGrid object.
+/// </returns>
     public HexGrid GenerateMap(
         RootGenConfig config
     ) {
-//      Get a blank grid.
         HexGrid result = HexGrid.GetGrid();
 
+// Store the current random state to later restore it so that the
+// algorithm does not affect anything else using Random.
+// TODO:
+//      Create a new class or extension method that encapsulates this
+//      process.
         Random.State originalRandomState = Random.state;
 
         if (!config.useFixedSeed) {
@@ -157,7 +273,6 @@ public class MapGenerator
         }
 
         Random.InitState(config.seed);
-
         _cellCount = config.width * config.height;
         result.Initialize(config.width, config.height, config.wrapping);
 
@@ -183,6 +298,7 @@ public class MapGenerator
             result.GetCell(i).SearchPhase = 0;
         }
 
+// Restore the original random state.
         Random.state = originalRandomState;
         return result;
     }
@@ -382,8 +498,8 @@ public class MapGenerator
         _nextClimate.Clear();
 
         ClimateData initialData = new ClimateData();
-
         initialData.moisture = config.startingMoisture;
+
         ClimateData clearData = new ClimateData();
 
         for (int i = 0; i < _cellCount; i++) {
@@ -409,6 +525,92 @@ public class MapGenerator
             // Store the modified climate data in next climate
             _nextClimate = swap;
         }
+    }
+
+    private void StepClimate(RootGenConfig config, HexGrid grid, int cellIndex) {
+        HexCell cell = grid.GetCell(cellIndex);
+        ClimateData cellClimate = _climate[cellIndex];
+
+        if (cell.IsUnderwater) {
+            cellClimate.moisture = 1f;
+            cellClimate.clouds += config.evaporationFactor;
+        }
+        else {
+            float evaporation = cellClimate.moisture * config.evaporationFactor;
+            cellClimate.moisture -= evaporation;
+            cellClimate.clouds += evaporation;
+        }
+
+        float precipitation = cellClimate.clouds * config.precipitationFactor;
+        cellClimate.clouds -= precipitation;
+        cellClimate.moisture += precipitation;
+
+        // Cloud maximum has an inverse relationship with elevation maximum.
+        float cloudMaximum = 1f - cell.ViewElevation / (config.elevationMax + 1f);
+
+        if (cellClimate.clouds > cloudMaximum) {
+            cellClimate.moisture += cellClimate.clouds - cloudMaximum;
+            cellClimate.clouds = cloudMaximum;
+        }
+
+        HexDirection mainDispersalDirection = config.windDirection.Opposite();
+
+        float cloudDispersal = cellClimate.clouds * (1f / (5f + config.windStrength));
+        float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
+        float seepage = cellClimate.moisture * config.seepageFactor * (1f / 6f);
+
+        for (
+            HexDirection direction = HexDirection.Northeast;
+            direction <= HexDirection.Northwest;
+            direction++
+        ) {
+            HexCell neighbor = cell.GetNeighbor(direction);
+
+            if (!neighbor) {
+                continue;
+            }
+
+            ClimateData neighborClimate = _climate[neighbor.Index];
+
+            if (direction == mainDispersalDirection) {
+                neighborClimate.clouds += cloudDispersal * config.windStrength;
+            }
+            else {
+                neighborClimate.clouds += cloudDispersal;
+            }
+
+            int elevationDelta = neighbor.ViewElevation - cell.ViewElevation;
+
+            if (elevationDelta < 0) {
+                cellClimate.moisture -= runoff;
+                neighborClimate.moisture += runoff;
+            }
+            else if (elevationDelta == 0) {
+                cellClimate.moisture -= seepage;
+                neighborClimate.moisture += seepage;
+            }
+
+            _climate[neighbor.Index] = neighborClimate;
+        }
+
+        // Create a cell for the next climate.
+        ClimateData nextCellClimate = _nextClimate[cellIndex];
+
+        // Modify the data for the next climate.
+        nextCellClimate.moisture += cellClimate.moisture;
+
+        /* Ensure that no cell can have more moisture than
+            *a cell that is underwater.
+            */
+        if (nextCellClimate.moisture > 1f) {
+            nextCellClimate.moisture = 1f;
+        }
+
+        //Store the data for the next climate.
+        _nextClimate[cellIndex] = nextCellClimate;
+
+        //Clear the current climate data.
+        _climate[cellIndex] = new ClimateData();
     }
 
     private void GenerateRivers(
@@ -571,92 +773,6 @@ public class MapGenerator
         }
 
         return length;
-    }
-
-    private void StepClimate(RootGenConfig config, HexGrid grid, int cellIndex) {
-        HexCell cell = grid.GetCell(cellIndex);
-        ClimateData cellClimate = _climate[cellIndex];
-
-        if (cell.IsUnderwater) {
-            cellClimate.moisture = 1f;
-            cellClimate.clouds += config.evaporationFactor;
-        }
-        else {
-            float evaporation = cellClimate.moisture * config.evaporationFactor;
-            cellClimate.moisture -= evaporation;
-            cellClimate.clouds += evaporation;
-        }
-
-        float precipitation = cellClimate.clouds * config.precipitationFactor;
-        cellClimate.clouds -= precipitation;
-        cellClimate.moisture += precipitation;
-
-        // Cloud maximum has an inverse relationship with elevation maximum.
-        float cloudMaximum = 1f - cell.ViewElevation / (config.elevationMax + 1f);
-
-        if (cellClimate.clouds > cloudMaximum) {
-            cellClimate.moisture += cellClimate.clouds - cloudMaximum;
-            cellClimate.clouds = cloudMaximum;
-        }
-
-        HexDirection mainDispersalDirection = config.windDirection.Opposite();
-
-        float cloudDispersal = cellClimate.clouds * (1f / (5f + config.windStrength));
-        float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
-        float seepage = cellClimate.moisture * config.seepageFactor * (1f / 6f);
-
-        for (
-            HexDirection direction = HexDirection.Northeast;
-            direction <= HexDirection.Northwest;
-            direction++
-        ) {
-            HexCell neighbor = cell.GetNeighbor(direction);
-
-            if (!neighbor) {
-                continue;
-            }
-
-            ClimateData neighborClimate = _climate[neighbor.Index];
-
-            if (direction == mainDispersalDirection) {
-                neighborClimate.clouds += cloudDispersal * config.windStrength;
-            }
-            else {
-                neighborClimate.clouds += cloudDispersal;
-            }
-
-            int elevationDelta = neighbor.ViewElevation - cell.ViewElevation;
-
-            if (elevationDelta < 0) {
-                cellClimate.moisture -= runoff;
-                neighborClimate.moisture += runoff;
-            }
-            else if (elevationDelta == 0) {
-                cellClimate.moisture -= seepage;
-                neighborClimate.moisture += seepage;
-            }
-
-            _climate[neighbor.Index] = neighborClimate;
-        }
-
-        // Create a cell for the next climate.
-        ClimateData nextCellClimate = _nextClimate[cellIndex];
-
-        // Modify the data for the next climate.
-        nextCellClimate.moisture += cellClimate.moisture;
-
-        /* Ensure that no cell can have more moisture than
-            *a cell that is underwater.
-            */
-        if (nextCellClimate.moisture > 1f) {
-            nextCellClimate.moisture = 1f;
-        }
-
-        //Store the data for the next climate.
-        _nextClimate[cellIndex] = nextCellClimate;
-
-        //Clear the current climate data.
-        _climate[cellIndex] = new ClimateData();
     }
 
     private bool IsErodible(HexCell cell) {
@@ -960,35 +1076,6 @@ public class MapGenerator
         }
     }
 
-    private HexCell GetRandomCell(HexGrid grid, MapRegion region)
-    {
-        return grid.GetCell(Random.Range(region.xMin, region.xMax), Random.Range(region.zMin, region.zMax));
-    }
-
-    private void VisualizeRiverOrigins(RootGenConfig config, HexGrid grid)
-    {
-        for (int i = 0; i < _cellCount; i++)
-        {
-            HexCell cell = grid.GetCell(i);
-
-            float data = _climate[i].moisture * (cell.Elevation - config.waterLevel) /
-                            (config.elevationMax - config.waterLevel);
-
-            if (data > 0.75f)
-            {
-                cell.SetMapData(1f);
-            }
-            else if (data > 0.5f)
-            {
-                cell.SetMapData(0.5f);
-            }
-            else if (data > 0.25f)
-            {
-                cell.SetMapData(0.25f);
-            }
-        }
-    }
-
     private float GenerateTemperature(
         RootGenConfig config, 
         HexGrid grid, 
@@ -1025,6 +1112,35 @@ public class MapGenerator
         temperature += (jitter * 2f - 1f) * config.temperatureJitter;
 
         return temperature;
+    }
+
+    private HexCell GetRandomCell(HexGrid grid, MapRegion region)
+    {
+        return grid.GetCell(Random.Range(region.xMin, region.xMax), Random.Range(region.zMin, region.zMax));
+    }
+
+    private void VisualizeRiverOrigins(RootGenConfig config, HexGrid grid)
+    {
+        for (int i = 0; i < _cellCount; i++)
+        {
+            HexCell cell = grid.GetCell(i);
+
+            float data = _climate[i].moisture * (cell.Elevation - config.waterLevel) /
+                            (config.elevationMax - config.waterLevel);
+
+            if (data > 0.75f)
+            {
+                cell.SetMapData(1f);
+            }
+            else if (data > 0.5f)
+            {
+                cell.SetMapData(0.5f);
+            }
+            else if (data > 0.25f)
+            {
+                cell.SetMapData(0.25f);
+            }
+        }
     }
 
     private struct MapRegion {
