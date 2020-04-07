@@ -1,10 +1,11 @@
 {
     "name": "StudioRoot.RootGen.Runtime",
     "references": [
-        "GUID:44011771b0647494baecda71dd566002",
-        "GUID:e3c915e2f0abd8a47b75cfe5c45bd797",
-        "GUID:43539d56708bf444eb8bccd8fda625fe",
-        "GUID:ad6be23dff55bf748a5f4b3189514bfa"
+        "StudioRoot.RootLogging.Runtime",
+        "StudioRoot.RootExtensions.Runtime",
+        "StudioRoot.RootUtils.Editor",
+        "StudioRoot.RootCollections.Runtime",
+        "StudioRoot.RootUtils.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
