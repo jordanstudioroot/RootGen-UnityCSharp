@@ -3,6 +3,8 @@ using System.Collections;
 using UnityEngine.EventSystems;
 using RootExtensions;
 using RootLogging;
+using RootUtils.Validation;
+using RootUtils.UnityLifecycle;
 
 public class HexGridCamera : MonoBehaviour
 {  
@@ -177,64 +179,73 @@ public class HexGridCamera : MonoBehaviour
 // ~ Non-Static
 
 // ~~ public
-    public static HexGridCamera GetCamera(HexGrid grid) {
+    public static void AttachCamera(HexGrid grid) {
         HexGridCamera resultMono;
 
-        if (GameObject.FindObjectOfType<HexGridCamera>()) {
-            resultMono = GameObject.FindObjectOfType<HexGridCamera>();
+        if (InstanceValidation.InstanceExists<HexGridCamera>()) {
+            resultMono = InstanceValidation.GetFirstInstance<HexGridCamera>();
             resultMono.transform.SetParent(grid.transform, false);
             resultMono.TargetGrid = grid;
             resultMono.enabled = true;
+            if (InstanceValidation.SingleInstanceExists<HexGridCamera>()) {
+                RootLog.Log(
+                    "Single instance of camera already exists. " + 
+                        "Attaching instance to grid.",
+                    Severity.Information,
+                    "HexGridCamera"
+                );
+            }
+            else {
+                RootLog.Log(
+                    "Multiple instances of camera already exist. " + 
+                        "Attaching first instance to grid.",
+                    Severity.Information,
+                    "HexGridCamera"
+                );
+            }
+        }
+        else {
+            GameObject resultObj = new GameObject("HexGridCamera");
+            resultMono = resultObj.AddComponent<HexGridCamera>();
+            resultMono.transform.SetParent(grid.transform, false);
+            resultMono.TargetGrid = grid;
+            resultMono.enabled = true;
+            
+            GameObject swivelObj = new GameObject("Swivel");
+            swivelObj.SetParent(resultObj, false);
+            swivelObj.transform.localRotation = Quaternion.Euler(45, 0 ,0);
 
-            RootLog.Log(
-                "Camera already exists. Returning first instnace.",
-                Severity.Information,
-                "HexGridCamera"
+            resultMono.Swivel = swivelObj.transform;
+            
+            GameObject stickObj = new GameObject("Stick");
+            stickObj.SetParent(swivelObj, false);
+            stickObj.transform.localPosition = new Vector3(
+                0, 0, -45
             );
 
-            return GameObject.FindObjectOfType<HexGridCamera>();
+            resultMono.Stick = stickObj.transform;
+            
+            GameObject cameraObj = new GameObject("Camera");
+            cameraObj.SetParent(stickObj, false);
+            cameraObj.tag = "MainCamera";
+            cameraObj.transform.localRotation = Quaternion.Euler(5, 0, 0);
+
+            Camera cameraMono = cameraObj.AddComponent<Camera>();
+            cameraObj.AddComponent<PhysicsRaycaster>();
+            cameraMono.nearClipPlane = 0.3f;
+            cameraMono.farClipPlane = 1000f;
+            cameraMono.depth = -1f;
+
+            resultMono.transform.SetParent(grid.transform, false);
+
+            if (grid.Center2D) {
+                resultMono.SetPosition(
+                    grid,
+                    grid.Center2D.transform.position.x,
+                    grid.Center2D.transform.position.z
+                );
+            }
         }
-
-        GameObject resultObj = new GameObject("HexGridCamera");
-        resultMono = resultObj.AddComponent<HexGridCamera>();
-        
-        GameObject swivelObj = new GameObject("Swivel");
-        swivelObj.SetParent(resultObj, false);
-        swivelObj.transform.localRotation = Quaternion.Euler(45, 0 ,0);
-
-        resultMono.Swivel = swivelObj.transform;
-        
-        GameObject stickObj = new GameObject("Stick");
-        stickObj.SetParent(swivelObj, false);
-        stickObj.transform.localPosition = new Vector3(
-            0, 0, -45
-        );
-
-        resultMono.Stick = stickObj.transform;
-        
-        GameObject cameraObj = new GameObject("Camera");
-        cameraObj.SetParent(stickObj, false);
-        cameraObj.tag = "MainCamera";
-        cameraObj.transform.localRotation = Quaternion.Euler(5, 0, 0);
-
-        Camera cameraMono = cameraObj.AddComponent<Camera>();
-        cameraObj.AddComponent<PhysicsRaycaster>();
-        cameraMono.nearClipPlane = 0.3f;
-        cameraMono.farClipPlane = 1000f;
-        cameraMono.depth = -1f;
-
-        resultMono.transform.SetParent(grid.transform, false);
-        resultMono.TargetGrid = grid;
-
-        if (grid.Center2D) {
-            resultMono.SetPosition(
-                grid,
-                grid.Center2D.transform.position.x,
-                grid.Center2D.transform.position.z
-            );
-        }
-
-        return resultMono;
     }
 
     public void ValidatePosition(HexGrid grid) {

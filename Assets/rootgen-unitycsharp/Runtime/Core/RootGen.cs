@@ -38,7 +38,7 @@ public class RootGen {
         Destroy.DestroyAll<HexGrid>();
 
         HexGrid result = _mapGenerator.GenerateMap(config);
-        HexGridCamera camera = HexGridCamera.GetCamera(result);
+        HexGridCamera.AttachCamera(result);
         return result;
     }
 
@@ -46,7 +46,7 @@ public class RootGen {
         Destroy.DestroyAll<HexGrid>();
 
         HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
-        HexGridCamera camera = HexGridCamera.GetCamera(result);
+        HexGridCamera.AttachCamera(result);
         return result;
     }
 
@@ -66,14 +66,14 @@ public class RootGen {
     public HexGrid GenerateEmptyMap(Vector2 size, bool wrapping) {
         Destroy.DestroyAll<HexGrid>();
 
-        HexGrid response = HexGrid.GetGrid(
+        HexGrid result = HexGrid.GetGrid(
             (int)size.x,
             (int)size.y,
             wrapping
         );
 
-        HexGridCamera camera = HexGridCamera.GetCamera(response);
-        return response;
+        HexGridCamera.AttachCamera(result);
+        return result;
     }
 
 // STRUCTS ~~~~~~~~~~
