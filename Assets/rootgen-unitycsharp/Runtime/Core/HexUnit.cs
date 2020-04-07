@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using RootExtensions;
-using RootUtils;
+using RootUtils.Math;
 
 public class HexUnit : MonoBehaviour
 {

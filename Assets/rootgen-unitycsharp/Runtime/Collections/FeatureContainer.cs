@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using RootUtils.Randomization;
 
 public class FeatureContainer : MonoBehaviour
 {
@@ -120,34 +121,39 @@ public class FeatureContainer : MonoBehaviour
 * will not be changed when the cell is refreshed.
 */
 
-        RootGenHash rootHash = HexMetrics.SampleHashGrid(position);
+        RandomHash rootHash = HexMetrics.SampleHashGrid(position);
+        float a = rootHash.GetValue(0);
+        float b = rootHash.GetValue(1);
+        float c = rootHash.GetValue(2);
+        float d = rootHash.GetValue(3);
+        float e = rootHash.GetValue(4);
 
         Transform prefab = PickPrefab(
-            urbanCollections, cell.UrbanLevel, rootHash.a, rootHash.d
+            urbanCollections, cell.UrbanLevel, a, d
         );
 
         Transform otherPrefab = PickPrefab(
-            farmCollections, cell.FarmLevel, rootHash.b, rootHash.d
+            farmCollections, cell.FarmLevel, b, d
         );
 
-        float usedHash = rootHash.a;
+        float usedHash = rootHash.GetValue(0);
         if (prefab) {
-            if (otherPrefab && rootHash.b < rootHash.a) {
+            if (otherPrefab && b < a) {
                 prefab = otherPrefab;
-                usedHash = rootHash.b;
+                usedHash = b;
             }
         }
         else if (otherPrefab) {
             prefab = otherPrefab;
-            usedHash = rootHash.b;
+            usedHash = b;
         }
 
         otherPrefab = PickPrefab (
-            plantCollections, cell.PlantLevel, rootHash.c, rootHash.d
+            plantCollections, cell.PlantLevel, c, d
         );
 
         if (prefab) {
-            if (otherPrefab && rootHash.c < usedHash) {
+            if (otherPrefab && c < usedHash) {
                 prefab = otherPrefab;
             }
         }
@@ -165,7 +171,7 @@ public class FeatureContainer : MonoBehaviour
         Transform instance = Instantiate(prefab);
 
         instance.localPosition = HexMetrics.Perturb(position);
-        instance.localRotation = Quaternion.Euler(0f, 360f * rootHash.e, 0f);
+        instance.localRotation = Quaternion.Euler(0f, 360f * e, 0f);
 
         instance.SetParent(_container, false);
     }
@@ -320,11 +326,13 @@ public class FeatureContainer : MonoBehaviour
                 bool hasTower = false;
 
                 if (leftCell.Elevation == rightCell.Elevation) {
-                    RootGenHash rootHash = HexMetrics.SampleHashGrid (
+                    RandomHash rootHash = HexMetrics.SampleHashGrid (
                         (pivot + left + right) * 1f / 3f
                     );
 
-                    hasTower = rootHash.e < HexMetrics.wallTowerThreshold;
+                    float e = rootHash.GetValue(4);
+
+                    hasTower = e < HexMetrics.wallTowerThreshold;
                 }
 
                 AddWallSegment(pivot, left, pivot, right, hasTower);
@@ -412,8 +420,11 @@ public class FeatureContainer : MonoBehaviour
     public void AddSpecialFeature(HexCell cell, Vector3 position) {
         Transform instance = Instantiate(special[cell.SpecialIndex - 1]);
         instance.localPosition = HexMetrics.Perturb(position);
-        RootGenHash rootHash = HexMetrics.SampleHashGrid(position);
-        instance.localRotation = Quaternion.Euler(0f, 360f * rootHash.e, 0f);
+
+        RandomHash rootHash = HexMetrics.SampleHashGrid(position);
+        float e = rootHash.GetValue(4);
+
+        instance.localRotation = Quaternion.Euler(0f, 360f * e, 0f);
         instance.SetParent(_container, false);
     }
 }

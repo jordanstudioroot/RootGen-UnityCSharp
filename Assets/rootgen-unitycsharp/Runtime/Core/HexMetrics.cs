@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using RootUtils.Randomization;
 
 public static class HexMetrics
 {
@@ -62,7 +63,7 @@ public static class HexMetrics
 
     public static int wrapSize;
 
-    private static RootGenHash[] _hashGrid;
+    private static RandomHash[] _hashGrid;
 
     public static bool Wrapping
     {
@@ -243,7 +244,7 @@ public static class HexMetrics
 
     public static void InitializeHashGrid(int seed)
     {
-        _hashGrid = new RootGenHash[hashGridSize * hashGridSize];
+        _hashGrid = new RandomHash[hashGridSize * hashGridSize];
 
         // Store the default state of Random
         Random.State currentState = Random.state;
@@ -253,14 +254,14 @@ public static class HexMetrics
         // Get random values
         for (int i = 0; i < _hashGrid.Length; i++)
         {
-            _hashGrid[i] = RootGenHash.Create();
+            _hashGrid[i] = new RandomHash(5);
         }
 
         // Restore the default state of random to ensure randomness
         Random.state = currentState;
     }
 
-    public static RootGenHash SampleHashGrid(Vector3 position)
+    public static RandomHash SampleHashGrid(Vector3 position)
     {
         /* Modulo the input values to make them wrap around
             * the indices of the hash World. The smaller the

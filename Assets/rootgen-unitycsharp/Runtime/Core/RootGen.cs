@@ -1,6 +1,6 @@
 using UnityEngine;
 using RootLogging;
-using RootUtils;
+using RootUtils.UnityLifecycle;
 
 public class RootGen {
 // FIELDS ~~~~~~~~~~
