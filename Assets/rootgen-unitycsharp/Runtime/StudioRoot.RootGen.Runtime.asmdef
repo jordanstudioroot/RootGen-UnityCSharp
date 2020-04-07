@@ -3,9 +3,8 @@
     "references": [
         "StudioRoot.RootLogging.Runtime",
         "StudioRoot.RootExtensions.Runtime",
-        "StudioRoot.RootUtils.Editor",
-        "StudioRoot.RootCollections.Runtime",
-        "StudioRoot.RootUtils.Runtime"
+        "StudioRoot.RootUtils.Runtime",
+        "StudioRoot.RootCollections.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
