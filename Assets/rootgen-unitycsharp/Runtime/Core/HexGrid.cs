@@ -42,102 +42,8 @@ public class HexGrid : MonoBehaviour
     private bool _currentPathExists;
     private Material _terrainMaterial;
     private bool _uiVisible;
-    
-// CONSTRUCTORS ~~~~~~~~~~
+    private int _numCells;
 
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// DESTRUCTORS ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// DELEGATES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// EVENTS ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// ENUMS
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// INTERFACES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// PROPERTIES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
     public HexCell[] HexCells {
         get {
             return _hexCells;
@@ -187,6 +93,16 @@ public class HexGrid : MonoBehaviour
         }
     }
 
+    public int NumCells {
+        get {
+            if (_hexCells == null) {
+                return 0;
+            }
+
+            return _hexCells.Length;
+        }
+    }
+
 // ~~ private
 
 // INDEXERS ~~~~~~~~~~
@@ -230,16 +146,15 @@ public class HexGrid : MonoBehaviour
         get { return _currentPathExists; }
     }
 
-    public bool Initialize(int x, int z, bool wrapping) {
-        if
-        (
-            x <= 0 || x % HexMetrics.chunkSizeX != 0 ||
-            z <= 0 || z % HexMetrics.chunkSizeZ != 0
+    public void Initialize(int x, int z, bool wrapping) {
+        if (
+            x < HexMetrics.chunkSizeX || x % HexMetrics.chunkSizeX != 0 ||
+            z < HexMetrics.chunkSizeZ || z % HexMetrics.chunkSizeZ != 0
         ) {
             RootLog.Log(
                 "Unsupported or empty map size. Setting map size to minimum " +
                 "chunk size.",
-                Severity.Warning,
+                Severity.Debug,
                 "HexGrid"
             );
             x = HexMetrics.chunkSizeX;
@@ -270,8 +185,6 @@ public class HexGrid : MonoBehaviour
 
         CreateChunks();
         InitializeCells(x, z);
-
-        return true;
     }
 
     public HexCell GetCell(Vector3 position) {

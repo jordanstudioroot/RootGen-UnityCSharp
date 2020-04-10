@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RootLogging;
 
 public class RootGenExampleApp : MonoBehaviour
 {
@@ -25,9 +26,8 @@ public class RootGenExampleApp : MonoBehaviour
     {
         _rootGen = new RootGen();
 
-
         if (generationType == GenerationType.Standard) {
-            _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
+            _rootGen.GenerateMap(Resources.Load("defaultconfig") as RootGenConfig);
         }
         else if (generationType == GenerationType.TwoThreeAlgorithm) {  
             _rootGen.GenerateHistoricalBoard(75, 75);
@@ -38,9 +38,8 @@ public class RootGenExampleApp : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyUp(KeyCode.R)) {
-
             if (generationType == GenerationType.Standard) {
-                _rootGen.GenerateMap(this, Resources.Load("defaultconfig") as RootGenConfig);
+                _rootGen.GenerateMap(Resources.Load("defaultconfig") as RootGenConfig);
             }
             else if (generationType == GenerationType.TwoThreeAlgorithm) {  
                 _rootGen.GenerateHistoricalBoard(75, 75);

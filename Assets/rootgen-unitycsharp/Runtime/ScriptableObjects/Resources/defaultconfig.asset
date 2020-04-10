@@ -12,24 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce2e8e7003601f44faf50f5baf0608df, type: 3}
   m_Name: defaultconfig
   m_EditorClassIdentifier: 
-  width: 40
-  height: 40
+  width: 80
+  height: 80
   wrapping: 1
-  useFixedSeed: 0
-  seed: 1248129603
+  useFixedSeed: 1
+  seed: 1469630778
   jitterProbability: 0.25
   chunkSizeMin: 30
   chunkSizeMax: 100
   landPercentage: 50
   waterLevel: 3
-  highRiseProbability: 0.25
+  highRiseProbability: 0.222
   sinkProbability: 0.2
-  elevationMinimum: -2
+  elevationMin: -2
   elevationMax: 8
   mapBorderX: 5
   mapBorderZ: 5
   regionBorder: 5
-  regionCount: 1
+  numRegions: 1
   erosionPercentage: 50
   evaporationFactor: 0.5
   precipitationFactor: 0.25
@@ -42,5 +42,5 @@ MonoBehaviour:
   extraLakeProbability: 0.25
   lowTemperature: 0
   highTemperature: 1
-  temperatureJitter: 0.1
-  hemisphere: 0
+  temperatureJitter: 0.236
+  hemisphere: 1

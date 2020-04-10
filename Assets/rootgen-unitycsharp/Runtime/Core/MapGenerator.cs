@@ -12,11 +12,6 @@ using RootCollections;
 public class MapGenerator
 {
 /// <summary>
-/// The number of cells in the map.
-/// </summary>
-    private int _cellCount;
-
-/// <summary>
 /// The number of land cells in the map.
 /// </summary>
     private int _landCells;
@@ -36,7 +31,7 @@ public class MapGenerator
 /// <summary>
 /// A collection of all the map regions.
 /// </summary>
-    private List<MapRegion> _regions;
+    private List<MapRegionRect> _regions;
 
 /// <summary>
 /// A collection of structs defining the current climate data.
@@ -148,31 +143,30 @@ public class MapGenerator
         int tileLimit
     ) {
         HexGrid result = HexGrid.GetGrid();
-        
-        _cellCount = width * height;
         result.Initialize(width, height, true);
+        int _cellCount = result.CellCountX * result.CellCountZ;
 
         for (int i = 0; i < _cellCount; i++) {
             result.GetCell(i).TerrainTypeIndex = 0;
         }
 
-        List<HexCell> region = new List<HexCell>();
+        List<HexCell> constellation = new List<HexCell>();
 
         int terrainIndex = 0;
 
         HexCell current = result.GetCell((height * width) / 2);
-        region.Add(current);
+        constellation.Add(current);
         current.Elevation = 2;
         current.TerrainTypeIndex = terrainIndex;        
 
         foreach (HexCell neighbor in current.Neighbors) {
-            region.Add(neighbor);
+            constellation.Add(neighbor);
             neighbor.TerrainTypeIndex = terrainIndex;
             neighbor.Elevation = 2;
         }
 
-        List<HexCell> toGrow = GrowRegion(
-            region, 
+        List<HexCell> toGrow = GrowConstellation(
+            constellation, 
             tileLimit,
             ++terrainIndex
         );
@@ -180,16 +174,16 @@ public class MapGenerator
         return result;
     }
 
-    private List<HexCell> GrowRegion(
-        List<HexCell> region,
+    private List<HexCell> GrowConstellation(
+        List<HexCell> constellation,
         int tileLimit,
         int currTerrain
     ) {
         if (currTerrain > 4) {
             currTerrain = 0;
         }
-        if (region.Count >= tileLimit) {
-            return region;
+        if (constellation.Count >= tileLimit) {
+            return constellation;
         }
         else {
             System.Random rand = new System.Random();
@@ -202,30 +196,30 @@ public class MapGenerator
             else {
                 growthThreshold = 3;
             }
-            HexCell expansion = GetValidExpansion(region, growthThreshold);
+            HexCell expansion = GetValidExpansion(constellation, growthThreshold);
             for (int i = 0; i < 6; ++i) {
                 HexCell neighbor = expansion.GetNeighbor((HexDirection)i);
-                TryAddToRegion(region, neighbor, currTerrain);
+                TryAddToConstellation(constellation, neighbor, currTerrain);
             }
-            return GrowRegion(region, tileLimit, ++currTerrain);
+            return GrowConstellation(constellation, tileLimit, ++currTerrain);
         }
     }
 
-    private HexCell GetValidExpansion(List<HexCell> region, int growthThreshold) {
+    private HexCell GetValidExpansion(List<HexCell> constellation, int growthThreshold) {
         HexCell result = null;
 
         System.Random random = new System.Random();
 
         while(result == null) {
-            HexCell expansionCandidate = region[random.Next(region.Count)];
-            int numOutsideRegion = 0;
+            HexCell expansionCandidate = constellation[random.Next(constellation.Count)];
+            int numOutsideConstellation = 0;
             foreach (HexCell neighbor in expansionCandidate.Neighbors) {
-                if (!region.Contains(neighbor)) {
-                    numOutsideRegion++;
+                if (!constellation.Contains(neighbor)) {
+                    numOutsideConstellation++;
                 } 
             }
 
-            if (numOutsideRegion >= growthThreshold) {
+            if (numOutsideConstellation >= growthThreshold) {
                 result = expansionCandidate;
             }
         }
@@ -233,12 +227,12 @@ public class MapGenerator
         return result;
     }
 
-    private void TryAddToRegion(List<HexCell> region, HexCell cell, int terrainType) {
-        if (region.Contains(cell)) {
+    private void TryAddToConstellation(List<HexCell> constellation, HexCell cell, int terrainType) {
+        if (constellation.Contains(cell)) {
 
         }
         else {
-            region.Add(cell);
+            constellation.Add(cell);
             cell.Elevation = 2;
             cell.TerrainTypeIndex = terrainType;
         }
@@ -273,28 +267,85 @@ public class MapGenerator
         }
 
         Random.InitState(config.seed);
-        _cellCount = config.width * config.height;
+
         result.Initialize(config.width, config.height, config.wrapping);
+        int numCells = result.NumCells;
 
         if (_searchFrontier == null) {
             _searchFrontier = new CellPriorityQueue();
         }
 
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numCells; i++) {
             result.GetCell(i).WaterLevel = config.waterLevel;
         }
 
-        GenerateRegions(config, result);
-        int numLandCells = GetNumLandCells(config, result);
-        GenerateErosion(config, result);
-        GenerateClimate(config, result);
-        GenerateRivers(config ,result, numLandCells);
-        SetTerrainTypes(config, result);
+        _regions = GenerateRegions(
+            result,
+            config.regionBorder,
+            config.mapBorderX,
+            config.mapBorderZ,
+            config.numRegions
+        );
+        
+        int numLandCells = GetNumLandCells(
+            config.landPercentage,
+            numCells,
+            config.sinkProbability,
+            config.chunkSizeMin,
+            config.chunkSizeMax,
+            result,
+            config.highRiseProbability,
+            config.elevationMin,
+            config.elevationMax,
+            config.waterLevel,
+            config.jitterProbability,
+            _searchFrontier,
+            _searchFrontierPhase
+        );
+
+        GenerateErosion(
+            result,
+            config.erosionPercentage,
+            numCells
+        );
+
+        GenerateClimate(
+            result,
+            config.startingMoisture,
+            numCells,
+            config.evaporationFactor,
+            config.precipitationFactor,
+            config.elevationMax,
+            config.windDirection,
+            config.windStrength,
+            config.runoffFactor,
+            config.seepageFactor
+        );
+
+        GenerateRivers(
+            result,
+            numLandCells,
+            config.waterLevel,
+            config.elevationMax,
+            config.riverPercentage,
+            config.extraLakeProbability
+        );
+
+        SetTerrainTypes(
+            config.elevationMax,
+            config.waterLevel,
+            numCells,
+            config.hemisphere,
+            config.temperatureJitter,
+            config.lowTemperature,
+            config.highTemperature,
+            result
+        );
 
         /* Reset the search phase of all cells to avoid collisions
             * with the World search algorithms.
             */
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numCells; i++) {
             result.GetCell(i).SearchPhase = 0;
         }
 
@@ -303,109 +354,135 @@ public class MapGenerator
         return result;
     }
 
-    private void GenerateRegions(RootGenConfig config, HexGrid grid) {
-        if (_regions == null) {
-            _regions = new List<MapRegion>();
-        }
-        else {
-            _regions.Clear();
-        }
-
-        int borderX = grid.Wrapping ? config.regionBorder : config.mapBorderX;
-
-        MapRegion region;
-        switch (config.regionCount) {
-            default:
-                if (grid.Wrapping)
-                {
-                    borderX = 0;
-                }
-
-                region.xMin = borderX;
-                region.xMax = grid.CellCountX - borderX;
-                region.zMin = config.mapBorderZ;
-                region.zMax = grid.CellCountZ - config.mapBorderZ;
-                _regions.Add(region);
-                break;
-            case 2:
-                if (Random.value < 0.5f)
-                {
-                    region.xMin = borderX;
-                    region.xMax = grid.CellCountX / 2 - config.regionBorder;
-                    region.zMin = config.mapBorderZ;
-                    region.zMax = grid.CellCountZ - config.mapBorderZ;
-                    _regions.Add(region);
-                    region.xMin = grid.CellCountX / 2 + config.regionBorder;
-                    region.xMax = grid.CellCountX - borderX;
-                    _regions.Add(region);
-                }
-                else
-                {
-                    if (grid.Wrapping)
-                    {
-                        borderX = 0;
-                    }
-
-                    region.xMin = borderX;
-                    region.xMax = grid.CellCountX - borderX;
-                    region.zMin = config.mapBorderZ;
-                    region.zMax = grid.CellCountZ / 2 - config.regionBorder;
-                    _regions.Add(region);
-                    region.zMin = grid.CellCountZ / 2 + config.regionBorder;
-                    region.zMax = grid.CellCountZ - config.mapBorderZ;
-                    _regions.Add(region);
-                }
-                break;
-            case 3:
-                region.xMin = borderX;
-                region.xMax = grid.CellCountX / 3 - config.regionBorder;
-                region.zMin = config.mapBorderZ;
-                region.zMax = grid.CellCountZ - config.mapBorderZ;
-                _regions.Add(region);
-                region.xMin = grid.CellCountX / 3 + config.regionBorder;
-                region.xMax = grid.CellCountX * 2 / 3 - config.regionBorder;
-                _regions.Add(region);
-                region.xMin = grid.CellCountX * 2 / 3 + config.regionBorder;
-                region.xMax = grid.CellCountX - borderX;
-                _regions.Add(region);
-                break;
-            case 4:
-                region.xMin = borderX;
-                region.xMax = grid.CellCountX / 2 - config.regionBorder;
-                region.zMin = config.mapBorderZ;
-                region.zMax = grid.CellCountZ / 2 - config.regionBorder;
-                _regions.Add(region);
-                region.xMin = grid.CellCountX / 2 + config.regionBorder;
-                region.xMax = grid.CellCountX - borderX;
-                _regions.Add(region);
-                region.zMin = grid.CellCountZ / 2 + config.regionBorder;
-                region.zMax = grid.CellCountZ - config.mapBorderZ;
-                _regions.Add(region);
-                region.xMin = borderX;
-                region.xMax = grid.CellCountX / 2 - config.regionBorder;
-                _regions.Add(region);
-                break;
-        }
+    private List<MapRegionRect> GenerateRegions(
+        HexGrid grid,
+        int regionBorder,
+        int mapBorderX,
+        int mapBorderZ,
+        int numRegions
+    ) {
+        return new List<MapRegionRect>(
+            SubdivideRegions(
+                grid.CellCountX,
+                grid.CellCountZ,
+                mapBorderX,
+                mapBorderZ,
+                numRegions,
+                regionBorder,
+                grid.Wrapping
+            )
+        );
     }
 
-    private int GetNumLandCells(RootGenConfig config, HexGrid grid) {
+    private List<MapRegionRect> SubdivideRegions(
+        int cellCountX,
+        int cellCountZ,
+        int mapBorderX,
+        int mapBorderZ,
+        int numRegions,
+        int regionBorder,
+        bool wrapping
+    ) {
+        List<MapRegionRect> result = new List<MapRegionRect>();
+
+        int borderX = wrapping ? regionBorder : mapBorderX;
+
+        int rootXMin = cellCountX > (borderX * 2) ?
+            borderX : 0;
+        int rootZMin = cellCountZ > (borderX * 2) ?
+            borderX : 0;
+        int rootXMax = cellCountX > (borderX * 2) ?
+            cellCountX - borderX  - 1 : cellCountX - 1;
+        int rootZMax = cellCountZ > (borderX * 2) ?
+            cellCountZ - mapBorderZ - 1 : cellCountZ - 1;
+
+
+        MapRegionRect root = new MapRegionRect(
+            rootXMin,
+            rootXMax,
+            rootZMin,
+            rootZMax
+        );
+
+        result.Add(root);
+
+        List<MapRegionRect> temp = new List<MapRegionRect>();
+
+        int i = 0;
+
+        while (result.Count < numRegions) {
+            foreach (MapRegionRect mapRect in result) {
+                if (i % 2 == 0) {
+                    temp.AddRange(mapRect.SubdivideVertical(regionBorder));
+                }
+                else {
+                    temp.AddRange(mapRect.SubdivideHorizontal(regionBorder));
+                }
+            }
+
+            result.Clear();
+            result.AddRange(temp);
+            temp.Clear();
+            i++;
+
+            RootLog.Log(result.Count.ToString());
+        }
+
+        return result;
+    }
+
+    private int GetNumLandCells(
+        int percentLand,
+        int numCells,
+        float sinkProbability,
+        int chunkSizeMin,
+        int chunkSizeMax, 
+        HexGrid grid,
+        float highRiseProbability,
+        int elevationMin,
+        int elevationMax,
+        int waterLevel,
+        float jitterProbability,
+        CellPriorityQueue searchFrontier,
+        int searchFrontierPhase
+    ) {
         int landBudget = Mathf.RoundToInt(
-            _cellCount * config.landPercentage * 0.01f
+            numCells * percentLand * 0.01f
         );
 
         int result = landBudget;
 
         for (int guard = 0; guard < 10000; guard++) {
-            bool sink = Random.value < config.sinkProbability;
+            bool sink = Random.value < sinkProbability;
 
             for (int i = 0; i < _regions.Count; i++) {
-                MapRegion region = _regions[i];
-                int chunkSize = Random.Range(config.chunkSizeMin, config.chunkSizeMax + 1);
+                MapRegionRect region = _regions[i];
+                int chunkSize = Random.Range(chunkSizeMin, chunkSizeMax + 1);
                 if (sink) {
-                    landBudget = SinkTerrain(config, grid, chunkSize, landBudget, region);
+                    landBudget = SinkTerrain(
+                        grid,
+                        chunkSize,
+                        landBudget,
+                        region,
+                        highRiseProbability,
+                        elevationMin,
+                        waterLevel,
+                        jitterProbability,
+                        searchFrontier,
+                        searchFrontierPhase
+                    );
                 }
                 else {
-                    landBudget = RaiseTerrain(config, grid, chunkSize, landBudget, region);
+                    landBudget = RaiseTerrain(
+                        grid,
+                        chunkSize,
+                        landBudget,
+                        region,
+                        highRiseProbability,
+                        elevationMax,
+                        waterLevel,
+                        jitterProbability
+                    );
                     if (landBudget == 0) {
                         return result;
                     }
@@ -424,10 +501,184 @@ public class MapGenerator
         return result;
     }
 
-    private void GenerateErosion(RootGenConfig config, HexGrid grid) {
+    int SinkTerrain(
+        HexGrid grid,
+        int chunkSize,
+        int budget,
+        MapRegionRect region,
+        float highRiseProbability,
+        int elevationMin,
+        int waterLevel,
+        float jitterProbability,
+        CellPriorityQueue searchFrontier,
+        int searchFrontierPhase
+    ) {
+        searchFrontierPhase += 1;
+        
+// Region dimensions are used to calcualte valid bounds for randomly
+// selecting first cell to apply the sink algorithm to. This results
+// in continent like formations loosely constrained by the size of
+// a given region.
+// TODO:
+//  This algorithm could probably be improved by finding a real-world
+//  model to implement for sinking terrain based on tectonic shift.
+        HexCell firstCell = GetRandomCell(grid, region);
+        firstCell.SearchPhase = _searchFrontierPhase;
+        firstCell.Distance = 0;
+        firstCell.SearchHeuristic = 0;
+        searchFrontier.Enqueue(firstCell);
+
+        HexCoordinates center = firstCell.Coordinates;
+
+        int sink = Random.value < highRiseProbability ? 2 : 1;
+        int size = 0;
+
+        while (size < chunkSize && searchFrontier.Count > 0) {
+            HexCell current = searchFrontier.Dequeue();
+            int originalElevation = current.Elevation;
+
+            int newElevation = current.Elevation - sink;
+
+            if (newElevation < elevationMin) {
+                continue;
+            }
+
+            current.Elevation = newElevation;
+
+            if (
+                originalElevation >= waterLevel &&
+                newElevation < waterLevel
+            ) {
+                budget += 1;
+            }
+
+            size += 1;
+
+            for (
+                HexDirection direction = HexDirection.Northeast;
+                direction <= HexDirection.Northwest;
+                direction++
+            ) {
+                HexCell neighbor = current.GetNeighbor(direction);
+                if (neighbor && neighbor.SearchPhase < _searchFrontierPhase)
+                {
+                    neighbor.SearchPhase = _searchFrontierPhase;
+
+                    /* Set the distance to be the distance from the center of the
+                        * raised terrain chunk, so that cells closer to the center are
+                        * prioritized when raising terrain.
+                        */
+                    neighbor.Distance = neighbor.Coordinates.DistanceTo(center);
+
+                    /* Set the search heuristic to 1 or 0 based on a configurable
+                        * jitter probability, to cause perturbation in the cells which
+                        * are selected to be raised. This will make the chunks generated
+                        * less uniform.
+                        */
+                    neighbor.SearchHeuristic =
+                        Random.value < jitterProbability ? 1 : 0;
+                    searchFrontier.Enqueue(neighbor);
+                }
+            }
+        }
+
+        searchFrontier.Clear();
+        return budget;
+    }
+
+    private int RaiseTerrain(
+        HexGrid grid, 
+        int chunkSize, 
+        int budget, 
+        MapRegionRect region,
+        float highRiseProbability,
+        int elevationMax,
+        int waterLevel,
+        float jitterProbability
+    ) {
+        _searchFrontierPhase += 1;
+
+// Region dimensions are used to calcualte valid bounds for randomly
+// selecting first cell to apply the raise algorithm to. This results
+// in continent like formations loosely constrained by the size of
+// a given region.
+// TODO:
+//  This algorithm could probably be improved by finding a real-world
+//  model to implement for raising terrain based on tectonic shift.
+        HexCell firstCell = GetRandomCell(grid, region);
+        firstCell.SearchPhase = _searchFrontierPhase;
+        firstCell.Distance = 0;
+        firstCell.SearchHeuristic = 0;
+        _searchFrontier.Enqueue(firstCell);
+
+        HexCoordinates center = firstCell.Coordinates;
+
+        int rise = Random.value < highRiseProbability ? 2 : 1;
+        int size = 0;
+
+        while (size < chunkSize && _searchFrontier.Count > 0) {
+            HexCell current = _searchFrontier.Dequeue();
+            int originalElevation = current.Elevation;
+            int newElevation = originalElevation + rise;
+
+            if (newElevation > elevationMax) {
+                continue;
+            }
+
+            current.Elevation = newElevation;
+
+            if (
+                originalElevation < waterLevel &&
+                newElevation >= waterLevel &&
+                --budget == 0
+            ) {
+                break;
+            }
+
+            size += 1;
+
+            for (
+                HexDirection direction = HexDirection.Northeast;
+                direction <= HexDirection.Northwest;
+                direction++
+            ) {
+                HexCell neighbor = current.GetNeighbor(direction);
+                if (neighbor && neighbor.SearchPhase < _searchFrontierPhase) {
+                    neighbor.SearchPhase = _searchFrontierPhase;
+
+                    /* Set the distance to be the distance from the center of the
+                        * raised terrain chunk, so that cells closer to the center are
+                        * prioritized when raising terrain.
+                        */
+                    neighbor.Distance = neighbor.Coordinates.DistanceTo(center);
+
+                    /* Set the search heuristic to 1 or 0 based on a configurable
+                        * jitter probability, to cause perturbation in the cells which
+                        * are selected to be raised. This will make the chunks generated
+                        * less uniform.
+                        */
+                    neighbor.SearchHeuristic = 
+                        Random.value < jitterProbability ? 1 : 0;
+
+                    _searchFrontier.Enqueue(neighbor);
+                }
+            }
+        }
+
+        _searchFrontier.Clear();
+
+        return budget;
+    }
+
+    private void GenerateErosion(
+        HexGrid grid,
+        int erosionPercentage,
+        int numCells
+
+    ) {
         List<HexCell> erodibleCells = ListPool<HexCell>.Get();
 
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numCells; i++) {
             HexCell cell = grid.GetCell(i);
 
             if (IsErodible(cell)) {
@@ -436,7 +687,7 @@ public class MapGenerator
         }
 
         int targetErodibleCount =
-            (int)(erodibleCells.Count * (100 - config.erosionPercentage) * 0.01f);
+            (int)(erodibleCells.Count * (100 - erosionPercentage) * 0.01f);
 
         while (erodibleCells.Count > targetErodibleCount) {
             int index = Random.Range(0, erodibleCells.Count);
@@ -493,23 +744,45 @@ public class MapGenerator
         ListPool<HexCell>.Add(erodibleCells);
     }
 
-    private void GenerateClimate(RootGenConfig config, HexGrid grid) {
+    private void GenerateClimate(
+        HexGrid grid,
+        float startingMoisture,
+        int numCells,
+        float evaporationFactor,
+        float precipitationFactor,
+        int elevationMax,    
+        HexDirection windDirection,
+        float windStrength,
+        float runoffFactor,
+        float seepageFactor
+
+    ) {
         _climate.Clear();
         _nextClimate.Clear();
 
         ClimateData initialData = new ClimateData();
-        initialData.moisture = config.startingMoisture;
+        initialData.moisture = startingMoisture;
 
         ClimateData clearData = new ClimateData();
 
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numCells; i++) {
             _climate.Add(initialData);
             _nextClimate.Add(clearData);
         }
 
         for (int cycle = 0; cycle < 40; cycle++) {
-            for (int i = 0; i < _cellCount; i++) {
-                StepClimate(config, grid, i);
+            for (int i = 0; i < numCells; i++) {
+                StepClimate(
+                    grid,
+                    i,
+                    evaporationFactor,
+                    precipitationFactor,
+                    elevationMax,
+                    windDirection,
+                    windStrength,
+                    runoffFactor,
+                    seepageFactor
+                );
             }
 
             /* Make sure that the climate data being calculated in the current
@@ -527,37 +800,47 @@ public class MapGenerator
         }
     }
 
-    private void StepClimate(RootGenConfig config, HexGrid grid, int cellIndex) {
+    private void StepClimate(
+        HexGrid grid,
+        int cellIndex,
+        float evaporationFactor,
+        float precipitationFactor,
+        int elevationMax,
+        HexDirection windDirection,
+        float windStrength,
+        float runoffFactor,
+        float seepageFactor
+    ) {
         HexCell cell = grid.GetCell(cellIndex);
         ClimateData cellClimate = _climate[cellIndex];
 
         if (cell.IsUnderwater) {
             cellClimate.moisture = 1f;
-            cellClimate.clouds += config.evaporationFactor;
+            cellClimate.clouds += evaporationFactor;
         }
         else {
-            float evaporation = cellClimate.moisture * config.evaporationFactor;
+            float evaporation = cellClimate.moisture * evaporationFactor;
             cellClimate.moisture -= evaporation;
             cellClimate.clouds += evaporation;
         }
 
-        float precipitation = cellClimate.clouds * config.precipitationFactor;
+        float precipitation = cellClimate.clouds * precipitationFactor;
         cellClimate.clouds -= precipitation;
         cellClimate.moisture += precipitation;
 
         // Cloud maximum has an inverse relationship with elevation maximum.
-        float cloudMaximum = 1f - cell.ViewElevation / (config.elevationMax + 1f);
+        float cloudMaximum = 1f - cell.ViewElevation / (elevationMax + 1f);
 
         if (cellClimate.clouds > cloudMaximum) {
             cellClimate.moisture += cellClimate.clouds - cloudMaximum;
             cellClimate.clouds = cloudMaximum;
         }
 
-        HexDirection mainDispersalDirection = config.windDirection.Opposite();
+        HexDirection mainDispersalDirection = windDirection.Opposite();
 
-        float cloudDispersal = cellClimate.clouds * (1f / (5f + config.windStrength));
-        float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
-        float seepage = cellClimate.moisture * config.seepageFactor * (1f / 6f);
+        float cloudDispersal = cellClimate.clouds * (1f / (5f + windStrength));
+        float runoff = cellClimate.moisture * runoffFactor * (1f / 6f);
+        float seepage = cellClimate.moisture * seepageFactor * (1f / 6f);
 
         for (
             HexDirection direction = HexDirection.Northeast;
@@ -573,7 +856,7 @@ public class MapGenerator
             ClimateData neighborClimate = _climate[neighbor.Index];
 
             if (direction == mainDispersalDirection) {
-                neighborClimate.clouds += cloudDispersal * config.windStrength;
+                neighborClimate.clouds += cloudDispersal * windStrength;
             }
             else {
                 neighborClimate.clouds += cloudDispersal;
@@ -614,13 +897,16 @@ public class MapGenerator
     }
 
     private void GenerateRivers(
-        RootGenConfig config,
         HexGrid grid,
-        int numLandCells
+        int numLandCells,
+        int waterLevel,
+        int elevationMax,
+        int riverPercentage,
+        float extraLakeProbability
     ) {
         List<HexCell> riverOrigins = ListPool<HexCell>.Get();
 
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numLandCells; i++) {
             HexCell cell = grid.GetCell(i);
 
             if (cell.IsUnderwater) {
@@ -629,8 +915,8 @@ public class MapGenerator
 
             ClimateData data = _climate[i];
             float weight =
-                data.moisture * (cell.Elevation - config.waterLevel) /
-                (config.elevationMax - config.waterLevel);
+                data.moisture * (cell.Elevation - waterLevel) /
+                (elevationMax - waterLevel);
 
             if (weight > 0.75) {
                 riverOrigins.Add(cell);
@@ -646,7 +932,7 @@ public class MapGenerator
             }
         }
 
-        int riverBudget = Mathf.RoundToInt(numLandCells * config.riverPercentage * 0.01f);
+        int riverBudget = Mathf.RoundToInt(numLandCells * riverPercentage * 0.01f);
 
         while (riverBudget > 0 && riverOrigins.Count > 0) {
             int index = Random.Range(0, riverOrigins.Count);
@@ -672,7 +958,7 @@ public class MapGenerator
                 }
 
                 if (isValidOrigin) {
-                    riverBudget -= GenerateRiver(config, origin);
+                    riverBudget -= GenerateRiver(origin, extraLakeProbability);
                 }
             }
         }
@@ -684,7 +970,7 @@ public class MapGenerator
         ListPool<HexCell>.Add(riverOrigins);
     }
 
-    private int GenerateRiver(RootGenConfig config, HexCell origin) {
+    private int GenerateRiver(HexCell origin, float extraLakeProbability) {
         int length = 1;
         HexCell cell = origin;
         HexDirection direction = HexDirection.Northeast;
@@ -763,7 +1049,7 @@ public class MapGenerator
 
             if (
                 minNeighborElevation >= cell.Elevation &&
-                Random.value < config.extraLakeProbability
+                Random.value < extraLakeProbability
             ) {
                 cell.WaterLevel = cell.Elevation;
                 cell.Elevation -= 1;
@@ -812,159 +1098,34 @@ public class MapGenerator
         return target;
     }
 
-    private int RaiseTerrain(
-        RootGenConfig config, 
-        HexGrid grid, 
-        int chunkSize, 
-        int budget, 
-        MapRegion region
+    private void SetTerrainTypes(
+        int elevationMax,
+        int waterLevel,
+        int numCells,
+        HemisphereMode hemisphereMode,
+        float temperatureJitter,
+        float lowTemperature,
+        float highTemperature,
+        HexGrid grid
     ) {
-        _searchFrontierPhase += 1;
-        HexCell firstCell = GetRandomCell(grid, region);
-        firstCell.SearchPhase = _searchFrontierPhase;
-        firstCell.Distance = 0;
-        firstCell.SearchHeuristic = 0;
-        _searchFrontier.Enqueue(firstCell);
-
-        HexCoordinates center = firstCell.Coordinates;
-
-        int rise = Random.value < config.highRiseProbability ? 2 : 1;
-        int size = 0;
-
-        while (size < chunkSize && _searchFrontier.Count > 0) {
-            HexCell current = _searchFrontier.Dequeue();
-            int originalElevation = current.Elevation;
-            int newElevation = originalElevation + rise;
-
-            if (newElevation > config.elevationMax) {
-                continue;
-            }
-
-            current.Elevation = newElevation;
-
-            if (
-                originalElevation < config.waterLevel &&
-                newElevation >= config.waterLevel &&
-                --budget == 0
-            ) {
-                break;
-            }
-
-            size += 1;
-
-            for (
-                HexDirection direction = HexDirection.Northeast;
-                direction <= HexDirection.Northwest;
-                direction++
-            ) {
-                HexCell neighbor = current.GetNeighbor(direction);
-                if (neighbor && neighbor.SearchPhase < _searchFrontierPhase) {
-                    neighbor.SearchPhase = _searchFrontierPhase;
-
-                    /* Set the distance to be the distance from the center of the
-                        * raised terrain chunk, so that cells closer to the center are
-                        * prioritized when raising terrain.
-                        */
-                    neighbor.Distance = neighbor.Coordinates.DistanceTo(center);
-
-                    /* Set the search heuristic to 1 or 0 based on a configurable
-                        * jitter probability, to cause perturbation in the cells which
-                        * are selected to be raised. This will make the chunks generated
-                        * less uniform.
-                        */
-                    neighbor.SearchHeuristic = 
-                        Random.value < config.jitterProbability ? 1 : 0;
-
-                    _searchFrontier.Enqueue(neighbor);
-                }
-            }
-        }
-
-        _searchFrontier.Clear();
-
-        return budget;
-    }
-
-    int SinkTerrain(
-        RootGenConfig config,
-        HexGrid grid,
-        int chunkSize,
-        int budget,
-        MapRegion region
-    ) {
-        _searchFrontierPhase += 1;
-        HexCell firstCell = GetRandomCell(grid, region);
-        firstCell.SearchPhase = _searchFrontierPhase;
-        firstCell.Distance = 0;
-        firstCell.SearchHeuristic = 0;
-        _searchFrontier.Enqueue(firstCell);
-
-        HexCoordinates center = firstCell.Coordinates;
-
-        int sink = Random.value < config.highRiseProbability ? 2 : 1;
-        int size = 0;
-
-        while (size < chunkSize && _searchFrontier.Count > 0) {
-            HexCell current = _searchFrontier.Dequeue();
-            int originalElevation = current.Elevation;
-
-            int newElevation = current.Elevation - sink;
-
-            if (newElevation < config.elevationMin) {
-                continue;
-            }
-
-            current.Elevation = newElevation;
-
-            if (
-                originalElevation >= config.waterLevel &&
-                newElevation < config.waterLevel
-            ) {
-                budget += 1;
-            }
-
-            size += 1;
-
-            for (
-                HexDirection direction = HexDirection.Northeast;
-                direction <= HexDirection.Northwest;
-                direction++
-            ) {
-                HexCell neighbor = current.GetNeighbor(direction);
-                if (neighbor && neighbor.SearchPhase < _searchFrontierPhase)
-                {
-                    neighbor.SearchPhase = _searchFrontierPhase;
-
-                    /* Set the distance to be the distance from the center of the
-                        * raised terrain chunk, so that cells closer to the center are
-                        * prioritized when raising terrain.
-                        */
-                    neighbor.Distance = neighbor.Coordinates.DistanceTo(center);
-
-                    /* Set the search heuristic to 1 or 0 based on a configurable
-                        * jitter probability, to cause perturbation in the cells which
-                        * are selected to be raised. This will make the chunks generated
-                        * less uniform.
-                        */
-                    neighbor.SearchHeuristic =
-                        Random.value < config.jitterProbability ? 1 : 0;
-                    _searchFrontier.Enqueue(neighbor);
-                }
-            }
-        }
-
-        _searchFrontier.Clear();
-        return budget;
-    }
-
-    private void SetTerrainTypes(RootGenConfig config, HexGrid grid) {
         _temperatureJitterChannel = Random.Range(0, 4);
         int rockDesertElevation =
-            config.elevationMax - (config.elevationMax - config.waterLevel) / 2;
+            elevationMax - (elevationMax - waterLevel) / 2;
 
-        for (int i = 0; i < _cellCount; i++) {
+        for (int i = 0; i < numCells; i++) {
             HexCell cell = grid.GetCell(i);
-            float temperature = GenerateTemperature(config, grid, cell);
+
+            float temperature = GenerateTemperature(
+                grid,
+                cell,
+                hemisphereMode,
+                waterLevel,
+                elevationMax,
+                temperatureJitter,
+                lowTemperature,
+                highTemperature
+            );
+
             float moisture = _climate[i].moisture;
 
             if (!cell.IsUnderwater) {
@@ -991,7 +1152,7 @@ public class MapGenerator
                         cellBiome.terrain = 3;
                     }
                 }
-                else if (cell.Elevation == config.elevationMax) {
+                else if (cell.Elevation == elevationMax) {
                     cellBiome.terrain = 4;
                 }
 
@@ -1009,7 +1170,7 @@ public class MapGenerator
             else {
                 int terrain;
 
-                if (cell.Elevation == config.waterLevel - 1) {
+                if (cell.Elevation == waterLevel - 1) {
                     int cliffs = 0;
                     int slopes = 0;
 
@@ -1054,7 +1215,7 @@ public class MapGenerator
                         terrain = 1;
                     }
                 }
-                else if (cell.Elevation >= config.waterLevel) {
+                else if (cell.Elevation >= waterLevel) {
                     terrain = 1;
                 }
                 else if (cell.Elevation < 0) {
@@ -1077,91 +1238,356 @@ public class MapGenerator
     }
 
     private float GenerateTemperature(
-        RootGenConfig config, 
         HexGrid grid, 
-        HexCell cell
+        HexCell cell,
+        HemisphereMode hemisphere,
+        int waterLevel,
+        int elevationMax,
+        float temperatureJitter,
+        float lowTemperature,
+        float highTemperature
     ) {
         float latitude = (float)cell.Coordinates.Z / grid.CellCountZ;
 
-        if (config.hemisphere == HemisphereMode.Both) {
+        if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
 
             if (latitude > 1f) {
                 latitude = 2f - latitude;
             }
         }
-        else if (config.hemisphere == HemisphereMode.North) {
+        else if (hemisphere == HemisphereMode.North) {
             latitude = 1f - latitude;
         }
 
         float temperature =
             Mathf.LerpUnclamped(
-                config.lowTemperature,
-                config.highTemperature,
+                lowTemperature,
+                highTemperature,
                 latitude
             );
 
         temperature *= 
             1f - 
-            (cell.ViewElevation - config.waterLevel) /
-            (config.elevationMax - config.waterLevel + 1f);
+            (cell.ViewElevation - waterLevel) /
+            (elevationMax - waterLevel + 1f);
 
         float jitter =
             HexMetrics.SampleNoise(cell.Position * 0.1f)[_temperatureJitterChannel];
 
-        temperature += (jitter * 2f - 1f) * config.temperatureJitter;
+        temperature += (jitter * 2f - 1f) * temperatureJitter;
 
         return temperature;
     }
 
-    private HexCell GetRandomCell(HexGrid grid, MapRegion region)
+    private HexCell GetRandomCell(HexGrid grid, MapRegionRect region)
     {
-        return grid.GetCell(Random.Range(region.xMin, region.xMax), Random.Range(region.zMin, region.zMax));
+        return grid.GetCell(
+            Random.Range(region.OffsetXMin, region.OffsetXMax),
+            Random.Range(region.OffsetZMin, region.OffsetZMax)
+        );
     }
 
-    private void VisualizeRiverOrigins(RootGenConfig config, HexGrid grid)
-    {
-        for (int i = 0; i < _cellCount; i++)
-        {
+    private void VisualizeRiverOrigins(
+        HexGrid grid,
+        int cellCount,
+        int waterLevel,
+        int elevationMax
+    ) {
+        for (int i = 0; i < cellCount; i++) {
             HexCell cell = grid.GetCell(i);
 
-            float data = _climate[i].moisture * (cell.Elevation - config.waterLevel) /
-                            (config.elevationMax - config.waterLevel);
+            float data = _climate[i].moisture * (cell.Elevation - waterLevel) /
+                            (elevationMax - waterLevel);
 
-            if (data > 0.75f)
-            {
+            if (data > 0.75f) {
                 cell.SetMapData(1f);
             }
-            else if (data > 0.5f)
-            {
+            else if (data > 0.5f) {
                 cell.SetMapData(0.5f);
             }
-            else if (data > 0.25f)
-            {
+            else if (data > 0.25f) {
                 cell.SetMapData(0.25f);
             }
         }
     }
 
-    private struct MapRegion {
-        public int xMin;
-        public int xMax;
-        public int zMin;
-        public int zMax;
-    }
+/// <summary>
+/// Struct defining the bounds of a rectangular map region.
+/// </summary>
+    private struct MapRegionRect {
+        private int _offsetXMin;
+        private int _offsetXMax;
+        private int _offsetZMin;
+        private int _offsetZMax;
 
-    private struct ClimateData {
-        public float clouds;
-        public float moisture;
-    }
+/// <summary>
+/// The minimum X axis offset coordinate in the region.
+/// </summary>
+/// <value>
+///     The provided value if <= OffsetXMax, otherwise
+///     OffsetXMax.
+/// </value>
+        public int OffsetXMin {
+            get { return _offsetXMin; }
+            set {
+                if (value < 0) {
+                    _offsetXMin = 0;
+                }
+                else {
+                    _offsetXMin = value <= _offsetXMax ?
+                        value : _offsetXMax;
+                }
+            } 
+        }
 
-    private struct Biome {
-        public int terrain;
-        public int plant;
+/// <summary>
+/// The maximum X axis offset coordinate in the region.
+/// </summary>
+/// <value>
+///     The provided value if >= OffsetXMin, otherwise
+///     OffsetXMin.
+/// </value>
+        public int OffsetXMax {
+            get { return _offsetXMax; }
+            set {
+                _offsetXMin = value >= _offsetXMin ?
+                    value : _offsetXMin;
+            }
+        }
 
-        public Biome(int terrain, int plant) {
-            this.terrain = terrain;
-            this.plant = plant;
+/// <summary>
+/// The minimum Z axis offset coordinate in the region.
+/// </summary>
+/// <value>
+///     The provided value if <= OffsetZMax,
+///     otherwise OffsetZMax.
+/// </value>
+        public int OffsetZMin {
+            get { return _offsetZMin; }
+            set {
+                if (value < 0) {
+                    _offsetZMin = 0;
+                }
+                else {
+                    _offsetZMin = value <= _offsetZMax ?
+                        value : _offsetZMax;
+                }
+            }
+        }
+
+/// <summary>
+/// The maximum Z axis offset coordinate in the region.
+/// </summary>
+/// <value>
+///     The provided value if >= than OffsetZMin, otherwise
+///     OffsetZMin.
+/// </value>
+        public int OffsetZMax {
+            get { return _offsetZMax; }
+            set {
+                _offsetZMax = value >= _offsetZMin ?
+                    value : _offsetZMin;
+            }
+        }
+
+/// <summary>
+/// The area of the region using offset coordinates.
+/// </summary>
+        public int OffsetArea {
+            get {
+                return OffsetSizeX * OffsetSizeZ;
+            }
+        }
+
+/// <summary>
+/// The size of the region along the x axis using offset coordinates.
+/// </summary>
+        public int OffsetSizeX {
+            get {
+                return (OffsetXMax - OffsetXMin);
+            }
+        }
+
+/// <summary>
+/// The size of the region along the z axis using offset coordinates.
+/// </summary>
+        public int OffsetSizeZ {
+            get {
+                return (OffsetZMax - OffsetZMin);
+            }
+        }
+
+/// <summary>
+/// The middle offset coordinate along the x axis.
+/// </summary>
+        public int OffsetXCenter {
+            get {
+                return
+                    OffsetXMin + (OffsetSizeX / 2);
+            }
+        }
+
+/// <summary>
+/// The middle offset coordinate along the z axis.
+/// </summary>
+        public int OffsetZCenter {
+            get {
+                return
+                    OffsetZMin + (OffsetSizeZ / 2);
+            }
+        }
+
+        public override string ToString() {
+            return 
+                "xMin: " + _offsetXMin +
+                ", xMax: " + _offsetXMax + 
+                ", zMin: " + _offsetZMin +
+                ", zMax: " + _offsetZMax; 
+        }
+
+/// <summary>
+/// Constructor.
+/// </summary>
+/// <param name="offsetXMin">
+///     The minimum X axis offset coordinate of the region.
+///     Will be set to offsetXMax if greater than offsetXMax.
+///     If set to a negative value, will be set to 0.
+/// </param>
+/// <param name="offsetXMax">
+///     The maximum X axis offset coordinate of the region.
+///     Will be set to offsetXMin if less than offsetXMin.
+/// </param>
+/// <param name="offsetZMin">
+///     The minimum Z axis offset coordinate of the region.
+///     Will be set ot offsetZMax is greater than offsetZMax.
+///     if set to a negative value, will be set to 0.
+/// </param>
+/// <param name="offsetZMax">
+///     The maximum Z axis offset coordinate of the region.
+///     Will be set of offsetZMin if greater than offsetZMin.
+/// </param>
+        public MapRegionRect(
+            int offsetXMin,
+            int offsetXMax,
+            int offsetZMin,
+            int offsetZMax
+        ) {
+            offsetXMin = offsetXMin < 0 ? 0 : offsetXMin;
+            offsetZMin = offsetXMin < 0 ? 0 : offsetZMin;
+
+            _offsetXMin =
+                offsetXMin <= offsetXMax ? 
+                offsetXMin : offsetXMax;
+
+            _offsetXMax =
+                offsetXMax >= offsetXMin ?
+                offsetXMax : offsetXMin;
+
+            _offsetZMin =
+                offsetZMin <= offsetZMax ?
+                offsetZMin : offsetZMax;
+
+            _offsetZMax =
+                offsetZMax >= offsetZMin ?
+                offsetZMax : offsetZMin;
+        }
+
+/// <summary>
+/// Subdivide the border along the z axis.
+/// </summary>
+/// <param name="border">
+///     (Optional) place a border between the two regions. If border is
+///     greater than or equal to the size of the X dimension, border will be
+///     set to the x dimension - 2.
+/// </param>
+/// <returns></returns>
+        public List<MapRegionRect> SubdivideHorizontal(int border = 0) {
+            if (this.OffsetSizeX - border < 3) {
+                RootLog.Log(
+                    "Border cannot reduce x dimension below 3 or divison will" +
+                    " be impossible. Setting border to 0.",
+                    Severity.Debug,
+                    "MapGenerator"
+                );
+
+                border = 0;
+            }
+
+            List<MapRegionRect> result = new List<MapRegionRect>();
+
+            result.Add(
+                new MapRegionRect(
+                    this.OffsetXMin,
+                    this.OffsetXMax,
+                    this.OffsetZMin,
+                    this.OffsetZCenter - border
+                )
+            );
+
+            result.Add(
+                new MapRegionRect(
+                    this.OffsetXMin,
+                    this.OffsetXMax,
+                    this.OffsetZCenter + border,
+                    this.OffsetZMax
+                )
+            );
+
+            return result;
+        }
+
+        public List<MapRegionRect> SubdivideVertical(int border = 0) {
+            if (this.OffsetSizeZ - border < 3) {
+                RootLog.Log(
+                    "Border cannot reduce z dimension below 3 or divison will" +
+                    " be impossible. Setting border to 0.",
+                    Severity.Debug,
+                    "MapGenerator"
+                );
+
+                border = 0;
+            }
+
+            List<MapRegionRect> result = new List<MapRegionRect>();
+
+            result.Add(
+                new MapRegionRect(
+                    this.OffsetXMin,
+                    this.OffsetXCenter - border,
+                    this.OffsetZMin,
+                    this.OffsetZMax
+                )
+            );
+
+            result.Add(
+                new MapRegionRect(
+                    this.OffsetXCenter + border,
+                    this.OffsetXMax,
+                    this.OffsetZMin,
+                    this.OffsetZMax
+                )
+            );
+
+            return result;
         }
     }
-}
+
+        private struct ClimateData {
+            public float clouds;
+            public float moisture;
+        }
+
+        private struct Biome {
+            public int terrain;
+            public int plant;
+
+            public Biome(int terrain, int plant) {
+                this.terrain = terrain;
+                this.plant = plant;
+            }
+        }
+    }
+
+    
+

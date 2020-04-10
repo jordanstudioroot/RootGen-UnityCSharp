@@ -34,9 +34,8 @@ public class RootGen {
 /// <returns>
 ///     A HexGrid generated according to the config settings.
 /// </returns>
-    public HexGrid GenerateMap(object source, RootGenConfig config) {
+    public HexGrid GenerateMap(RootGenConfig config) {
         Destroy.DestroyAll<HexGrid>();
-
         HexGrid result = _mapGenerator.GenerateMap(config);
         HexGridCamera.AttachCamera(result);
         return result;
@@ -44,7 +43,6 @@ public class RootGen {
 
     public HexGrid GenerateHistoricalBoard(int width, int height) {
         Destroy.DestroyAll<HexGrid>();
-
         HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
         HexGridCamera.AttachCamera(result);
         return result;

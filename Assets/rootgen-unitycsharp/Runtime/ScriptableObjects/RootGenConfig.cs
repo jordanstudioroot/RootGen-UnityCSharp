@@ -52,8 +52,8 @@ public class RootGenConfig : ScriptableObject
     [Range(0, 10)]
     public int regionBorder = 5;
 
-    [Range(1, 4)]
-    public int regionCount = 1;
+    [Range(1, 9999)]
+    public int numRegions = 1;
 
     [Range(0, 100)]
     public int erosionPercentage = 50;
