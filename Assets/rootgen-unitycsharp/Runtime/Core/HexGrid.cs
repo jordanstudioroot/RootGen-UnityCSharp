@@ -146,10 +146,15 @@ public class HexGrid : MonoBehaviour
         get { return _currentPathExists; }
     }
 
-    public void Initialize(int x, int z, bool wrapping) {
+    public void Initialize(
+        int x,
+        int z,
+        bool wrapping,
+        float cellOuterRadius
+    ) {
         if (
-            x < HexMetrics.chunkSizeX || x % HexMetrics.chunkSizeX != 0 ||
-            z < HexMetrics.chunkSizeZ || z % HexMetrics.chunkSizeZ != 0
+            x < HexagonPoint.chunkSizeX || x % HexagonPoint.chunkSizeX != 0 ||
+            z < HexagonPoint.chunkSizeZ || z % HexagonPoint.chunkSizeZ != 0
         ) {
             RootLog.Log(
                 "Unsupported or empty map size. Setting map size to minimum " +
@@ -157,8 +162,8 @@ public class HexGrid : MonoBehaviour
                 Severity.Debug,
                 "HexGrid"
             );
-            x = HexMetrics.chunkSizeX;
-            z = HexMetrics.chunkSizeZ;
+            x = HexagonPoint.chunkSizeX;
+            z = HexagonPoint.chunkSizeZ;
         }
 
         ClearPath();
@@ -177,19 +182,19 @@ public class HexGrid : MonoBehaviour
 
         // Set to -1 so new maps always gets centered.
         _currentCenterColumnIndex = -1;
-        HexMetrics.wrapSize = wrapping ? _cellCountX : 0;
+        HexagonPoint.wrapSize = wrapping ? _cellCountX : 0;
 
-        _chunkCountX = _cellCountX / HexMetrics.chunkSizeX;
-        _chunkCountZ = _cellCountZ / HexMetrics.chunkSizeZ;
+        _chunkCountX = _cellCountX / HexagonPoint.chunkSizeX;
+        _chunkCountZ = _cellCountZ / HexagonPoint.chunkSizeZ;
         _cellShaderData.Initialize(_cellCountX, _cellCountZ);
 
-        CreateChunks();
-        InitializeCells(x, z);
+        CreateChunks(cellOuterRadius);
+        InitializeCells(x, z, cellOuterRadius);
     }
 
-    public HexCell GetCell(Vector3 position) {
+    public HexCell GetCell(Vector3 position, float outerCellRadius) {
         position = transform.InverseTransformPoint(position);
-        HexCoordinates coordinates = HexCoordinates.FromPosition(position);
+        HexCoordinates coordinates = HexCoordinates.FromPosition(position, outerCellRadius);
         return GetCell(coordinates);
     }
 
@@ -211,11 +216,11 @@ public class HexGrid : MonoBehaviour
         return _hexCells[x + z * _cellCountX];
     }
 
-    public HexCell GetCell(Ray ray) {
+    public HexCell GetCell(Ray ray, float outerRadius) {
         RaycastHit hit;
         
         if (Physics.Raycast(ray, out hit)) {
-            return GetCell(hit.point);
+            return GetCell(hit.point, outerRadius);
         }
 
         return null;
@@ -319,10 +324,12 @@ public class HexGrid : MonoBehaviour
     }
 
 
-    public void CenterMap(float xPosition) {
+    public void CenterMap(float xPosition, float cellOuterRadius) {
+        float innerDiameter = 
+            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
         // Get the column index which the x axis coordinate is over.
         int centerColumnIndex =
-            (int) (xPosition / (HexMetrics.innerDiameter * HexMetrics.chunkSizeX));
+            (int) (xPosition / (innerDiameter * HexagonPoint.chunkSizeX));
 
         if (centerColumnIndex == _currentCenterColumnIndex) {
             return;
@@ -339,11 +346,11 @@ public class HexGrid : MonoBehaviour
         for (int i = 0; i < _columns.Length; i++) {
             if (i < minColumnIndex) {
                 position.x = _chunkCountX *
-                                (HexMetrics.innerDiameter * HexMetrics.chunkSizeX);
+                                (innerDiameter * HexagonPoint.chunkSizeX);
             }
             else if (i > maxColumnIndex) {
                 position.x = _chunkCountX *
-                                -(HexMetrics.innerDiameter * HexMetrics.chunkSizeX);
+                                -(innerDiameter * HexagonPoint.chunkSizeX);
             }
             else {
                 position.x = 0f;
@@ -595,7 +602,7 @@ public class HexGrid : MonoBehaviour
         return visibleCells;
     }
 
-    private void CreateChunks()
+    private void CreateChunks(float cellOuterRadius)
     {
         _columns = new Transform[_chunkCountX];
 
@@ -611,13 +618,14 @@ public class HexGrid : MonoBehaviour
         {
             for (int x = 0; x < _chunkCountX; x++)
             {
-                HexGridChunk chunk = _chunks[i++] = HexGridChunk.GetChunk();
+                HexGridChunk chunk = _chunks[i++] =
+                    HexGridChunk.GetChunk(cellOuterRadius);
                 chunk.transform.SetParent(_columns[x], false);
             }
         }
     }
 
-    private void InitializeCells(int width, int height)
+    private void InitializeCells(int width, int height, float cellOuterRadius)
     {
         _hexCells = new HexCell[width * height];
 
@@ -625,32 +633,36 @@ public class HexGrid : MonoBehaviour
         {
             for (int x = 0; x < _cellCountX; x++)
             {
-                InitializeCell(x, z, i++);
+                InitializeCell(x, z, i++, cellOuterRadius);
             }
         }
     }
     
-    private void InitializeCell(int x, int z, int i)
+    private void InitializeCell(int x, int z, int i, float cellOuterRadius)
     {
         Vector3 position;
+        float innerDiameter =
+            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
-        /*The distance between the center of two hexagons on the x axis is equal to twice the inner radius 
-        * of a given hexagon. Additionally, half of the cells position on the z axis (cartesian y axis)
-        * is added to its position on the x axis as an offset, and the integer division of the cells
-        * position on the z axis is subtracted from that value. For even rows this negates the offset.
-        * For odd rows, the integer is rounded down and the offset is retained.*/
-        position.x = (x + z * 0.5f - z / 2) * HexMetrics.innerDiameter;
+// The distance between the center of two hexagons on the x axis is equal to
+// twice the inner radius of a given hexagon. Additionally, for half of the
+// cells, the position on the z axis (cartesian y axis) is added to its position
+// on the x axis as an offset, and the integer division of the position of
+// the cell on the z axis is subtracted from that value. For even rows this
+// negates the offset. For odd rows, the integer is rounded down and the offset
+// is retained.
+        position.x = (x + z * 0.5f - z / 2) * innerDiameter;
         position.y = 0f;
 
-        /*The distance between the center of two hexagons on the z axis (cartesian y axis) is equal to
-        * one and one half the outer radius of a given hexagon.*/
-        position.z = z * (HexMetrics.outerRadius * 1.5f);
+// The distance between the center of two hexagons on the z axis (cartesian y axis) is equal to
+// one and one half the outer radius of a given hexagon.*/
+        position.z = z * (cellOuterRadius * 1.5f);
 
         HexCell cell = _hexCells[i] = HexCell.GetCell();
         cell.transform.localPosition = position;
         cell.Coordinates = HexCoordinates.AsAxialCoordinates(x, z);
         cell.Index = i;
-        cell.ColumnIndex = x / HexMetrics.chunkSizeX;
+        cell.ColumnIndex = x / HexagonPoint.chunkSizeX;
         cell.ShaderData = _cellShaderData;
 
         if (_wrapping)
@@ -725,26 +737,26 @@ public class HexGrid : MonoBehaviour
         Text label = Instantiate<Text>(_cellLabelPrefab);
         label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
         cell.uiRect = label.rectTransform;
-        cell.Elevation = 0;
+        cell.SetElevation(0, cellOuterRadius);
 
         AddCellToChunk(x, z, cell);
     }
 
     private void AddCellToChunk(int x, int z, HexCell cell)
     {
-        int chunkX = x / HexMetrics.chunkSizeX;
-        int chunkZ = z / HexMetrics.chunkSizeZ;
+        int chunkX = x / HexagonPoint.chunkSizeX;
+        int chunkZ = z / HexagonPoint.chunkSizeZ;
         HexGridChunk chunk = _chunks[chunkX + chunkZ * _chunkCountX];
 
-        int localX = x - chunkX * HexMetrics.chunkSizeX;
-        int localZ = z - chunkZ * HexMetrics.chunkSizeZ;
+        int localX = x - chunkX * HexagonPoint.chunkSizeX;
+        int localZ = z - chunkZ * HexagonPoint.chunkSizeZ;
 
-        chunk.AddCell(localX + localZ * HexMetrics.chunkSizeX, cell);
+        chunk.AddCell(localX + localZ * HexagonPoint.chunkSizeX, cell);
     }
 
     private void Awake()
     {
-        HexMetrics.InitializeHashGrid(_seed);
+        HexagonPoint.InitializeHashGrid(_seed);
         _terrainMaterial = Resources.Load<Material>("Terrain");
         _cellShaderData = gameObject.AddComponent<CellShaderData>();
         _cellShaderData.HexGrid = this;
@@ -755,8 +767,8 @@ public class HexGrid : MonoBehaviour
 
     private void OnEnable()
     {
-        HexMetrics.InitializeHashGrid(_seed);
-        HexMetrics.wrapSize = _wrapping ? _cellCountX : 0;
+        HexagonPoint.InitializeHashGrid(_seed);
+        HexagonPoint.wrapSize = _wrapping ? _cellCountX : 0;
         ResetVisibility();
     }
 }

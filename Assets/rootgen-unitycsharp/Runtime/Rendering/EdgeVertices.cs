@@ -39,11 +39,11 @@ public struct EdgeVertices
         EdgeVertices result = new EdgeVertices();
 
         // Note that HexMetrics.TerraceLerp is being called. This method is not recursive.
-        result.vertex1 = HexMetrics.TerraceLerp(edgeA.vertex1, edgeB.vertex1, step);
-        result.vertex2 = HexMetrics.TerraceLerp(edgeA.vertex2, edgeB.vertex2, step);
-        result.vertex3 = HexMetrics.TerraceLerp(edgeA.vertex3, edgeB.vertex3, step);
-        result.vertex4 = HexMetrics.TerraceLerp(edgeA.vertex4, edgeB.vertex4, step);
-        result.vertex5 = HexMetrics.TerraceLerp(edgeA.vertex5, edgeB.vertex5, step);
+        result.vertex1 = HexagonPoint.TerraceLerp(edgeA.vertex1, edgeB.vertex1, step);
+        result.vertex2 = HexagonPoint.TerraceLerp(edgeA.vertex2, edgeB.vertex2, step);
+        result.vertex3 = HexagonPoint.TerraceLerp(edgeA.vertex3, edgeB.vertex3, step);
+        result.vertex4 = HexagonPoint.TerraceLerp(edgeA.vertex4, edgeB.vertex4, step);
+        result.vertex5 = HexagonPoint.TerraceLerp(edgeA.vertex5, edgeB.vertex5, step);
 
         return result;
     }

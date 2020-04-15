@@ -200,24 +200,24 @@ public class HexCell : MonoBehaviour
     public float StreamBedY {
         get {
             return
-                (_elevation + HexMetrics.streamBedElevationOffset) *
-                HexMetrics.elevationStep;
+                (_elevation + HexagonPoint.streamBedElevationOffset) *
+                HexagonPoint.elevationStep;
         }
     }
 
     public float RiverSurfaceY {
         get {
             return
-                (_elevation + HexMetrics.waterElevationOffset) *
-                HexMetrics.elevationStep;
+                (_elevation + HexagonPoint.waterElevationOffset) *
+                HexagonPoint.elevationStep;
         }
     }
 
     public float WaterSurfaceY {
         get {
             return
-                (_waterLevel + HexMetrics.waterElevationOffset) *
-                HexMetrics.elevationStep;
+                (_waterLevel + HexagonPoint.waterElevationOffset) *
+                HexagonPoint.elevationStep;
         }
     }
 
@@ -266,51 +266,47 @@ public class HexCell : MonoBehaviour
         }
     }
 
-    private Mesh InteractionMesh {
-        get {
-            Mesh result = new Mesh();
-            List<Vector3> verts = new List<Vector3>();
-            List<int> tris = new List<int>();
+    private Mesh GetInteractionMesh(float radius) {
+        Mesh result = new Mesh();
+        List<Vector3> verts = new List<Vector3>();
+        List<int> tris = new List<int>();
 
-            Vector3 center = this.transform.position;
-            Vector3 offset = (Vector3.up * .2f);
-            for (int i = 0; i < 6; i++) {
-                int index = verts.Count;
-                verts.Add(center + offset);
-                verts.Add(HexMetrics.corners[i] + offset);
-                verts.Add(HexMetrics.corners[i + 1] + offset);
+        Vector3 center = this.transform.position;
+        Vector3 offset = (Vector3.up * .2f);
+        for (int i = 0; i < 6; i++) {
+            int index = i * 3;
+            verts.Add(center + offset);
+            verts.Add(HexagonPoint.GetCorner(i, radius) + offset);
+            verts.Add(HexagonPoint.GetCorner(i + 1, radius) + offset);
 
-                tris.Add(index);
-                tris.Add(index + 1);
-                tris.Add(index + 2);
-            }
-            
-            result.Clear();
-            result.vertices = verts.ToArray();
-            result.triangles = tris.ToArray();
-
-            return result;
+            tris.Add(index);
+            tris.Add(index + 1);
+            tris.Add(index + 2);
         }
+        
+        result.Clear();
+        result.vertices = verts.ToArray();
+        result.triangles = tris.ToArray();
+
+        return result;
     }
 
-    public bool InteractionMeshEnabled {
-        set {
-            MeshCollider col;
-            if (col = this.GetComponent<MeshCollider>()) {
-                if (value) {
-                    col.enabled = true;
-                }
-                else {
-                    col.enabled = false;
-                }
+    public void SetEnabledInteractionMesh(bool enabled, float outerRadius) {
+        MeshCollider colldier;
+        if (colldier = this.GetComponent<MeshCollider>()) {
+            if (enabled) {
+                colldier.enabled = true;
             }
             else {
-                Mesh mesh = InteractionMesh;
-                col = this.gameObject.AddComponent<MeshCollider>();
-                col.sharedMesh = mesh;
-                if (!value) {
-                    col.enabled = false;   
-                }
+                colldier.enabled = false;
+            }
+        }
+        else {
+            Mesh mesh = GetInteractionMesh(outerRadius);
+            colldier = this.gameObject.AddComponent<MeshCollider>();
+            colldier.sharedMesh = mesh;
+            if (!enabled) {
+                colldier.enabled = false;   
             }
         }
     }
@@ -319,21 +315,22 @@ public class HexCell : MonoBehaviour
         get {
             return _elevation;
         }
+    }
 
-        set {
-            if (Elevation == value) {
+    public void SetElevation(int elevation, float cellOuterRadius) {
+        if (_elevation == elevation) {
                 return;
             }
 
             int originalViewElevation = ViewElevation;
 
-            _elevation = value;
+            _elevation = elevation;
 
             if (ViewElevation != originalViewElevation) {
                 ShaderData.ViewElevationChanged();
             }
 
-            RefreshPosition();
+            RefreshPosition(cellOuterRadius);
             ValidateRivers();
 
             for (int i = 0; i < _roads.Length; i++) {
@@ -343,7 +340,6 @@ public class HexCell : MonoBehaviour
             }
 
             Refresh();
-        }
     }
 
     public int TerrainTypeIndex {
@@ -547,7 +543,7 @@ public class HexCell : MonoBehaviour
 * in the case where there is a neighbor.
 */
     public EdgeType GetEdgeType(HexDirection direction) {
-        return HexMetrics.GetEdgeType(Elevation, _neighbors[(int)direction].Elevation);
+        return HexagonPoint.GetEdgeType(Elevation, _neighbors[(int)direction].Elevation);
     }
 
     public void SetNeighborPair(HexDirection direction, HexCell cell) {
@@ -562,7 +558,7 @@ public class HexCell : MonoBehaviour
     }
 
     public EdgeType GetEdgeType(HexCell otherCell) {
-        return HexMetrics.GetEdgeType(Elevation, otherCell.Elevation);
+        return HexagonPoint.GetEdgeType(Elevation, otherCell.Elevation);
     }
 
     public bool HasRiverThroughEdge(HexDirection direction) {
@@ -735,7 +731,10 @@ public class HexCell : MonoBehaviour
 /* Fields must be read back in the same order they were written above.
 * Data structure could be made explicit with a Queue.
 */
-    public void Load(BinaryReader reader, int header) {
+    public void Load(
+        BinaryReader reader,
+        int header,
+        float cellOuterRadius) {
         _terrainTypeIndex = reader.ReadByte();
         ShaderData.RefreshTerrain(this);
         _elevation = reader.ReadByte();
@@ -745,7 +744,7 @@ public class HexCell : MonoBehaviour
             _elevation -= 127;
         }
 
-        RefreshPosition();
+        RefreshPosition(cellOuterRadius);
         _waterLevel = reader.ReadByte();
         _urbanLevel = reader.ReadByte();
         _farmLevel = reader.ReadByte();
@@ -830,7 +829,9 @@ public class HexCell : MonoBehaviour
     }
 
 // ~~ private
-    private void Awake() { InteractionMeshEnabled = true; }
+    private void Awake() {
+        //SetEnabledInteractionMesh(true);
+    }
     private void SetRoad(int index, bool state) {
         _roads[index] = state;
         _neighbors[index]._roads[(int)((HexDirection)index).Opposite()] = state;
@@ -901,13 +902,17 @@ public class HexCell : MonoBehaviour
         }
     }
 
-    private void RefreshPosition() {
+    private void RefreshPosition(float cellOuterRadius) {
         Vector3 position = transform.localPosition;
-        position.y = _elevation * HexMetrics.elevationStep;
+        position.y = _elevation * HexagonPoint.elevationStep;
 
         position.y +=
-            (HexMetrics.SampleNoise(position).y * 2f - 1f) *
-            HexMetrics.elevationPerturbStrength;
+            (
+                HexagonPoint.SampleNoise(
+                    position,
+                    cellOuterRadius
+                ).y * 2f - 1f
+            ) * HexagonPoint.elevationPerturbStrength;
 
         transform.localPosition = position;
 

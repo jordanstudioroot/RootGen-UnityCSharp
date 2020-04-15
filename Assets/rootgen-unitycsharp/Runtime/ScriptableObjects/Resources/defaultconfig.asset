@@ -17,6 +17,7 @@ MonoBehaviour:
   wrapping: 1
   useFixedSeed: 1
   seed: 1469630778
+  cellOuterRadius: 20
   jitterProbability: 0.25
   chunkSizeMin: 30
   chunkSizeMax: 100
@@ -29,7 +30,7 @@ MonoBehaviour:
   mapBorderX: 5
   mapBorderZ: 5
   regionBorder: 5
-  numRegions: 1
+  numRegions: 20
   erosionPercentage: 50
   evaporationFactor: 0.5
   precipitationFactor: 0.25
@@ -43,4 +44,4 @@ MonoBehaviour:
   lowTemperature: 0
   highTemperature: 1
   temperatureJitter: 0.236
-  hemisphere: 1
+  hemisphere: 0

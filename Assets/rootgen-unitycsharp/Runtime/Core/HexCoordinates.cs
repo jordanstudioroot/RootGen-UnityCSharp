@@ -40,7 +40,7 @@ public struct HexCoordinates
     public HexCoordinates(int x, int z)
     {
         
-        if (HexMetrics.Wrapping)
+        if (HexagonPoint.Wrapping)
         {
             /* Get offset x coordinate back from axial coordinates, and
                 * check if value is outside of the wrapping range and adjust
@@ -49,27 +49,30 @@ public struct HexCoordinates
 
             if (offsetX < 0)
             {
-                x += HexMetrics.wrapSize;
+                x += HexagonPoint.wrapSize;
             }
-            else if (offsetX >= HexMetrics.wrapSize)
+            else if (offsetX >= HexagonPoint.wrapSize)
             {
-                x -= HexMetrics.wrapSize;
+                x -= HexagonPoint.wrapSize;
             }
         }
         this.x = x;
         this.z = z;
     }
 
-    public static HexCoordinates FromPosition(Vector3 position)
+    public static HexCoordinates FromPosition(Vector3 position, float outerRadius)
     {
+        float innerDiameter =
+            HexagonPoint.GetOuterToInnerRadius(outerRadius) * 2f;
+            
         // Divide X by the horizontal width of a hexagon.
-        float x = position.x / HexMetrics.innerDiameter;
+        float x = position.x / innerDiameter;
 
         // The y axis is just the inverse of the x axis.
         float y = -x;
 
         //Shift every two rows one unit to the left.
-        float offset = position.z / (HexMetrics.outerRadius * 3f);
+        float offset = position.z / (outerRadius * 3f);
         x -= offset;
         y -= offset;
 
@@ -122,9 +125,9 @@ public struct HexCoordinates
             (x < other.x ? other.x - x : x - other.x) +
             (Y < other.Y ? other.Y - Y : Y - other.Y);
 
-        if (HexMetrics.Wrapping)
+        if (HexagonPoint.Wrapping)
         {
-            other.x += HexMetrics.wrapSize;
+            other.x += HexagonPoint.wrapSize;
             int xyWrapped =
                 (x < other.x ? other.x - x : x - other.x) +
                 (Y < other.Y ? other.Y - Y : Y - other.Y);
@@ -134,7 +137,7 @@ public struct HexCoordinates
             }
             else
             {
-                other.x -= 2 * HexMetrics.wrapSize;
+                other.x -= 2 * HexagonPoint.wrapSize;
                 xyWrapped =
                     (x < other.x ? other.x - x : x - other.x) +
                     (Y < other.Y ? other.Y - Y : Y - other.Y);

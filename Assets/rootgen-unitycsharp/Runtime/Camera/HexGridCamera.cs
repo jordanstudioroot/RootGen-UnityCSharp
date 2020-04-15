@@ -34,6 +34,13 @@ public class HexGridCamera : MonoBehaviour
     private float _zoom = 1f;
     private float _rotationAngle;
     private IEnumerator _steadyPan;
+// TODO: Temporariliy storing the outer radius
+//       of a given cell in a local variable,
+//       using reassignment to update it as a
+//       reference value for camera movement
+//       and constraining camera position.
+//       Need alternative approach to this.
+    private static float _cellOuterRadius;
 
 // CONSTRUCTORS ~~~~~~~~~~
 
@@ -179,8 +186,9 @@ public class HexGridCamera : MonoBehaviour
 // ~ Non-Static
 
 // ~~ public
-    public static void AttachCamera(HexGrid grid) {
+    public static void AttachCamera(HexGrid grid, float cellOuterRadius) {
         HexGridCamera resultMono;
+        _cellOuterRadius = cellOuterRadius;
 
         if (InstanceValidation.InstanceExists<HexGridCamera>()) {
             resultMono = InstanceValidation.GetFirstInstance<HexGridCamera>();
@@ -242,31 +250,48 @@ public class HexGridCamera : MonoBehaviour
                 resultMono.SetPosition(
                     grid,
                     grid.Center2D.transform.position.x,
-                    grid.Center2D.transform.position.z
+                    grid.Center2D.transform.position.z,
+                    cellOuterRadius
                 );
             }
         }
     }
 
-    public void ValidatePosition(HexGrid grid) {
-        AdjustPosition(grid, 0, 0);
+    public void ValidatePosition(HexGrid grid, float cellOuterRadius) {
+        AdjustPosition(grid, 0, 0, cellOuterRadius);
     }
 
-    public void StartSteadyPan(Vector3 direction, float seconds, float speed) {
+    public void StartSteadyPan(
+        Vector3 direction,
+        float seconds,
+        float speed,
+        float cellOuterRadius
+    ) {
         StopSteadyPan();
         _steadyPan =
             SteadyPanCoroutine(
                 _grid,
                 direction,
-                seconds,speed
+                seconds,speed,
+                cellOuterRadius
             );
 
         StartCoroutine(_steadyPan);
     }
 
-    public void StartEndlessSteadyPan(Vector3 direction, float speed) {
+    public void StartEndlessSteadyPan(
+        Vector3 direction,
+        float speed,
+        float cellOuterRadius
+    ) {
         StopSteadyPan();
-        _steadyPan = SteadyPanCoroutine(_grid, direction, -1, speed);
+        _steadyPan = SteadyPanCoroutine(
+            _grid,
+            direction,
+            -1,
+            speed,
+            cellOuterRadius
+        );
         StartCoroutine(_steadyPan);
     }
     
@@ -296,17 +321,17 @@ public class HexGridCamera : MonoBehaviour
 
     private void Update() {
         if (_grid)
-            ValidatePosition(_grid);
+            ValidatePosition(_grid, _cellOuterRadius);
         else
             return;           
 
         if (!SuspendInput) {
-            ProcessInput();
+            ProcessInput(_cellOuterRadius);
         }
         
     }
 
-    private void ProcessInput() {
+    private void ProcessInput(float cellOuterRadius) {
         float zoomDelta = Input.GetAxis("Mouse ScrollWheel");
 
         if (zoomDelta != 0f) {
@@ -323,7 +348,12 @@ public class HexGridCamera : MonoBehaviour
         float zDelta = Input.GetAxis("Vertical");
 
         if (xDelta != 0f || zDelta != 0f) {
-            AdjustPosition(_grid, xDelta, zDelta);
+            AdjustPosition(
+                _grid,
+                xDelta,
+                zDelta,
+                cellOuterRadius
+            );
         }
     }
 
@@ -337,7 +367,12 @@ public class HexGridCamera : MonoBehaviour
         _swivel.localRotation = Quaternion.Euler(angle, 0f, 0f);
     }
 
-    private void AdjustPosition(HexGrid grid, float xDelta, float zDelta) {
+    private void AdjustPosition(
+        HexGrid grid,
+        float xDelta,
+        float zDelta,
+        float cellOuterRadius
+    ) {
 /* Multiply direction by rotation to point it in the direction of the rotation
 * and keep the users movement in line with the camera.
 */
@@ -351,10 +386,17 @@ public class HexGridCamera : MonoBehaviour
         Vector3 position = transform.localPosition;
         position += direction * distance;
         transform.localPosition = 
-            grid.Wrapping ? WrapPosition(grid, position) : ClampPosition(grid, position);
+            grid.Wrapping ?
+                WrapPosition(grid, position, cellOuterRadius) :
+                ClampPosition(grid, position, cellOuterRadius);
     }
 
-    public void SetPosition(HexGrid grid, float posX, float posZ) {
+    public void SetPosition(
+        HexGrid grid,
+        float posX,
+        float posZ,
+        float cellOuterRadius
+    ) {
         Vector3 position = new Vector3(
             posX,
             this.transform.localPosition.y,
@@ -362,25 +404,42 @@ public class HexGridCamera : MonoBehaviour
         );
 
         this.transform.localPosition =
-            grid.Wrapping ? WrapPosition(grid, position) : ClampPosition(grid, position);
+            grid.Wrapping ?
+                WrapPosition(grid, position, cellOuterRadius) :
+                ClampPosition(grid, position, cellOuterRadius);
     }
 
-    private Vector3 ClampPosition (HexGrid grid, Vector3 position) {
+    private Vector3 ClampPosition (
+        HexGrid grid,
+        Vector3 position,
+        float cellOuterRadius
+    ) {
+// Get inner diameter of a given cell.
+        float innerDiameter = 
+            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
+
         float xMax =
-            (grid.CellCountX - 0.5f) * HexMetrics.innerDiameter;
+            (grid.CellCountX - 0.5f) * innerDiameter;
 
         position.x = Mathf.Clamp(position.x, 0f, xMax);
 
         float zMax =
-            (grid.CellCountZ - 1) * (1.5f * HexMetrics.outerRadius);
+            (grid.CellCountZ - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
         return position;
     }
 
-    private Vector3 WrapPosition(HexGrid grid, Vector3 position) {
-        float width = grid.CellCountX * HexMetrics.innerDiameter;
+    private Vector3 WrapPosition(
+        HexGrid grid,
+        Vector3 position,
+        float cellOuterRadius
+    ) {
+        float innerDiameter = 
+            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
+
+        float width = grid.CellCountX * innerDiameter;
 
         while (position.x < 0f) {
             position.x += width;
@@ -391,11 +450,11 @@ public class HexGridCamera : MonoBehaviour
         }
 
         float zMax =
-            (grid.CellCountZ - 1) * (1.5f * HexMetrics.outerRadius);
+            (grid.CellCountZ - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
-        grid.CenterMap(position.x);
+        grid.CenterMap(position.x, cellOuterRadius);
         return position;
     }
 
@@ -416,7 +475,8 @@ public class HexGridCamera : MonoBehaviour
         HexGrid grid,
         Vector3 direction,
         float durationInSeconds,
-        float speed
+        float speed,
+        float cellOuterRadius
     ) {
         SuspendInput = true;
 
@@ -433,7 +493,12 @@ public class HexGridCamera : MonoBehaviour
                 Time.deltaTime * speed
             );
 
-            SetPosition(grid, newPos.x, newPos.z);
+            SetPosition(
+                grid,
+                newPos.x,
+                newPos.z,
+                cellOuterRadius
+            );
 
             elapsedSeconds += Time.deltaTime;
             durationInSeconds = Mathf.Infinity;

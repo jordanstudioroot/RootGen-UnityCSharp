@@ -4,13 +4,13 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 using RootLogging;
 using RootCollections;
+using RootUtils.Randomization;
 
 
 /// <summary>
 /// Class encapsulating the RootGen map generation algorithms.
 /// </summary>
-public class MapGenerator
-{
+public class MapGenerator {
 /// <summary>
 /// The number of land cells in the map.
 /// </summary>
@@ -143,7 +143,7 @@ public class MapGenerator
         int tileLimit
     ) {
         HexGrid result = HexGrid.GetGrid();
-        result.Initialize(width, height, true);
+        result.Initialize(width, height, true, 10f);
         int _cellCount = result.CellCountX * result.CellCountZ;
 
         for (int i = 0; i < _cellCount; i++) {
@@ -156,13 +156,13 @@ public class MapGenerator
 
         HexCell current = result.GetCell((height * width) / 2);
         constellation.Add(current);
-        current.Elevation = 2;
+        current.SetElevation(2, 10f);
         current.TerrainTypeIndex = terrainIndex;        
 
         foreach (HexCell neighbor in current.Neighbors) {
             constellation.Add(neighbor);
             neighbor.TerrainTypeIndex = terrainIndex;
-            neighbor.Elevation = 2;
+            neighbor.SetElevation(2, 10f);
         }
 
         List<HexCell> toGrow = GrowConstellation(
@@ -233,7 +233,7 @@ public class MapGenerator
         }
         else {
             constellation.Add(cell);
-            cell.Elevation = 2;
+            cell.SetElevation(2, 10f);
             cell.TerrainTypeIndex = terrainType;
         }
     }
@@ -249,33 +249,37 @@ public class MapGenerator
 /// </returns>
     public HexGrid GenerateMap(
         RootGenConfig config
-    ) {
+    ) {        
         HexGrid result = HexGrid.GetGrid();
 
-// Store the current random state to later restore it so that the
-// algorithm does not affect anything else using Random.
-// TODO:
-//      Create a new class or extension method that encapsulates this
-//      process.
-        Random.State originalRandomState = Random.state;
+        int seed;
 
-        if (!config.useFixedSeed) {
+        if (config.useFixedSeed) {
+            seed = config.seed;
+        }
+        else {
             config.seed = Random.Range(0, int.MaxValue);
             config.seed ^= (int)System.DateTime.Now.Ticks;
             config.seed ^= (int)Time.time;
             config.seed &= int.MaxValue;
+            seed = config.seed;
         }
 
-        Random.InitState(config.seed);
+// Snapshot the initial random state before consuming the random sequence.
+        Random.State snapshot = RandomState.Snapshot(seed);
 
-        result.Initialize(config.width, config.height, config.wrapping);
-        int numCells = result.NumCells;
+        result.Initialize(
+            config.width,
+            config.height,
+            config.wrapping,
+            config.cellOuterRadius
+        );
 
         if (_searchFrontier == null) {
             _searchFrontier = new CellPriorityQueue();
         }
 
-        for (int i = 0; i < numCells; i++) {
+        for (int i = 0; i < result.NumCells; i++) {
             result.GetCell(i).WaterLevel = config.waterLevel;
         }
 
@@ -289,7 +293,7 @@ public class MapGenerator
         
         int numLandCells = GetNumLandCells(
             config.landPercentage,
-            numCells,
+            result.NumCells,
             config.sinkProbability,
             config.chunkSizeMin,
             config.chunkSizeMax,
@@ -300,19 +304,21 @@ public class MapGenerator
             config.waterLevel,
             config.jitterProbability,
             _searchFrontier,
-            _searchFrontierPhase
+            _searchFrontierPhase,
+            config.cellOuterRadius
         );
 
         GenerateErosion(
             result,
             config.erosionPercentage,
-            numCells
+            result.NumCells,
+            config.cellOuterRadius
         );
 
         GenerateClimate(
             result,
             config.startingMoisture,
-            numCells,
+            result.NumCells,
             config.evaporationFactor,
             config.precipitationFactor,
             config.elevationMax,
@@ -328,29 +334,31 @@ public class MapGenerator
             config.waterLevel,
             config.elevationMax,
             config.riverPercentage,
-            config.extraLakeProbability
+            config.extraLakeProbability,
+            config.cellOuterRadius
         );
 
         SetTerrainTypes(
             config.elevationMax,
             config.waterLevel,
-            numCells,
+            result.NumCells,
             config.hemisphere,
             config.temperatureJitter,
             config.lowTemperature,
             config.highTemperature,
-            result
+            result,
+            config.cellOuterRadius
         );
 
-        /* Reset the search phase of all cells to avoid collisions
-            * with the World search algorithms.
-            */
-        for (int i = 0; i < numCells; i++) {
+// Reset the search phase of the cells in the HexGrid to avoid search errors.
+        for (int i = 0; i < result.NumCells; i++) {
             result.GetCell(i).SearchPhase = 0;
         }
 
-// Restore the original random state.
-        Random.state = originalRandomState;
+// Restore the snapshot of the random state taken before consuming the
+// random sequence.
+        Random.state = snapshot;
+
         return result;
     }
 
@@ -424,8 +432,6 @@ public class MapGenerator
             result.AddRange(temp);
             temp.Clear();
             i++;
-
-            RootLog.Log(result.Count.ToString());
         }
 
         return result;
@@ -444,7 +450,8 @@ public class MapGenerator
         int waterLevel,
         float jitterProbability,
         CellPriorityQueue searchFrontier,
-        int searchFrontierPhase
+        int searchFrontierPhase,
+        float cellOuterRadius
     ) {
         int landBudget = Mathf.RoundToInt(
             numCells * percentLand * 0.01f
@@ -469,7 +476,8 @@ public class MapGenerator
                         waterLevel,
                         jitterProbability,
                         searchFrontier,
-                        searchFrontierPhase
+                        searchFrontierPhase,
+                        cellOuterRadius
                     );
                 }
                 else {
@@ -481,7 +489,8 @@ public class MapGenerator
                         highRiseProbability,
                         elevationMax,
                         waterLevel,
-                        jitterProbability
+                        jitterProbability,
+                        cellOuterRadius
                     );
                     if (landBudget == 0) {
                         return result;
@@ -511,7 +520,8 @@ public class MapGenerator
         int waterLevel,
         float jitterProbability,
         CellPriorityQueue searchFrontier,
-        int searchFrontierPhase
+        int searchFrontierPhase,
+        float cellOuterRadius
     ) {
         searchFrontierPhase += 1;
         
@@ -543,7 +553,7 @@ public class MapGenerator
                 continue;
             }
 
-            current.Elevation = newElevation;
+            current.SetElevation(newElevation, cellOuterRadius);
 
             if (
                 originalElevation >= waterLevel &&
@@ -594,7 +604,8 @@ public class MapGenerator
         float highRiseProbability,
         int elevationMax,
         int waterLevel,
-        float jitterProbability
+        float jitterProbability,
+        float cellOuterRadius
     ) {
         _searchFrontierPhase += 1;
 
@@ -625,7 +636,7 @@ public class MapGenerator
                 continue;
             }
 
-            current.Elevation = newElevation;
+            current.SetElevation(newElevation, cellOuterRadius);
 
             if (
                 originalElevation < waterLevel &&
@@ -673,7 +684,8 @@ public class MapGenerator
     private void GenerateErosion(
         HexGrid grid,
         int erosionPercentage,
-        int numCells
+        int numCells,
+        float cellOuterRadius
 
     ) {
         List<HexCell> erodibleCells = ListPool<HexCell>.Get();
@@ -694,8 +706,11 @@ public class MapGenerator
             HexCell cell = erodibleCells[index];
             HexCell erosionRunoffTargetCell = GetErosionRunoffTarget(cell);
 
-            cell.Elevation -= 1;
-            erosionRunoffTargetCell.Elevation += 1;
+            cell.SetElevation(cell.Elevation - 1, cellOuterRadius);
+            erosionRunoffTargetCell.SetElevation(
+                erosionRunoffTargetCell.Elevation + 1,
+                cellOuterRadius
+            );
 
             if (!IsErodible(cell)) {
                 erodibleCells[index] = erodibleCells[erodibleCells.Count - 1];
@@ -902,7 +917,8 @@ public class MapGenerator
         int waterLevel,
         int elevationMax,
         int riverPercentage,
-        float extraLakeProbability
+        float extraLakeProbability,
+        float cellOuterRadius
     ) {
         List<HexCell> riverOrigins = ListPool<HexCell>.Get();
 
@@ -958,7 +974,11 @@ public class MapGenerator
                 }
 
                 if (isValidOrigin) {
-                    riverBudget -= GenerateRiver(origin, extraLakeProbability);
+                    riverBudget -= GenerateRiver(
+                        origin,
+                        extraLakeProbability,
+                        cellOuterRadius
+                    );
                 }
             }
         }
@@ -970,7 +990,11 @@ public class MapGenerator
         ListPool<HexCell>.Add(riverOrigins);
     }
 
-    private int GenerateRiver(HexCell origin, float extraLakeProbability) {
+    private int GenerateRiver(
+        HexCell origin,
+        float extraLakeProbability,
+        float cellOuterRadius
+    ) {
         int length = 1;
         HexCell cell = origin;
         HexDirection direction = HexDirection.Northeast;
@@ -1036,7 +1060,10 @@ public class MapGenerator
                     cell.WaterLevel = minNeighborElevation;
 
                     if (minNeighborElevation == cell.Elevation) {
-                        cell.Elevation = minNeighborElevation - 1;
+                        cell.SetElevation(
+                            minNeighborElevation - 1,
+                            cellOuterRadius
+                        );
                     }
                 }
 
@@ -1052,7 +1079,7 @@ public class MapGenerator
                 Random.value < extraLakeProbability
             ) {
                 cell.WaterLevel = cell.Elevation;
-                cell.Elevation -= 1;
+                cell.SetElevation(cell.Elevation - 1, cellOuterRadius);
             }
 
             cell = cell.GetNeighbor(direction);
@@ -1106,7 +1133,8 @@ public class MapGenerator
         float temperatureJitter,
         float lowTemperature,
         float highTemperature,
-        HexGrid grid
+        HexGrid grid,
+        float cellOuterRadius
     ) {
         _temperatureJitterChannel = Random.Range(0, 4);
         int rockDesertElevation =
@@ -1123,7 +1151,8 @@ public class MapGenerator
                 elevationMax,
                 temperatureJitter,
                 lowTemperature,
-                highTemperature
+                highTemperature,
+                cellOuterRadius
             );
 
             float moisture = _climate[i].moisture;
@@ -1245,7 +1274,8 @@ public class MapGenerator
         int elevationMax,
         float temperatureJitter,
         float lowTemperature,
-        float highTemperature
+        float highTemperature,
+        float cellOuterRadius
     ) {
         float latitude = (float)cell.Coordinates.Z / grid.CellCountZ;
 
@@ -1273,7 +1303,10 @@ public class MapGenerator
             (elevationMax - waterLevel + 1f);
 
         float jitter =
-            HexMetrics.SampleNoise(cell.Position * 0.1f)[_temperatureJitterChannel];
+            HexagonPoint.SampleNoise(
+                cell.Position * 0.1f,
+                cellOuterRadius
+            )[_temperatureJitterChannel];
 
         temperature += (jitter * 2f - 1f) * temperatureJitter;
 

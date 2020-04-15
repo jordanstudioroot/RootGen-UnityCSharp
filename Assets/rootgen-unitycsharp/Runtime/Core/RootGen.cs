@@ -5,6 +5,7 @@ using RootUtils.UnityLifecycle;
 public class RootGen {
 // FIELDS ~~~~~~~~~~
     private MapGenerator _mapGenerator;
+    private RandomHashGrid _randomHashGrid;
 
 // CONSTRUCTORS ~~~~~~~~~~
     public RootGen() {
@@ -37,14 +38,14 @@ public class RootGen {
     public HexGrid GenerateMap(RootGenConfig config) {
         Destroy.DestroyAll<HexGrid>();
         HexGrid result = _mapGenerator.GenerateMap(config);
-        HexGridCamera.AttachCamera(result);
+        HexGridCamera.AttachCamera(result, config.cellOuterRadius);
         return result;
     }
 
     public HexGrid GenerateHistoricalBoard(int width, int height) {
         Destroy.DestroyAll<HexGrid>();
         HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
-        HexGridCamera.AttachCamera(result);
+        HexGridCamera.AttachCamera(result, 10f);
         return result;
     }
 
@@ -70,7 +71,7 @@ public class RootGen {
             wrapping
         );
 
-        HexGridCamera.AttachCamera(result);
+        HexGridCamera.AttachCamera(result, 10f);
         return result;
     }
 

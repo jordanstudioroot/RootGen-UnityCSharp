@@ -52,15 +52,34 @@ public class HexMesh : MonoBehaviour {
     public void AddTriangle(
         Vector3 vertex1, 
         Vector3 vertex2, 
-        Vector3 vertex3
+        Vector3 vertex3,
+        float cellOuterRadius
     ) {
         /* The vertex index is equal to the length of the vertices list before
             * before adding the new vertices to it. */
         int vertexIndex = _vertices.Count;
 
-        _vertices.Add(HexMetrics.Perturb(vertex1));
-        _vertices.Add(HexMetrics.Perturb(vertex2));
-        _vertices.Add(HexMetrics.Perturb(vertex3));
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex1,
+                cellOuterRadius
+            )
+        );
+
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex2,
+                cellOuterRadius
+            )
+        );
+        
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex3,
+                cellOuterRadius
+            )
+        );
+        
         _triangles.Add(vertexIndex);
         _triangles.Add(vertexIndex + 1);
         _triangles.Add(vertexIndex + 2);
@@ -85,13 +104,37 @@ public class HexMesh : MonoBehaviour {
         Vector3 vertex1, 
         Vector3 vertex2, 
         Vector3 vertex3, 
-        Vector3 vertex4
+        Vector3 vertex4,
+        float cellOuterRadius
     ) {
         int vertexIndex = _vertices.Count;
-        _vertices.Add(HexMetrics.Perturb(vertex1));
-        _vertices.Add(HexMetrics.Perturb(vertex2));
-        _vertices.Add(HexMetrics.Perturb(vertex3));
-        _vertices.Add(HexMetrics.Perturb(vertex4));
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex1,
+                cellOuterRadius)
+        );
+
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex2,
+                cellOuterRadius
+            )
+        );
+        
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex3,
+                cellOuterRadius
+            )
+        );
+
+        _vertices.Add(
+            HexagonPoint.Perturb(
+                vertex4,
+                cellOuterRadius
+            )
+        );
+        
         _triangles.Add(vertexIndex);
         _triangles.Add(vertexIndex + 2);
         _triangles.Add(vertexIndex + 1);

@@ -208,13 +208,13 @@ public class HexUnit : MonoBehaviour
         return cell.IsExplored && !cell.IsUnderwater && !cell.Unit;
     }
 
-    public void Travel(List<HexCell> path) {
+    public void Travel(List<HexCell> path, float cellOuterRadius) {
         _location.Unit = null;
         _location = path[path.Count - 1];
         _location.Unit = this;
         _pathToTravel = path;
         StopAllCoroutines();
-        StartCoroutine(TravelPath());
+        StartCoroutine(TravelPath(cellOuterRadius));
     }
 
     public int GetMoveCost
@@ -246,9 +246,11 @@ public class HexUnit : MonoBehaviour
     }
     
 // ~~ private
-    private IEnumerator TravelPath() {
+    private IEnumerator TravelPath(float cellOuterRadius) {
+        float innerDiameter = 
+            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
         Vector3 pointA, pointB, pointC = _pathToTravel[0].Position;
-        yield return LookAt(_pathToTravel[1].Position);
+        yield return LookAt(_pathToTravel[1].Position, cellOuterRadius);
 
         if (!_currentDestination) {
             _currentDestination = _pathToTravel[0];
@@ -271,12 +273,12 @@ public class HexUnit : MonoBehaviour
             int nextColumn = _currentDestination.ColumnIndex;
             if (currentColumn != nextColumn) {
                 if (nextColumn < currentColumn - 1) {
-                    pointA.x -= HexMetrics.innerDiameter * HexMetrics.wrapSize;
-                    pointB.x -= HexMetrics.innerDiameter * HexMetrics.wrapSize;
+                    pointA.x -= innerDiameter * HexagonPoint.wrapSize;
+                    pointB.x -= innerDiameter * HexagonPoint.wrapSize;
                 }
                 else if (nextColumn > currentColumn + 1) {
-                    pointA.x += HexMetrics.innerDiameter * HexMetrics.wrapSize;
-                    pointB.x += HexMetrics.innerDiameter * HexMetrics.wrapSize;
+                    pointA.x += innerDiameter * HexagonPoint.wrapSize;
+                    pointB.x += innerDiameter * HexagonPoint.wrapSize;
                 }
                 Grid.MakeChildOfColumn(transform, nextColumn);
                 currentColumn = nextColumn;
@@ -374,14 +376,18 @@ public class HexUnit : MonoBehaviour
         }
     }
 
-    private IEnumerator LookAt(Vector3 point) {
-        if (HexMetrics.Wrapping) {
+    private IEnumerator LookAt(Vector3 point, float cellOuterRadius) {
+        
+        float innerRadius = HexagonPoint.GetOuterToInnerRadius(cellOuterRadius);
+        float innerDiameter = innerRadius * 2f;
+
+        if (HexagonPoint.Wrapping) {
             float xDistance = point.x - transform.localPosition.x;
-            if (xDistance < -HexMetrics.innerRadius * HexMetrics.wrapSize) {
-                point.x += HexMetrics.innerDiameter * HexMetrics.wrapSize;
+            if (xDistance < -innerRadius * HexagonPoint.wrapSize) {
+                point.x += innerDiameter * HexagonPoint.wrapSize;
             }
-            else if (xDistance > HexMetrics.innerRadius * HexMetrics.wrapSize) {
-                point.x -= HexMetrics.innerDiameter * HexMetrics.wrapSize;
+            else if (xDistance > innerRadius * HexagonPoint.wrapSize) {
+                point.x -= innerDiameter * HexagonPoint.wrapSize;
             }
         }
 
