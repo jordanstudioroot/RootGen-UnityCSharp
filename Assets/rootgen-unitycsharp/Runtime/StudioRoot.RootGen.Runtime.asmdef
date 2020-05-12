@@ -4,7 +4,8 @@
         "StudioRoot.RootLogging.Runtime",
         "StudioRoot.RootExtensions.Runtime",
         "StudioRoot.RootUtils.Runtime",
-        "StudioRoot.RootCollections.Runtime"
+        "StudioRoot.RootCollections.Runtime",
+        "QuikGraph.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

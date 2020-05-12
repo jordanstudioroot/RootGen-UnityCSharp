@@ -5,16 +5,51 @@ using RootCollections;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HexMesh : MonoBehaviour {
+
+/// <summary>
+/// Boolean value representing whether the mesh collider is used.
+/// </summary>
     public bool useCollider;
+
+/// <summary>
+/// Boolean value representing whether the cellData is used in rendering.
+/// </summary>
     public bool useCellData;
+
+/// <summary>
+/// Boolean value representing whether the UV coordinates are used in rendering.
+/// </summary>
     public bool useUVCoordinates;
+/// <summary>
+/// Boolean value representing whether the UV2 coordinates are used in rendering.
+/// </summary>
     public bool useUV2Coordinates;
 
+/// <summary>
+/// The list of UV coordinates used to render the HexMesh.
+/// </summary>
     [NonSerialized] private List<Vector2> _uvs;
+/// <summary>
+/// The list of the UV2 coordinates used to render the HexMesh.
+/// </summary>
     [NonSerialized] private List<Vector2> _uv2s;
+/// <summary>
+/// The list of vertices used to render the HexMesh.
+/// </summary>
     [NonSerialized] private List<Vector3> _vertices;
+/// <summary>
+/// The list of triangles used to render the HexMesh.
+/// </summary>
     [NonSerialized] private List<int> _triangles;
+
+/// <summary>
+/// A list of Color values used as weights to blend the mesh data between cells. 
+/// </summary>
     [NonSerialized] private List<Color> _cellWeights;
+    
+/// <summary>
+///     A list of Vector3s used to map the cell positions to the UV map.
+/// </summary>
     [NonSerialized] private List<Vector3> _cellIndices;
 
     private UnityEngine.Mesh _hexMesh;
@@ -162,6 +197,18 @@ public class HexMesh : MonoBehaviour {
         _triangles.Add(vertexIndex + 3);
     }
 
+/// <summary>
+///     Add cell data to the mesh corresponding to a particular set of cell indicies
+///     represented as a collection by a Vector3.
+/// </summary>
+/// <param name="indices">
+///     A Vector3 representing a collection of cell indices corresponding to the triangle.
+/// </param>
+/// <param name="weights1">
+///     The weight of the first
+/// </param>
+/// <param name="weights2"></param>
+/// <param name="weights3"></param>
     public void AddTriangleCellData(
         Vector3 indices, 
         Color weights1, 

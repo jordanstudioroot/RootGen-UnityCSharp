@@ -123,7 +123,7 @@ public class HexClimate {
         int rockDesertElevation =
             config.elevationMax - (config.elevationMax - config.waterLevel) / 2;
 
-        for (int i = 0; i < (grid.CellCountX * grid.CellCountZ); i++) {
+        for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
             HexCell cell = grid.GetCell(i);
             float temperature = GenerateTemperature(
                 config,
@@ -252,13 +252,13 @@ public class HexClimate {
 
         ClimateData clearData = new ClimateData();
 
-        for (int i = 0; i < (grid.CellCountX * grid.CellCountZ); i++) {
+        for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
             _climate.Add(initialData);
             _nextClimate.Add(clearData);
         }
 
         for (int cycle = 0; cycle < 40; cycle++) {
-            for (int i = 0; i < (grid.CellCountX * grid.CellCountZ); i++) {
+            for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
                 StepClimate(config, grid, i);
             }
 
@@ -369,7 +369,7 @@ public class HexClimate {
         HexCell cell,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.Coordinates.Z / grid.CellCountZ;
+        float latitude = (float)cell.Coordinates.Z / grid.HeightInCells;
 
         if (config.hemisphere == HemisphereMode.Both) {
             latitude *= 2f;

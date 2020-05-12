@@ -37,25 +37,23 @@ public struct HexCoordinates
             return -X - Z;
         }
     }
-    public HexCoordinates(int x, int z)
+    public HexCoordinates(int x, int z, int wrapSize)
     {
         
-        if (HexagonPoint.Wrapping)
-        {
+        if (HexagonPoint.Wrapping) {
             /* Get offset x coordinate back from axial coordinates, and
                 * check if value is outside of the wrapping range and adjust
                 * the coordinate accordingly.*/
             int offsetX = x + z / 2;
 
-            if (offsetX < 0)
-            {
-                x += HexagonPoint.wrapSize;
+            if (offsetX < 0) {
+                x += wrapSize;
             }
-            else if (offsetX >= HexagonPoint.wrapSize)
-            {
-                x -= HexagonPoint.wrapSize;
+            else if (offsetX >= wrapSize) {
+                x -= wrapSize;
             }
         }
+
         this.x = x;
         this.z = z;
     }
@@ -119,25 +117,24 @@ public struct HexCoordinates
         return new HexCoordinates(x - z / 2, z);
     }
 
-    public int DistanceTo(HexCoordinates other)
-    {
+    public int DistanceTo(
+        HexCoordinates other,
+        int wrapSize
+    ) {
         int xy =
             (x < other.x ? other.x - x : x - other.x) +
             (Y < other.Y ? other.Y - Y : Y - other.Y);
 
-        if (HexagonPoint.Wrapping)
-        {
-            other.x += HexagonPoint.wrapSize;
+        if (HexagonPoint.Wrapping) {
+            other.x += wrapSize;
             int xyWrapped =
                 (x < other.x ? other.x - x : x - other.x) +
                 (Y < other.Y ? other.Y - Y : Y - other.Y);
-            if (xyWrapped < xy)
-            {
+            if (xyWrapped < xy) {
                 xy = xyWrapped;
             }
-            else
-            {
-                other.x -= 2 * HexagonPoint.wrapSize;
+            else {
+                other.x -= 2 * wrapSize;
                 xyWrapped =
                     (x < other.x ? other.x - x : x - other.x) +
                     (Y < other.Y ? other.Y - Y : Y - other.Y);
@@ -151,9 +148,15 @@ public struct HexCoordinates
         return (xy + (z < other.z ? other.z - z : z - other.z)) / 2;
     }
 
-    public override string ToString()
-    {
-        return "(X: " + X.ToString() + ", Y: " + Y.ToString() + ", Z: " + Z.ToString() + ")";
+    public override string ToString() {
+        return
+            "(X: " +
+            X.ToString() +
+            ", Y: " +
+            Y.ToString() +
+            ", Z: " +
+            Z.ToString() +
+            ")";
     }
 
     public string ToStringOnSeparateLines()

@@ -25,16 +25,6 @@ public static class HexagonPoint {
     public const float elevationStep = 3f;
     public const int terraceSteps = terracesPerSlope * 2 + 1;
     public const float elevationPerturbStrength = 1.5f;
-
-/// <summary>
-/// The size of a mesh chunk along the x axis in offset coordinates.
-/// </summary>
-    public const int chunkSizeX = 5;
-
-/// <summary>
-/// The size of a mesh chunk along the z axis in offset coordinates.
-/// </summary>
-    public const int chunkSizeZ = 5;
     public const float streamBedElevationOffset = -1.75f;
     public const float waterElevationOffset = -0.5f;
     public const float wallHeight = 4f;
@@ -181,18 +171,18 @@ public static class HexagonPoint {
         return Color.Lerp(colorA, colorB, horizontal);
     }
 
-    public static EdgeType GetEdgeType(int elevationA, int elevationB) {
+    public static ElevationEdgeType GetEdgeType(int elevationA, int elevationB) {
         if (elevationA == elevationB) {
-            return EdgeType.Flat;
+            return ElevationEdgeType.Flat;
         }
 
         int delta = elevationB - elevationA;
 
         if (delta == 1 || delta == -1) {
-            return EdgeType.Slope;
+            return ElevationEdgeType.Slope;
         }
 
-        return EdgeType.Cliff;
+        return ElevationEdgeType.Cliff;
     }
 
     public static Vector4 SampleNoise(

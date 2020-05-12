@@ -223,7 +223,7 @@ public class FeatureContainer : MonoBehaviour
         if  (
             nearCell.HasWalls != farCell.HasWalls &&
             !nearCell.IsUnderwater && !farCell.IsUnderwater &&
-            nearCell.GetEdgeType(farCell) != EdgeType.Cliff
+            nearCell.GetEdgeType(farCell) != ElevationEdgeType.Cliff
         ) {
             AddWallSegment(
                 near.vertex1,
@@ -422,10 +422,10 @@ public class FeatureContainer : MonoBehaviour
         }
 
         bool hasLeftWall = !leftCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(leftCell) != EdgeType.Cliff;
+                            pivotCell.GetEdgeType(leftCell) != ElevationEdgeType.Cliff;
 
         bool hasRightWall = !rightCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(rightCell) != EdgeType.Cliff;
+                            pivotCell.GetEdgeType(rightCell) != ElevationEdgeType.Cliff;
 
         if (hasLeftWall) {
             if (hasRightWall) {

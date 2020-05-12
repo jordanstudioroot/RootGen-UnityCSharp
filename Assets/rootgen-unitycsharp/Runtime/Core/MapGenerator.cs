@@ -144,7 +144,7 @@ public class MapGenerator {
     ) {
         HexGrid result = HexGrid.GetGrid();
         result.Initialize(width, height, true, 10f);
-        int _cellCount = result.CellCountX * result.CellCountZ;
+        int _cellCount = result.WidthInCells * result.HeightInCells;
 
         for (int i = 0; i < _cellCount; i++) {
             result.GetCell(i).TerrainTypeIndex = 0;
@@ -247,16 +247,13 @@ public class MapGenerator {
 /// <returns>
 ///     A randomly generated HexGrid object.
 /// </returns>
-    public HexGrid GenerateMap(
-        RootGenConfig config
-    ) {        
+    public HexGrid GenerateMap(RootGenConfig config) {        
         HexGrid result = HexGrid.GetGrid();
-
         int seed;
 
         if (config.useFixedSeed) {
             seed = config.seed;
-        }
+        } 
         else {
             config.seed = Random.Range(0, int.MaxValue);
             config.seed ^= (int)System.DateTime.Now.Ticks;
@@ -371,8 +368,8 @@ public class MapGenerator {
     ) {
         return new List<MapRegionRect>(
             SubdivideRegions(
-                grid.CellCountX,
-                grid.CellCountZ,
+                grid.WidthInCells,
+                grid.HeightInCells,
                 mapBorderX,
                 mapBorderZ,
                 numRegions,
@@ -1277,7 +1274,7 @@ public class MapGenerator {
         float highTemperature,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.Coordinates.Z / grid.CellCountZ;
+        float latitude = (float)cell.Coordinates.Z / grid.HeightInCells;
 
         if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -1334,13 +1331,13 @@ public class MapGenerator {
                             (elevationMax - waterLevel);
 
             if (data > 0.75f) {
-                cell.SetMapData(1f);
+                cell.SetAndEnableMapVisualizationShaderData(1f);
             }
             else if (data > 0.5f) {
-                cell.SetMapData(0.5f);
+                cell.SetAndEnableMapVisualizationShaderData(0.5f);
             }
             else if (data > 0.25f) {
-                cell.SetMapData(0.25f);
+                cell.SetAndEnableMapVisualizationShaderData(0.25f);
             }
         }
     }

@@ -27,6 +27,7 @@
     "dependencies": {
         "mkdirp": "^0.5.5",
         "ncp": "^2.0.0",
+        "quikgraphnpm-unitycsharp": "github:jordanstudioroot/quikgraphnpm-unitycsharp",
         "rootcollections-unitycsharp": "github:jordanstudioroot/rootcollections-unitycsharp",
         "rootextensions-unitycsharp": "github:jordanstudioroot/RootExtensions-UnityCSharp",
         "rootlog-unitycsharp": "github:jordanstudioroot/RootLog-UnityCSharp",

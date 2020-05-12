@@ -225,8 +225,8 @@ public class HexUnit : MonoBehaviour
     ) {
         int moveCost;
 
-        EdgeType edgeType = fromCell.GetEdgeType(toCell);
-        if (edgeType == EdgeType.Cliff) {
+        ElevationEdgeType edgeType = fromCell.GetEdgeType(toCell);
+        if (edgeType == ElevationEdgeType.Cliff) {
             return -1;
         }
 
@@ -237,7 +237,7 @@ public class HexUnit : MonoBehaviour
             return -1;
         }
         else {
-            moveCost = edgeType == EdgeType.Flat ? 5 : 10;
+            moveCost = edgeType == ElevationEdgeType.Flat ? 5 : 10;
             moveCost +=
                 toCell.UrbanLevel + toCell.FarmLevel + toCell.PlantLevel;
         }
@@ -246,7 +246,7 @@ public class HexUnit : MonoBehaviour
     }
     
 // ~~ private
-    private IEnumerator TravelPath(float cellOuterRadius) {
+    private IEnumerator TravelPath(float cellOuterRadius, int wrapSize) {
         float innerDiameter = 
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
         Vector3 pointA, pointB, pointC = _pathToTravel[0].Position;
@@ -273,12 +273,12 @@ public class HexUnit : MonoBehaviour
             int nextColumn = _currentDestination.ColumnIndex;
             if (currentColumn != nextColumn) {
                 if (nextColumn < currentColumn - 1) {
-                    pointA.x -= innerDiameter * HexagonPoint.wrapSize;
-                    pointB.x -= innerDiameter * HexagonPoint.wrapSize;
+                    pointA.x -= innerDiameter * wrapSize;
+                    pointB.x -= innerDiameter * wrapSize;
                 }
                 else if (nextColumn > currentColumn + 1) {
-                    pointA.x += innerDiameter * HexagonPoint.wrapSize;
-                    pointB.x += innerDiameter * HexagonPoint.wrapSize;
+                    pointA.x += innerDiameter * wrapSize;
+                    pointB.x += innerDiameter * wrapSize;
                 }
                 Grid.MakeChildOfColumn(transform, nextColumn);
                 currentColumn = nextColumn;
@@ -376,18 +376,22 @@ public class HexUnit : MonoBehaviour
         }
     }
 
-    private IEnumerator LookAt(Vector3 point, float cellOuterRadius) {
+    private IEnumerator LookAt(
+        Vector3 point,
+        float cellOuterRadius,
+        int wrapSize
+    ) {
         
         float innerRadius = HexagonPoint.GetOuterToInnerRadius(cellOuterRadius);
         float innerDiameter = innerRadius * 2f;
 
         if (HexagonPoint.Wrapping) {
             float xDistance = point.x - transform.localPosition.x;
-            if (xDistance < -innerRadius * HexagonPoint.wrapSize) {
-                point.x += innerDiameter * HexagonPoint.wrapSize;
+            if (xDistance < -innerRadius * wrapSize) {
+                point.x += innerDiameter * wrapSize;
             }
-            else if (xDistance > innerRadius * HexagonPoint.wrapSize) {
-                point.x -= innerDiameter * HexagonPoint.wrapSize;
+            else if (xDistance > innerRadius * wrapSize) {
+                point.x -= innerDiameter * wrapSize;
             }
         }
 
