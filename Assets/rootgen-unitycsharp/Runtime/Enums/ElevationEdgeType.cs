@@ -1,4 +1,4 @@
-﻿public enum ElevationEdgeType
+﻿public enum ElevationEdgeTypes
 {
     Flat,
     Slope,

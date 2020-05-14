@@ -114,7 +114,9 @@ public class HexClimate {
 
     private void SetTerrainTypes(
         RootGenConfig config,
-        HexGrid grid
+        HexMap grid,
+        NeighborGraph neighborGraph,
+        RiverGraph riverGraph
     ) {
 // Select the temperature jitter channel.
         _temperatureJitterChannel = Random.Range(0, 4);
@@ -166,7 +168,8 @@ public class HexClimate {
                     cellBiome.plant = 0;
                 }
 
-                if (cellBiome.plant < 3 && cell.HasRiver) {
+//                if (cellBiome.plant < 3 && cell.HasRiver) {
+                if (riverGraph.HasRiver(cell)) {
                     cellBiome.plant += 1;
                 }
 
@@ -180,17 +183,20 @@ public class HexClimate {
                     int cliffs = 0;
                     int slopes = 0;
 
-                    for
-                    (
-                        HexDirection direction = HexDirection.Northeast;
-                        direction <= HexDirection.Northwest;
-                        direction++
+//                    for
+//                    (
+//                        HexDirection direction = HexDirection.Northeast;
+//                        direction <= HexDirection.Northwest;
+//                        direction++
+                    foreach(
+                        HexCell neighbor in
+                        neighborGraph.Neighbors(cell)
                     ) {
-                        HexCell neighbor = cell.GetNeighbor(direction);
+//                        HexCell neighbor = cell.GetNeighbor(direction);
 
-                        if (!neighbor) {
-                            continue;
-                        }
+//                        if (!neighbor) {
+//                            continue;
+//                        }
 
                         int delta = neighbor.Elevation - cell.WaterLevel;
 
@@ -243,7 +249,11 @@ public class HexClimate {
         }
     }
 
-    private void GenerateClimate(RootGenConfig config, HexGrid grid) {
+    private void GenerateClimate(
+        RootGenConfig config,
+        HexMap grid,
+        NeighborGraph neighborGraph
+    ) {
         _climate.Clear();
         _nextClimate.Clear();
 
@@ -258,8 +268,17 @@ public class HexClimate {
         }
 
         for (int cycle = 0; cycle < 40; cycle++) {
-            for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
-                StepClimate(config, grid, i);
+            for (
+                int i = 0;
+                i < (grid.WidthInCells * grid.HeightInCells);
+                i++
+            ) {
+                StepClimate(
+                    config,
+                    grid,
+                    i,
+                    neighborGraph
+                );
             }
 
             /* Make sure that the climate data being calculated in the current
@@ -277,7 +296,12 @@ public class HexClimate {
         }
     }
 
-    private void StepClimate(RootGenConfig config, HexGrid grid, int cellIndex) {
+    private void StepClimate(
+        RootGenConfig config,
+        HexMap grid,
+        int cellIndex,
+        NeighborGraph neighborGraph
+    ) {
         HexCell cell = grid.GetCell(cellIndex);
         ClimateData cellClimate = _climate[cellIndex];
 
@@ -309,27 +333,27 @@ public class HexClimate {
         float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
         float seepage = cellClimate.moisture * config.seepageFactor * (1f / 6f);
 
-        for (
-            HexDirection direction = HexDirection.Northeast;
-            direction <= HexDirection.Northwest;
-            direction++
-        ) {
-            HexCell neighbor = cell.GetNeighbor(direction);
+//        for (
+//            HexDirection direction = HexDirection.Northeast;
+//            direction <= HexDirection.Northwest;
+//            direction++
+        foreach (HexEdge edge in neighborGraph.Edges(cell)) {
+//            HexCell neighbor = cell.GetNeighbor(direction);
 
-            if (!neighbor) {
-                continue;
-            }
+//            if (!neighbor) {
+//                continue;
+//            }
 
-            ClimateData neighborClimate = _climate[neighbor.Index];
+            ClimateData neighborClimate = _climate[edge.Target.Index];
 
-            if (direction == mainDispersalDirection) {
+            if (edge.Direction == mainDispersalDirection) {
                 neighborClimate.clouds += cloudDispersal * config.windStrength;
             }
             else {
                 neighborClimate.clouds += cloudDispersal;
             }
 
-            int elevationDelta = neighbor.ViewElevation - cell.ViewElevation;
+            int elevationDelta = edge.Target.ViewElevation - cell.ViewElevation;
 
             if (elevationDelta < 0) {
                 cellClimate.moisture -= runoff;
@@ -340,7 +364,7 @@ public class HexClimate {
                 neighborClimate.moisture += seepage;
             }
 
-            _climate[neighbor.Index] = neighborClimate;
+            _climate[edge.Target.Index] = neighborClimate;
         }
 
         // Create a cell for the next climate.
@@ -365,7 +389,7 @@ public class HexClimate {
 
     private float GenerateTemperature(
         RootGenConfig config, 
-        HexGrid grid, 
+        HexMap grid, 
         HexCell cell,
         float cellOuterRadius
     ) {
@@ -397,7 +421,9 @@ public class HexClimate {
         float jitter =
             HexagonPoint.SampleNoise(
                 cell.Position * 0.1f,
-                cellOuterRadius
+                cellOuterRadius,
+                grid.IsWrapping,
+                grid.WrapSize
             )[_temperatureJitterChannel];
 
         temperature += (jitter * 2f - 1f) * config.temperatureJitter;

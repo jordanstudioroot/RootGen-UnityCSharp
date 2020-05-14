@@ -117,7 +117,12 @@ public class HexCell : MonoBehaviour {
 
     public int Elevation { get; set; }
 
-    public void SetElevation(int elevation, float cellOuterRadius) {
+    public void SetElevation(
+        int elevation,
+        float cellOuterRadius,
+        bool wrapping,
+        int wrapSize
+    ) {
         if (Elevation == elevation) {
             return;
         }
@@ -130,7 +135,11 @@ public class HexCell : MonoBehaviour {
             ShaderData.ViewElevationChanged();
         }
 
-        RefreshPosition(cellOuterRadius);
+        RefreshPosition(
+            cellOuterRadius,
+            wrapping,
+            wrapSize
+        );
     }
 
     public int TerrainTypeIndex { get; set; }
@@ -191,7 +200,7 @@ public class HexCell : MonoBehaviour {
         }
     }
 
-    public ElevationEdgeType GetEdgeType(HexCell otherCell) {
+    public ElevationEdgeTypes GetEdgeType(HexCell otherCell) {
         return HexagonPoint.GetEdgeType(Elevation, otherCell.Elevation);
     }
 
@@ -272,7 +281,11 @@ public class HexCell : MonoBehaviour {
         }
     }
 
-    private void RefreshPosition(float cellOuterRadius) {
+    private void RefreshPosition(
+        float cellOuterRadius,
+        bool wrapping,
+        int wrapSize
+    ) {
         Vector3 position = transform.localPosition;
         position.y = Elevation * HexagonPoint.elevationStep;
 
@@ -280,7 +293,9 @@ public class HexCell : MonoBehaviour {
             (
                 HexagonPoint.SampleNoise(
                     position,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapping,
+                    wrapSize
                 ).y * 2f - 1f
             ) * HexagonPoint.elevationPerturbStrength;
 

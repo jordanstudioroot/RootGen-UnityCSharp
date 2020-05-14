@@ -189,7 +189,11 @@ public class FeatureContainer : MonoBehaviour
 
         Transform instance = Instantiate(prefab);
 
-        instance.localPosition = HexagonPoint.Perturb(position, cellOuterRadius);
+        instance.localPosition = HexagonPoint.Perturb(
+            position,
+            cellOuterRadius
+        );
+        
         instance.localRotation = Quaternion.Euler(0f, 360f * e, 0f);
 
         instance.SetParent(_container, false);
@@ -223,7 +227,7 @@ public class FeatureContainer : MonoBehaviour
         if  (
             nearCell.HasWalls != farCell.HasWalls &&
             !nearCell.IsUnderwater && !farCell.IsUnderwater &&
-            nearCell.GetEdgeType(farCell) != ElevationEdgeType.Cliff
+            nearCell.GetEdgeType(farCell) != ElevationEdgeTypes.Cliff
         ) {
             AddWallSegment(
                 near.vertex1,
@@ -422,10 +426,10 @@ public class FeatureContainer : MonoBehaviour
         }
 
         bool hasLeftWall = !leftCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(leftCell) != ElevationEdgeType.Cliff;
+                            pivotCell.GetEdgeType(leftCell) != ElevationEdgeTypes.Cliff;
 
         bool hasRightWall = !rightCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(rightCell) != ElevationEdgeType.Cliff;
+                            pivotCell.GetEdgeType(rightCell) != ElevationEdgeTypes.Cliff;
 
         if (hasLeftWall) {
             if (hasRightWall) {

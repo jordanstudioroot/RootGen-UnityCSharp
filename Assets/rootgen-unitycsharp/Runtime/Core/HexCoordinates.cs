@@ -37,20 +37,20 @@ public struct HexCoordinates
             return -X - Z;
         }
     }
-    public HexCoordinates(int x, int z, int wrapSize)
-    {
+
+    public HexCoordinates(int x, int z) {
         
-        if (HexagonPoint.Wrapping) {
+        if (HexagonPoint.IsMapWrapping) {
             /* Get offset x coordinate back from axial coordinates, and
                 * check if value is outside of the wrapping range and adjust
                 * the coordinate accordingly.*/
             int offsetX = x + z / 2;
 
             if (offsetX < 0) {
-                x += wrapSize;
+                x += HexagonPoint.MapWrapSize;
             }
-            else if (offsetX >= wrapSize) {
-                x -= wrapSize;
+            else if (offsetX >= HexagonPoint.MapWrapSize) {
+                x -= HexagonPoint.MapWrapSize;
             }
         }
 
@@ -58,8 +58,10 @@ public struct HexCoordinates
         this.z = z;
     }
 
-    public static HexCoordinates FromPosition(Vector3 position, float outerRadius)
-    {
+    public static HexCoordinates FromPosition(
+        Vector3 position,
+        float outerRadius
+    ) {
         float innerDiameter =
             HexagonPoint.GetOuterToInnerRadius(outerRadius) * 2f;
             
@@ -104,17 +106,26 @@ public struct HexCoordinates
             }
         }
 
-        return new HexCoordinates(integerX, integerZ);
+        return new HexCoordinates(
+            integerX,
+            integerZ
+        );
 
     }
 
-    public static HexCoordinates AsAxialCoordinates(int x, int z)
-    {
+    public static HexCoordinates AsAxialCoordinates(
+        int x,
+        int z,
+        int wrapSize
+    ) {
         /* Return coordinates after subtracting the X coordinate with the Z coordinated integer
             * divided by 2. All cells will be offset on the X axis directly proportional to Z. As
             * Z grows larger, the magnitude of the offset increases bringing the X axis into alignment
             * with a proposed axis which is at a (roughly) 45 degree angle with the Z axis.*/
-        return new HexCoordinates(x - z / 2, z);
+        return new HexCoordinates(
+            x - z / 2,
+            z
+        );
     }
 
     public int DistanceTo(
@@ -125,7 +136,7 @@ public struct HexCoordinates
             (x < other.x ? other.x - x : x - other.x) +
             (Y < other.Y ? other.Y - Y : Y - other.Y);
 
-        if (HexagonPoint.Wrapping) {
+        if (HexagonPoint.IsMapWrapping) {
             other.x += wrapSize;
             int xyWrapped =
                 (x < other.x ? other.x - x : x - other.x) +

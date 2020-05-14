@@ -23,10 +23,10 @@ public class RootGenConfig : ScriptableObject
     public float jitterProbability = 0.25f;
 
     [Range(20, 200)]
-    public int chunkSizeMin = 30;
+    public int minimumRegionDensity = 30;
 
     [Range(20, 200)]
-    public int chunkSizeMax = 100;
+    public int maximumRegionDensity = 100;
 
     [Range(5, 95)]
     public int landPercentage = 50;

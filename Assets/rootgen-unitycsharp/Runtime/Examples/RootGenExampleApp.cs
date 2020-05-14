@@ -5,13 +5,6 @@ using RootLogging;
 
 public class RootGenExampleApp : MonoBehaviour
 {
-    public enum GenerationType {
-        Standard,
-        TwoThreeAlgorithm
-    }
-
-    public GenerationType generationType;
-
     private RootGen _rootGen;
     void Awake() {
         
@@ -25,25 +18,18 @@ public class RootGenExampleApp : MonoBehaviour
     void Start()
     {
         _rootGen = new RootGen();
-
-        if (generationType == GenerationType.Standard) {
-            _rootGen.GenerateMap(Resources.Load("defaultconfig") as RootGenConfig);
-        }
-        else if (generationType == GenerationType.TwoThreeAlgorithm) {  
-            _rootGen.GenerateHistoricalBoard(75, 75);
-        }
+        _rootGen.GenerateEmptyMap(
+            new Vector2(10, 10), true
+        );
     }
 
     // Update is called once per frame
     void Update()
     {
         if (Input.GetKeyUp(KeyCode.R)) {
-            if (generationType == GenerationType.Standard) {
-                _rootGen.GenerateMap(Resources.Load("defaultconfig") as RootGenConfig);
-            }
-            else if (generationType == GenerationType.TwoThreeAlgorithm) {  
-                _rootGen.GenerateHistoricalBoard(75, 75);
-            }
+            _rootGen.GenerateEmptyMap(
+                new Vector2(10, 10), true
+            );
         }
     }
 }

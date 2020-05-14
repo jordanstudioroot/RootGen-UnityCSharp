@@ -38,11 +38,13 @@ public static class HexagonPoint {
     private const int _sqrtHashGridSize = 256;
     private const float _hashGridScale = 0.25f;
     private static RandomHash[] _hashGrid;
-    public static int wrapSize;
+    public static int MapWrapSize {
+        get; set;
+    }
 
 // TODO: Why is this property neccessary?
-    public static bool Wrapping {
-        get { return wrapSize > 0; }
+    public static bool IsMapWrapping {
+        get; set;
     }
 
     public static Vector3 WallLerp(Vector3 near, Vector3 far) {
@@ -171,23 +173,25 @@ public static class HexagonPoint {
         return Color.Lerp(colorA, colorB, horizontal);
     }
 
-    public static ElevationEdgeType GetEdgeType(int elevationA, int elevationB) {
+    public static ElevationEdgeTypes GetEdgeType(int elevationA, int elevationB) {
         if (elevationA == elevationB) {
-            return ElevationEdgeType.Flat;
+            return ElevationEdgeTypes.Flat;
         }
 
         int delta = elevationB - elevationA;
 
         if (delta == 1 || delta == -1) {
-            return ElevationEdgeType.Slope;
+            return ElevationEdgeTypes.Slope;
         }
 
-        return ElevationEdgeType.Cliff;
+        return ElevationEdgeTypes.Cliff;
     }
 
     public static Vector4 SampleNoise(
         Vector3 position,
-        float outerRadius
+        float outerRadius,
+        bool wrapping,
+        int wrapSize
     ) {
         float innerDiameter =
             GetOuterToInnerRadius(outerRadius) * 2f;
@@ -202,7 +206,7 @@ public static class HexagonPoint {
 // a cell width to the left to avoid seams where the cell coordinates
 // are negative.
         if (
-            Wrapping &&
+            wrapping &&
             position.x < (outerRadius * 2f) * 1.5f
         ) {
             Vector4 sample2 = noiseSource.GetPixelBilinear (
@@ -225,7 +229,12 @@ public static class HexagonPoint {
         Vector3 position,
         float outerRadius
     ) {
-        Vector4 sample = SampleNoise(position, outerRadius);
+        Vector4 sample = SampleNoise(
+            position,
+            outerRadius,
+            IsMapWrapping,
+            MapWrapSize
+        );
 
 // Set the range of the perturbation between -1 and 1. Because the value of the
 // noise will be between 0 and 1, sample * 2f - 1f can be no less than -1 and no

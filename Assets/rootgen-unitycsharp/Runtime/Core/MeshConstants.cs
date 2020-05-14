@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public static class MeshConstants {
 /// <summary>
 /// The size of a mesh chunk along the x axis in offset coordinates.
@@ -8,4 +10,10 @@ public static class MeshConstants {
 /// The size of a mesh chunk along the z axis in offset coordinates.
 /// </summary>
     public const int ChunkSizeZ = 5;
+
+    public static readonly Vector2 ChunkSize =
+        new Vector2(
+            ChunkSizeX,
+            ChunkSizeZ
+        );
 }

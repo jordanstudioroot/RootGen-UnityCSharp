@@ -28,7 +28,7 @@ public class HexGridCamera : MonoBehaviour
     public float rotationSpeed = 180;
 
 // ~~ private
-    private HexGrid _grid;
+    private HexMap _grid;
     private Transform _swivel;
     private Transform _stick;
     private float _zoom = 1f;
@@ -149,7 +149,7 @@ public class HexGridCamera : MonoBehaviour
         }
     }
 
-    public HexGrid TargetGrid {
+    public HexMap TargetGrid {
         set {
             _grid = value;
         }
@@ -186,7 +186,7 @@ public class HexGridCamera : MonoBehaviour
 // ~ Non-Static
 
 // ~~ public
-    public static void AttachCamera(HexGrid grid, float cellOuterRadius) {
+    public static void AttachCamera(HexMap grid, float cellOuterRadius) {
         HexGridCamera resultMono;
         _cellOuterRadius = cellOuterRadius;
 
@@ -257,7 +257,7 @@ public class HexGridCamera : MonoBehaviour
         }
     }
 
-    public void ValidatePosition(HexGrid grid, float cellOuterRadius) {
+    public void ValidatePosition(HexMap grid, float cellOuterRadius) {
         AdjustPosition(grid, 0, 0, cellOuterRadius);
     }
 
@@ -368,7 +368,7 @@ public class HexGridCamera : MonoBehaviour
     }
 
     private void AdjustPosition(
-        HexGrid grid,
+        HexMap grid,
         float xDelta,
         float zDelta,
         float cellOuterRadius
@@ -386,13 +386,13 @@ public class HexGridCamera : MonoBehaviour
         Vector3 position = transform.localPosition;
         position += direction * distance;
         transform.localPosition = 
-            grid.Wrapping ?
+            grid.IsWrapping ?
                 WrapPosition(grid, position, cellOuterRadius) :
                 ClampPosition(grid, position, cellOuterRadius);
     }
 
     public void SetPosition(
-        HexGrid grid,
+        HexMap grid,
         float posX,
         float posZ,
         float cellOuterRadius
@@ -404,13 +404,13 @@ public class HexGridCamera : MonoBehaviour
         );
 
         this.transform.localPosition =
-            grid.Wrapping ?
+            grid.IsWrapping ?
                 WrapPosition(grid, position, cellOuterRadius) :
                 ClampPosition(grid, position, cellOuterRadius);
     }
 
     private Vector3 ClampPosition (
-        HexGrid grid,
+        HexMap grid,
         Vector3 position,
         float cellOuterRadius
     ) {
@@ -432,7 +432,7 @@ public class HexGridCamera : MonoBehaviour
     }
 
     private Vector3 WrapPosition(
-        HexGrid grid,
+        HexMap grid,
         Vector3 position,
         float cellOuterRadius
     ) {
@@ -454,7 +454,7 @@ public class HexGridCamera : MonoBehaviour
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
-        grid.CenterMap(position.x, cellOuterRadius);
+        // grid.CenterMap(position.x, cellOuterRadius);
         return position;
     }
 
@@ -472,7 +472,7 @@ public class HexGridCamera : MonoBehaviour
     }
 
     private IEnumerator SteadyPanCoroutine(
-        HexGrid grid,
+        HexMap grid,
         Vector3 direction,
         float durationInSeconds,
         float speed,

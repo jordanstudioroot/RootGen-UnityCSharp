@@ -156,13 +156,15 @@ public class HexUnit : MonoBehaviour
         get { return _location; }
         set {
             if (_location) {
-                Grid.DecreaseVisibility(Location, _visionRange);
+// TODO: This is a circular dependency that needs to be fixed.
+//                Grid.DecreaseVisibility(Location, _visionRange);
                 _location.Unit = null;
             }
 
             _location = value;
             value.Unit = this;
-            Grid.IncreaseVisibility(Location, _visionRange);
+// TODO: This is a circular dependency that needs to be fixed.
+//   Grid.IncreaseVisibility(Location, _visionRange);
             transform.StandOn(value.Position);
             Grid.MakeChildOfColumn(transform, value.ColumnIndex);
         }
@@ -177,7 +179,7 @@ public class HexUnit : MonoBehaviour
         }
     }
 
-    public HexGrid Grid { get; set; }
+    public HexMap Grid { get; set; }
 
     public int Speed {
         get { return 24; }
@@ -208,55 +210,70 @@ public class HexUnit : MonoBehaviour
         return cell.IsExplored && !cell.IsUnderwater && !cell.Unit;
     }
 
-    public void Travel(List<HexCell> path, float cellOuterRadius) {
+    public void Travel(
+        List<HexCell> path,
+        float cellOuterRadius,
+        int wrapSize
+    ) {
         _location.Unit = null;
         _location = path[path.Count - 1];
         _location.Unit = this;
         _pathToTravel = path;
         StopAllCoroutines();
-        StartCoroutine(TravelPath(cellOuterRadius));
+        StartCoroutine(
+            TravelPath(
+                cellOuterRadius,
+                wrapSize
+            )
+        );
     }
 
-    public int GetMoveCost
-    (
-        HexCell fromCell, 
-        HexCell toCell, 
-        HexDirection direction
-    ) {
-        int moveCost;
-
-        ElevationEdgeType edgeType = fromCell.GetEdgeType(toCell);
-        if (edgeType == ElevationEdgeType.Cliff) {
-            return -1;
-        }
-
-        if (fromCell.HasRoadThroughEdge(direction)) {
-            moveCost = 1;
-        }
-        else if (fromCell.HasWalls != toCell.HasWalls) {
-            return -1;
-        }
-        else {
-            moveCost = edgeType == ElevationEdgeType.Flat ? 5 : 10;
-            moveCost +=
-                toCell.UrbanLevel + toCell.FarmLevel + toCell.PlantLevel;
-        }
-
-        return moveCost;
-    }
+// TODO: This should not be the responsibilty of this class. Should
+//       probably be located in the HexMap.
+//    public int GetMoveCost
+//    (
+//        HexCell fromCell, 
+//       HexCell toCell, 
+//        HexDirection direction
+//    ) {
+//        int moveCost;
+//
+//        ElevationEdgeTypes edgeType = fromCell.GetEdgeType(toCell);
+//        if (edgeType == ElevationEdgeTypes.Cliff) {
+//            return -1;
+//        }
+//
+//        if (fromCell.HasRoadThroughEdge(direction)) {
+//            moveCost = 1;
+//        }
+//        else if (fromCell.HasWalls != toCell.HasWalls) {
+//            return -1;
+//        }
+//        else {
+//            moveCost = edgeType == ElevationEdgeTypes.Flat ? 5 : 10;
+//            moveCost +=
+//                toCell.UrbanLevel + toCell.FarmLevel + toCell.PlantLevel;
+//        }
+//
+//        return moveCost;
+//    }
     
 // ~~ private
     private IEnumerator TravelPath(float cellOuterRadius, int wrapSize) {
         float innerDiameter = 
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
         Vector3 pointA, pointB, pointC = _pathToTravel[0].Position;
-        yield return LookAt(_pathToTravel[1].Position, cellOuterRadius);
+        yield return LookAt(
+            _pathToTravel[1].Position,
+            cellOuterRadius,
+            wrapSize
+        );
 
         if (!_currentDestination) {
             _currentDestination = _pathToTravel[0];
         }
-
-        Grid.DecreaseVisibility(_currentDestination, VisionRange);
+// TODO: This is a circular dependency and needs to be fixed.
+//        Grid.DecreaseVisibility(_currentDestination, VisionRange);
 
         int currentColumn = _currentDestination.ColumnIndex;
 
@@ -285,7 +302,8 @@ public class HexUnit : MonoBehaviour
             }
 
             pointC = (pointB + _currentDestination.Position) * 0.5f;
-            Grid.IncreaseVisibility(_pathToTravel[i], VisionRange);
+// TODO: This is a circular dependency and needs to be fixed.
+//            Grid.IncreaseVisibility(_pathToTravel[i], VisionRange);
 
             for (; t < 1f; t += Time.deltaTime * _travelSpeed) {
                 transform.StandOn(
@@ -303,7 +321,8 @@ public class HexUnit : MonoBehaviour
 
             _currentDestination = null;
 
-            Grid.DecreaseVisibility(_pathToTravel[i], _visionRange);
+// TODO: This is a circular dependency and needs to be fixed.
+//            Grid.DecreaseVisibility(_pathToTravel[i], _visionRange);
 
 /* Subtract 1 from each time "segment" to carry over the remaining
 * time into the next loop, which will prevent stuttering if the
@@ -321,7 +340,8 @@ public class HexUnit : MonoBehaviour
 
         pointC = pointB;
 
-        Grid.IncreaseVisibility(_location, _visionRange);
+// TODO: This is a circular dependency and needs to be fixed.
+//        Grid.IncreaseVisibility(_location, _visionRange);
 
         for (; t < 1f; t += Time.deltaTime * _travelSpeed) {
             transform.StandOn(
@@ -385,7 +405,7 @@ public class HexUnit : MonoBehaviour
         float innerRadius = HexagonPoint.GetOuterToInnerRadius(cellOuterRadius);
         float innerDiameter = innerRadius * 2f;
 
-        if (HexagonPoint.Wrapping) {
+        if (HexagonPoint.IsMapWrapping) {
             float xDistance = point.x - transform.localPosition.x;
             if (xDistance < -innerRadius * wrapSize) {
                 point.x += innerDiameter * wrapSize;
@@ -427,8 +447,9 @@ public class HexUnit : MonoBehaviour
             transform.localPosition = Location.Position;
 
             if (_currentDestination) {
-                Grid.IncreaseVisibility(_location, _visionRange);
-                Grid.DecreaseVisibility(_currentDestination, _visionRange);
+// TODO: These are both circular dependencies and they need to be fixed.
+//                Grid.IncreaseVisibility(_location, _visionRange);
+//                Grid.DecreaseVisibility(_currentDestination, _visionRange);
                 _currentDestination = null;
             }
         }

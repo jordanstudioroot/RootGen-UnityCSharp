@@ -12,18 +12,14 @@ public class CellShaderData : MonoBehaviour
     private const float _transitionSpeed = 255f;
 
     public bool ImmediateMode { get; set; }
-    public HexGrid HexGrid { get; set; }
+    public HexMap HexMap { get; set; }
 
-    public void Initialize(int x, int z)
-    {
-        if (_cellTexture)
-        {
+    public void Initialize(int x, int z) {
+        if (_cellTexture) {
             _cellTexture.Resize(x, z);
         }
-        else
-        {
-            _cellTexture = new Texture2D
-            (
+        else {
+            _cellTexture = new Texture2D (
                 x, z, TextureFormat.RGBA32, false, true
             );
         }
@@ -31,20 +27,20 @@ public class CellShaderData : MonoBehaviour
         _cellTexture.filterMode = FilterMode.Point;
         _cellTexture.wrapModeU = TextureWrapMode.Repeat;
         _cellTexture.wrapModeV = TextureWrapMode.Clamp;
-        Shader.SetGlobalTexture("_HexCellData", _cellTexture);
 
-        Shader.SetGlobalVector
-        (
+        Shader.SetGlobalTexture("_HexCellData", _cellTexture);
+        Shader.SetGlobalVector(
             "_HexCellData_TexelSize",
             new Vector4(1f / x, 1f / z, x, z)
         );
 
-        if (_cellTextureData == null || _cellTextureData.Length != x * z)
-        {
+        if (
+            _cellTextureData == null ||
+            _cellTextureData.Length != x * z
+        ) {
             _cellTextureData = new Color32[x * z];
         }
-        else
-        {
+        else {
             for (int i = 0; i < _cellTextureData.Length; i++)
             {
                 _cellTextureData[i] = new Color32(0, 0, 0, 0);
@@ -146,7 +142,7 @@ public class CellShaderData : MonoBehaviour
         if (_needsVisibilityReset)
         {
             _needsVisibilityReset = false;
-            HexGrid.ResetVisibility();
+            HexMap.ResetVisibility();
         }
 
         int delta = (int)(Time.deltaTime * _transitionSpeed);

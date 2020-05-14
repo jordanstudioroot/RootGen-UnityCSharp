@@ -159,8 +159,13 @@ namespace DenseArray {
         /// <returns>Value at row and column index</returns>
         public T this[int row, int column]
         {
-            get { return _dataArray[_columnindexes[column] + row]; }
-            set { _dataArray[_columnindexes[column] + row] = value; }
+            get { 
+                return _dataArray[_columnindexes[column] + row];
+            }
+
+            set {
+                _dataArray[_columnindexes[column] + row] = value;
+            }
         }
 
         /// <summary>
@@ -260,6 +265,14 @@ namespace DenseArray {
             {
                 this[i, column] = items[i];
             }
+        }
+
+        public T[] ToList() {
+            T[] result = new T[_dataArray.Length];
+
+            _dataArray.CopyTo(result, 0);
+            
+            return result;
         }
     }
 }

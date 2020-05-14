@@ -5,8 +5,11 @@ using UnityEngine;
 [CustomPropertyDrawer(typeof(HexCoordinates))]
 public class HexCoordinatesDrawer : PropertyDrawer
 {
-    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-    {
+    public override void OnGUI(
+        Rect position,
+        SerializedProperty property,
+        GUIContent label
+    ) {
         HexCoordinates coordinates = new HexCoordinates
             (
                 property.FindPropertyRelative("x").intValue,

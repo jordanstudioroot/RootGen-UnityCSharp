@@ -35,17 +35,17 @@ public class RootGen {
 /// <returns>
 ///     A HexGrid generated according to the config settings.
 /// </returns>
-    public HexGrid GenerateMap(RootGenConfig config) {
-        Destroy.DestroyAll<HexGrid>();
-        HexGrid result = _mapGenerator.GenerateMap(config);
-        HexGridCamera.AttachCamera(result, config.cellOuterRadius);
-        return result;
-    }
+    public HexMap GenerateMap(RootGenConfig config) {
+        Destroy.DestroyAll<HexMap>();
 
-    public HexGrid GenerateHistoricalBoard(int width, int height) {
-        Destroy.DestroyAll<HexGrid>();
-        HexGrid result = _mapGenerator.GenerateHistoricalBoard(width, height, 16);
-        HexGridCamera.AttachCamera(result, 10f);
+        HexMap result = _mapGenerator.GenerateMap(
+            config,
+            new NeighborGraph(),
+            new RiverGraph(),
+            new ElevationGraph()
+        );
+
+        HexGridCamera.AttachCamera(result, config.cellOuterRadius);
         return result;
     }
 
@@ -62,13 +62,15 @@ public class RootGen {
 /// <returns>
 ///     A blank hex map generated according to the specified dimensions.
 /// </returns>
-    public HexGrid GenerateEmptyMap(Vector2 size, bool wrapping) {
-        Destroy.DestroyAll<HexGrid>();
+    public HexMap GenerateEmptyMap(Vector2 size, bool wrapping) {
+        Destroy.DestroyAll<HexMap>();
 
-        HexGrid result = HexGrid.GetGrid(
-            (int)size.x,
-            (int)size.y,
-            wrapping
+        HexMap result = HexMap.Empty(
+            new Rect(0, 0, (int)size.x, (int)size.y),
+            wrapping,
+            true,
+            5,
+            0
         );
 
         HexGridCamera.AttachCamera(result, 10f);

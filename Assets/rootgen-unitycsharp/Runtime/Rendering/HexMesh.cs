@@ -90,6 +90,9 @@ public class HexMesh : MonoBehaviour {
         Vector3 vertex3,
         float cellOuterRadius
     ) {
+        bool isMapWrapping = HexagonPoint.IsMapWrapping;
+        int mapWrapsize = HexagonPoint.MapWrapSize;
+
         /* The vertex index is equal to the length of the vertices list before
             * before adding the new vertices to it. */
         int vertexIndex = _vertices.Count;
@@ -142,11 +145,15 @@ public class HexMesh : MonoBehaviour {
         Vector3 vertex4,
         float cellOuterRadius
     ) {
+        bool isMapWrapping = HexagonPoint.IsMapWrapping;
+        int mapWrapSize = HexagonPoint.MapWrapSize;
+
         int vertexIndex = _vertices.Count;
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex1,
-                cellOuterRadius)
+                cellOuterRadius
+            )
         );
 
         _vertices.Add(
