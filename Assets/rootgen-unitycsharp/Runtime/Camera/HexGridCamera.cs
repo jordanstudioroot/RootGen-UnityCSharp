@@ -246,11 +246,11 @@ public class HexGridCamera : MonoBehaviour
 
             resultMono.transform.SetParent(grid.transform, false);
 
-            if (grid.Center2D) {
+            if (grid.Center) {
                 resultMono.SetPosition(
                     grid,
-                    grid.Center2D.transform.position.x,
-                    grid.Center2D.transform.position.z,
+                    grid.Center.transform.position.x,
+                    grid.Center.transform.position.z,
                     cellOuterRadius
                 );
             }
@@ -419,12 +419,12 @@ public class HexGridCamera : MonoBehaviour
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
         float xMax =
-            (grid.WidthInCells - 0.5f) * innerDiameter;
+            (grid.Width - 0.5f) * innerDiameter;
 
         position.x = Mathf.Clamp(position.x, 0f, xMax);
 
         float zMax =
-            (grid.HeightInCells - 1) * (1.5f * cellOuterRadius);
+            (grid.Height - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
@@ -439,7 +439,7 @@ public class HexGridCamera : MonoBehaviour
         float innerDiameter = 
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
-        float width = grid.WidthInCells * innerDiameter;
+        float width = grid.Width * innerDiameter;
 
         while (position.x < 0f) {
             position.x += width;
@@ -450,7 +450,7 @@ public class HexGridCamera : MonoBehaviour
         }
 
         float zMax =
-            (grid.HeightInCells - 1) * (1.5f * cellOuterRadius);
+            (grid.Height - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 

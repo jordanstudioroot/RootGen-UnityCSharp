@@ -71,7 +71,7 @@ public class MapGenerator {
 ///     
 ///     Might be possible to somehow eliminate this list entirely by using functional
 ///     programming principles instead of reusing the same list.
-    private List<HexDirection> _flowDirections = new List<HexDirection>();
+    private List<HexDirections> _flowDirections = new List<HexDirections>();
 
 /// <summary>
 /// An integer value representing the selected noise channel to use when
@@ -145,9 +145,7 @@ public class MapGenerator {
 /// </returns>
     public HexMap GenerateMap(
         RootGenConfig config,
-        NeighborGraph neighborGraph,
-        RiverGraph riverGraph,
-        ElevationGraph elevationGraph
+        bool editMode
     ) {        
         HexMap result = HexMap.CreateHexMapGameObject();
         int seed;
@@ -168,17 +166,17 @@ public class MapGenerator {
 
         result.Initialize(
             new Rect(0, 0, config.width, config.height),
+            seed,
+            config.cellSize,
             config.wrapping,
-            true,
-            config.cellOuterRadius,
-            seed
+            editMode
         );
 
 //        if (_searchFrontier == null) {
 //            _searchFrontier = new PriorityQueue();
 //        }
 
-        for (int i = 0; i < result.NumCells; i++) {
+        for (int i = 0; i < result.Size; i++) {
             result.GetCell(i).WaterLevel = config.waterLevel;
         }
 
@@ -192,7 +190,7 @@ public class MapGenerator {
         
         int numLandCells = GetNumLandCells(
             config.landPercentage,
-            result.WidthInCells * result.HeightInCells,
+            result.Width * result.Height,
             config.sinkProbability,
             config.minimumRegionDensity,
             config.maximumRegionDensity,
@@ -202,23 +200,23 @@ public class MapGenerator {
             config.elevationMax,
             config.waterLevel,
             config.jitterProbability,
-            config.cellOuterRadius,
+            config.cellSize,
             result.WrapSize,
-            neighborGraph
+            result.NeighborGraph
         );
 
         GenerateErosion(
             result,
             config.erosionPercentage,
-            result.NumCells,
-            config.cellOuterRadius,
-            neighborGraph
+            result.Size,
+            config.cellSize,
+            result.NeighborGraph
         );
 
         GenerateClimate(
             result,
             config.startingMoisture,
-            result.NumCells,
+            result.Size,
             config.evaporationFactor,
             config.precipitationFactor,
             config.elevationMax,
@@ -226,7 +224,7 @@ public class MapGenerator {
             config.windStrength,
             config.runoffFactor,
             config.seepageFactor,
-            neighborGraph
+            result.NeighborGraph
         );
 
         GenerateRivers(
@@ -236,27 +234,27 @@ public class MapGenerator {
             config.elevationMax,
             config.riverPercentage,
             config.extraLakeProbability,
-            config.cellOuterRadius,
-            neighborGraph,
-            riverGraph
+            config.cellSize,
+            result.NeighborGraph,
+            result.RiverGraph
         );
 
         SetTerrainTypes(
             config.elevationMax,
             config.waterLevel,
-            result.NumCells,
+            result.Size,
             config.hemisphere,
             config.temperatureJitter,
             config.lowTemperature,
             config.highTemperature,
             result,
-            config.cellOuterRadius,
-            riverGraph,
-            neighborGraph
+            config.cellSize,
+            result.RiverGraph,
+            result.NeighborGraph
         );
 
 // Reset the search phase of the cells in the HexMap to avoid search errors.
-        for (int i = 0; i < result.NumCells; i++) {
+        for (int i = 0; i < result.Size; i++) {
             result.GetCell(i).SearchPhase = 0;
         }
 
@@ -276,8 +274,8 @@ public class MapGenerator {
     ) {
         return new List<MapRegionRect>(
             SubdivideRegions(
-                hexMap.WidthInCells,
-                hexMap.HeightInCells,
+                hexMap.Width,
+                hexMap.Height,
                 mapBorderX,
                 mapBorderZ,
                 numRegions,
@@ -383,7 +381,7 @@ public class MapGenerator {
 
 // Get a chunk size to use within the bounds of the region based
 // of the minimum and maximum chunk sizes.
-                int chunkSize = Random.Range(
+                int maximumRegionDensity = Random.Range(
                     chunkSizeMin,
                     chunkSizeMax + 1
                 );
@@ -393,7 +391,7 @@ public class MapGenerator {
                 if (sink) {
                     landBudget = SinkTerrain(
                         hexMap,
-                        chunkSize,
+                        maximumRegionDensity,
                         landBudget,
                         region,
                         highRiseProbability,
@@ -401,8 +399,7 @@ public class MapGenerator {
                         waterLevel,
                         jitterProbability,
                         cellOuterRadius,
-                        neighborGraph,
-                        wrapSize
+                        neighborGraph
                     );
                 }
 
@@ -411,7 +408,7 @@ public class MapGenerator {
                 else {
                     landBudget = RaiseTerrain(
                         hexMap,
-                        chunkSize,
+                        maximumRegionDensity,
                         landBudget,
                         region,
                         highRiseProbability,
@@ -459,8 +456,7 @@ public class MapGenerator {
         float jitterProbability,
 //        int searchFrontierPhase,
         float cellOuterRadius,
-        NeighborGraph neighborGraph,
-        int wrapSize
+        NeighborGraph neighborGraph
     ) {
         PriorityQueue<HexCell> open = new PriorityQueue<HexCell>();
         List<HexCell> closed = new List<HexCell>();
@@ -495,7 +491,7 @@ public class MapGenerator {
 
         open.Enqueue(firstCell, 0);
 
-        HexCoordinates center = firstCell.Coordinates;
+        HexVector center = firstCell.HexCoordinates;
 
         int sink = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
@@ -521,7 +517,6 @@ public class MapGenerator {
             current.SetElevation(
                 newElevation,
                 cellOuterRadius,
-                hexMap.IsWrapping,
                 hexMap.WrapSize
             );
 
@@ -570,9 +565,9 @@ public class MapGenerator {
 //                    searchFrontier.Enqueue(neighbor);
 
                     int priority =
-                        neighbor.Coordinates.DistanceTo(
+                        neighbor.HexCoordinates.DistanceTo(
                             center,
-                            wrapSize
+                            hexMap.WrapSize
                         ) +
                         Random.value < jitterProbability ? 1 : 0;
 
@@ -589,7 +584,7 @@ public class MapGenerator {
     }
 
     private int RaiseTerrain(
-        HexMap HexMap, 
+        HexMap hexMap, 
         int maximumRegionDensity, 
         int budget, 
         MapRegionRect region,
@@ -610,7 +605,7 @@ public class MapGenerator {
 // TODO:
 //  This algorithm could probably be improved by finding a real-world
 //  model to implement for raising terrain based on tectonic shift.
-        HexCell firstCell = GetRandomCell(HexMap, region);
+        HexCell firstCell = GetRandomCell(hexMap, region);
 
         PriorityQueue<HexCell> open = new PriorityQueue<HexCell>();
         List<HexCell> closed = new List<HexCell>();
@@ -622,7 +617,7 @@ public class MapGenerator {
 //        firstCell.SearchHeuristic = 0;
 //        _searchFrontier.Enqueue(firstCell);
 
-        HexCoordinates center = firstCell.Coordinates;
+        HexVector center = firstCell.HexCoordinates;
 
         int rise = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
@@ -646,8 +641,13 @@ public class MapGenerator {
             current.SetElevation(
                 newElevation,
                 cellOuterRadius,
-                HexMap.IsWrapping,
-                HexMap.WrapSize
+                hexMap.WrapSize
+            );
+
+            current.SetElevation(
+                newElevation,
+                cellOuterRadius,
+                hexMap.WrapSize
             );
 
             if (
@@ -689,9 +689,9 @@ public class MapGenerator {
 
 //                    _searchFrontier.Enqueue(neighbor);
                     int priority =
-                        neighbor.Coordinates.DistanceTo(
+                        neighbor.HexCoordinates.DistanceTo(
                             center,
-                            wrapSize
+                            hexMap.WrapSize
                         ) +
                         Random.value < jitterProbability ? 1 : 0;
 
@@ -706,7 +706,7 @@ public class MapGenerator {
     }
 
     private void GenerateErosion(
-        HexMap HexMap,
+        HexMap hexMap,
         int erosionPercentage,
         int numCells,
         float cellOuterRadius,
@@ -715,7 +715,7 @@ public class MapGenerator {
         List<HexCell> erodibleCells = ListPool<HexCell>.Get();
 
         for (int i = 0; i < numCells; i++) {
-            HexCell cell = HexMap.GetCell(i);
+            HexCell cell = hexMap.GetCell(i);
 
             if (IsErodible(cell, neighborGraph)) {
                 erodibleCells.Add(cell);
@@ -737,15 +737,13 @@ public class MapGenerator {
             cell.SetElevation(
                 cell.Elevation - 1,
                 cellOuterRadius,
-                HexMap.IsWrapping,
-                HexMap.WrapSize
+                hexMap.WrapSize
             );
 
             erosionRunoffTargetCell.SetElevation(
                 erosionRunoffTargetCell.Elevation + 1,
                 cellOuterRadius,
-                HexMap.IsWrapping,
-                HexMap.WrapSize
+                hexMap.WrapSize
             );
 
             if (
@@ -821,7 +819,7 @@ public class MapGenerator {
         float evaporationFactor,
         float precipitationFactor,
         int elevationMax,    
-        HexDirection windDirection,
+        HexDirections windDirection,
         float windStrength,
         float runoffFactor,
         float seepageFactor,
@@ -877,7 +875,7 @@ public class MapGenerator {
         float evaporationFactor,
         float precipitationFactor,
         int elevationMax,
-        HexDirection windDirection,
+        HexDirections windDirection,
         float windStrength,
         float runoffFactor,
         float seepageFactor,
@@ -908,7 +906,7 @@ public class MapGenerator {
             cellClimate.clouds = cloudMaximum;
         }
 
-        HexDirection mainDispersalDirection = windDirection.Opposite();
+        HexDirections mainDispersalDirection = windDirection.Opposite();
 
         float cloudDispersal = cellClimate.clouds * (1f / (5f + windStrength));
         float runoff = cellClimate.moisture * runoffFactor * (1f / 6f);
@@ -1065,7 +1063,7 @@ public class MapGenerator {
     }
 
     private int GenerateRiver(
-        HexMap map,
+        HexMap hexMap,
         HexCell origin,
         float extraLakeProbability,
         float cellOuterRadius,
@@ -1074,7 +1072,7 @@ public class MapGenerator {
     ) {
         int localRiverLength = 1;
         HexCell currentCell = origin;
-        HexDirection direction = HexDirection.Northeast;
+        HexDirections direction = HexDirections.Northeast;
 
         while (!currentCell.IsUnderwater) {
             int minNeighborElevation = int.MaxValue;
@@ -1082,8 +1080,8 @@ public class MapGenerator {
             _flowDirections.Clear();
 
             for (
-                HexDirection directionCandidate = HexDirection.Northeast;
-                directionCandidate <= HexDirection.Northwest;
+                HexDirections directionCandidate = HexDirections.Northeast;
+                directionCandidate <= HexDirections.Northwest;
                 directionCandidate++
             ) {
 //            foreach(HexCell neighbor in neighborGraph.Neighbors(cell)) {
@@ -1187,8 +1185,7 @@ public class MapGenerator {
                         currentCell.SetElevation(
                             minNeighborElevation - 1,
                             cellOuterRadius,
-                            map.IsWrapping,
-                            map.WrapSize
+                            hexMap.WrapSize
                         );
                     }
                 }
@@ -1227,8 +1224,7 @@ public class MapGenerator {
                 currentCell.SetElevation(
                     currentCell.Elevation - 1,
                     cellOuterRadius,
-                    map.IsWrapping,
-                    map.WrapSize
+                    hexMap.WrapSize
                 );
             }
 // Make the new current cell the cell which the river has branched
@@ -1439,7 +1435,7 @@ public class MapGenerator {
         float highTemperature,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.Coordinates.Z / hexMap.HeightInCells;
+        float latitude = (float)cell.HexCoordinates.Z / hexMap.Height;
 
         if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -1468,7 +1464,6 @@ public class MapGenerator {
             HexagonPoint.SampleNoise(
                 cell.Position * 0.1f,
                 cellOuterRadius,
-                hexMap.IsWrapping,
                 hexMap.WrapSize
             )[_temperatureJitterChannel];
 

@@ -1,7 +1,7 @@
-﻿using System;
-using QuikGraph;
+﻿using QuikGraph;
+using RootLogging;
+using System;
 using System.Collections.Generic;
-using DenseArray;
 
 public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
@@ -44,7 +44,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public IEnumerable<HexEdge> TryGetEdgeInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         List<HexEdge> result = new List<HexEdge>();
@@ -61,7 +61,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexCell TryGetNeighborInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         IEnumerable<HexEdge> edges;
 
@@ -96,7 +96,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexEdge GetHexDirectionOppositeEdge(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         
@@ -130,7 +130,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexEdge GetHexDirectionNextEdge(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         
@@ -164,7 +164,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexEdge GetHexDirectionPreviousEdge(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         
@@ -198,7 +198,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexEdge GetHexDirectionNext2Edge(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         
@@ -215,7 +215,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     public HexEdge GetHexDirectionPrevious2Edge(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         List<HexEdge> edges = Edges(cell);
         
@@ -230,39 +230,63 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         return null;
     }
 
-    public static NeighborGraph FromDenseArray(
-        DenseArray<HexCell> denseArray
+    public static NeighborGraph FromHexGrid(
+        HexGrid<HexCell> hexGrid
     ) {
         List<HexEdge> edges = new List<HexEdge>();
 
-        int numCells = denseArray.Columns * denseArray.Rows;
-        HexDirection direction = HexDirection.SouthWest;
+        for (
+            int index = 0;
+            index < hexGrid.Rows * hexGrid.Columns;
+            index++
+        ) {
+            RootLog.Log(
+                index.ToString(),
+                Severity.Information,
+                "HexGraph"
+            );
 
-        for (int i = 0; i < numCells; i++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    try {
-                        if (denseArray[dz, dx] && denseArray[dz, dx] != denseArray[i]) {
-                            edges.Add(
-                                new HexEdge(
-                                    denseArray[i],
-                                    denseArray[dz, dx],
-                                    direction                        
-                                )
-                            );
-
-                            direction = direction.NextClockwise();
-                        }
-                    }
-                    catch (IndexOutOfRangeException e) {
-                        
-                    }
-                }
+            foreach(HexCell neighbor in hexGrid.Neighbors(index)) {
+                RootLog.Log(
+                    neighbor.ToString(),
+                    Severity.Information,
+                    "HexGraph"
+                );
+                
+                edges.Add(
+                    new HexEdge(
+                        hexGrid.GetElement(index),
+                        neighbor,
+                        hexGrid.GetElement(index).HexCoordinates.DirectionTo(
+                            neighbor.HexCoordinates,
+                            hexGrid.WrapSize
+                        )
+                    )
+                );
             }
         }
 
         NeighborGraph result = new NeighborGraph();
         result.AddVerticesAndEdgeRange(edges);
+        return result;
+    }
+
+    public override string ToString() {
+        string result = "Neighbor Graph Edges \n\n";
+        
+        foreach (HexCell vertex in Vertices) {
+            IEnumerable<HexEdge> outEdges;
+
+            TryGetOutEdges(vertex, out outEdges);
+
+            if (outEdges != null) {
+                foreach (HexEdge edge in outEdges)
+                    result += edge.ToString() + "\n";
+            }
+
+            result += "\n\n";
+        }
+
         return result;
     }
 }
@@ -290,12 +314,12 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         return false;
     }
 
-    public List<HexDirection> IncomingRiverDirections(HexCell cell) {
+    public List<HexDirections> IncomingRiverDirections(HexCell cell) {
         IEnumerable<RiverEdge> edges;
-        List<HexDirection> result = null;
+        List<HexDirections> result = null;
 
         if (!TryGetInEdges(cell, out edges)) {
-            result = new List<HexDirection>();
+            result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
                 result.Add(currentEdge.Direction);
@@ -305,12 +329,12 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         return result;
     }
 
-    public List<HexDirection> OutgoingRiverDirections(HexCell cell) {
+    public List<HexDirections> OutgoingRiverDirections(HexCell cell) {
         IEnumerable<RiverEdge> edges;
-        List<HexDirection> result = null;
+        List<HexDirections> result = null;
 
         if (!TryGetOutEdges(cell, out edges)) {
-            result = new List<HexDirection>();
+            result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
                 result.Add(currentEdge.Direction);
@@ -420,7 +444,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
 
     public bool HasIncomingRiverInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         IEnumerable<RiverEdge> edges;
 
@@ -449,7 +473,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
 
     public bool HasOutgoingRiverInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         IEnumerable<RiverEdge> edges;
 
@@ -466,7 +490,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     
     public bool HasRiverInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         if (HasIncomingRiverInDirection(cell, direction))
             return true;
@@ -542,7 +566,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         return false;
     }
 
-    public HexDirection RiverStartOrEndDirection(
+    public HexDirections RiverStartOrEndDirection(
         HexCell cell
     ) {
         if (HasRiverStartOrEnd(cell)) {
@@ -554,7 +578,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         );
     }
 
-    public HexDirection AnyRiverDirection(
+    public HexDirections AnyRiverDirection(
         HexCell cell
     ) {
         List<RiverEdge> edges = (List<RiverEdge>)Edges;
@@ -567,7 +591,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         );
     }
 // TODO: STUB
-    public static RiverGraph FromDenseArray(DenseArray<HexCell> array) {
+    public static RiverGraph FromHexGrid(HexGrid<HexCell> hexGrid) {
         return new RiverGraph();
     }
 }
@@ -597,7 +621,7 @@ public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
 
     public bool HasRoadInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         if (!ContainsVertex(cell))
             return false;
@@ -615,7 +639,7 @@ public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
     }
 
 // TODO: STUB
-    public static RoadGraph FromDenseArray(DenseArray<HexCell> array) {
+    public static RoadGraph FromHexGrid(HexGrid<HexCell> array) {
         return new RoadGraph();
     }
 }
@@ -623,7 +647,7 @@ public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
 public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
     public ElevationEdgeTypes GetEdgeTypeInDirection(
         HexCell cell,
-        HexDirection direction
+        HexDirections direction
     ) {
         IEnumerable<ElevationEdge> edges;
 
@@ -670,44 +694,8 @@ public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
         return result;
     }
 
-    public static ElevationGraph FromDenseArray(
-        DenseArray<HexCell> denseArray
-    ) {
-        List<ElevationEdge> edges = new List<ElevationEdge>();
-        List<HexCell> vertices = new List<HexCell>();
-
-        int numCells = denseArray.Columns * denseArray.Rows;
-        HexDirection direction = HexDirection.SouthWest;
-
-        for (int i = 0; i < numCells; i++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    try {
-                        if (
-                            denseArray[dz, dx] &&
-                            denseArray[dz, dx] !=
-                            denseArray[i]
-                        ) {
-                            edges.Add(
-                                new ElevationEdge(
-                                    denseArray[i],
-                                    denseArray[dz, dx],
-                                    direction                     
-                                )
-                            );
-
-                            direction = direction.NextClockwise();
-                        }
-                    }
-                    catch (IndexOutOfRangeException e) {
-                        
-                    }
-                }
-            }
-        }
-
+    public static ElevationGraph FromHexGrid(HexGrid<HexCell> denseArray) {
         ElevationGraph result = new ElevationGraph();
-        result.AddVerticesAndEdgeRange(edges);
         return result;
     }
 }

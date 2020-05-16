@@ -6,7 +6,7 @@ using RootLogging;
 using RootCollections;
 using QuikGraph;
 using QuikGraph.Algorithms;
-using DenseArray;
+using MathNet.Numerics.LinearAlgebra;
 
 public class HexMap : MonoBehaviour{
 // FIELDS ~~~~~~~~~~
@@ -22,22 +22,21 @@ public class HexMap : MonoBehaviour{
 // ~~ public
 
 // ~~ private
-    private DenseArray<HexCell> _cellMatrix;
-    private bool _wrapping;
     private bool _editMode;
-    private Rect _bounds;
-    private Transform[] _columns;
+    public Transform[] Columns {
+        get; private set;
+    }
     private Text _cellLabelPrefab;
     private List<HexUnit> _units = new List<HexUnit>();
     private int WidthInChunks {
         get {
-            return WidthInCells / MeshConstants.ChunkSizeX;
+            return Width / MeshConstants.ChunkSizeX;
         }
     }
 
     private int HeightInChunks {
         get {
-            return WidthInCells / MeshConstants.ChunkSizeZ;
+            return Width / MeshConstants.ChunkSizeZ;
         }
     }
 
@@ -47,75 +46,58 @@ public class HexMap : MonoBehaviour{
 /// The index of the MeshChunk column currently centered below the camera.
 /// </summary>
     private int _currentCenterColumnIndex = -1;
-    private HexGridChunk[] _chunks;
+    public HexGridChunk[] Chunks {
+        get; private set;
+    }
     private CellShaderData _cellShaderData;
     private Material _terrainMaterial;
     private bool _uiVisible;
 
-    public DenseArray<HexCell> CellMatrix {
-        get {
-            return _cellMatrix;
-        }
-    }
-
-    public HexCell[] Cells {
-        get {
-            return _cellMatrix.ToList();
-        }
+    public HexGrid<HexCell> HexGrid {
+        get; private set;
     }
 
     public NeighborGraph NeighborGraph {
         get {
-            return NeighborGraph.FromDenseArray(_cellMatrix);
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return NeighborGraph.FromHexGrid(HexGrid);
         }
     }
 
     public RiverGraph RiverGraph {
         get {
-            return RiverGraph.FromDenseArray(_cellMatrix);
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return RiverGraph.FromHexGrid(HexGrid);
         }
     }
 
     public RoadGraph RoadGraph {
         get {
-            return RoadGraph.FromDenseArray(_cellMatrix);
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return RoadGraph.FromHexGrid(HexGrid);
         }
     }
 
     public ElevationGraph ElevationGraph {
         get {
-            return ElevationGraph.FromDenseArray(_cellMatrix);
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return ElevationGraph.FromHexGrid(HexGrid);
         }
     }
 
-    public bool IsWrapping {
+    public int Width {
         get {
-            return _wrapping;
-        }
-
-        set {
-            HexagonPoint.IsMapWrapping = value;
-            HexagonPoint.MapWrapSize =
-                value ? WidthInCells : 0;
-            _wrapping = value;
+            return HexGrid.Columns;
         }
     }
 
-    public int WrapSize {
+    public int Height {
         get {
-            return _wrapping ? WidthInCells : 0;
-        }
-    }
-
-    public int WidthInCells {
-        get {
-            return (int)_bounds.width;
-        }
-    }
-
-    public int HeightInCells {
-        get {
-             return (int)_bounds.height;
+             return HexGrid.Rows;
         }
     }
 
@@ -137,25 +119,36 @@ public class HexMap : MonoBehaviour{
         }
     }
 
-    public HexCell Center2D {
+    public HexCell Center {
         get {
-            if (_cellMatrix != null) {
-                return _cellMatrix[
-                    (_cellMatrix.Rows / 2) - 1,
-                    (_cellMatrix.Columns / 2) - 1
-                ];
-            }
-            return null;
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return HexGrid.Center;
         }
     }
 
-    public int NumCells {
+    public int Size {
         get {
-            if (_cellMatrix == null) {
-                return 0;
-            }
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return HexGrid.Size;
+        }
+    }
 
-            return _cellMatrix.Count;
+    public bool IsWrapping {
+        get {
+            if (HexGrid == null)
+                throw new NullHexGridException();
+            return HexGrid.IsWrapping;
+        }
+    }
+
+    public int WrapSize {
+        get {
+            if (HexGrid == null)
+                throw new NullHexGridException();
+
+            return HexGrid.WrapSize;
         }
     }
 
@@ -182,23 +175,21 @@ public class HexMap : MonoBehaviour{
 // ~~ public
 
     private void Render(
-        HexCell[] cells,
-        float cellOuterRadius,
-        NeighborGraph neighborGraph,
-        RiverGraph riverGraph,
         RoadGraph roadGraph,
-        ElevationGraph elevationGraph,
-        int wrapSize
+        RiverGraph riverGraph,
+        NeighborGraph neighborGraph,
+        HexGrid<HexCell> hexGrid,
+        float cellOuterRadius,
+        ElevationGraph elevationGraph
     ) {
-        foreach(HexGridChunk chunk in _chunks) {
+        foreach(HexGridChunk chunk in Chunks) {
             chunk.Triangulate(
-                cells,
+                hexGrid,
                 cellOuterRadius,
                 neighborGraph,
                 riverGraph,
                 roadGraph,
-                elevationGraph,
-                wrapSize                
+                elevationGraph            
             );
         }
     }
@@ -216,7 +207,7 @@ public class HexMap : MonoBehaviour{
 /// <param name="editMode">
 ///     Should the map be editable immediately after being initialized?
 /// </param>
-/// <param name="cellOuterRadius">
+/// <param name="cellSize">
 ///     The distance of each hex cell from its center to a circle 
 ///     intersecting each corner of the hexagon. Scales the size of all
 ///     other visual elements on the hex map.
@@ -226,17 +217,21 @@ public class HexMap : MonoBehaviour{
 /// </param>
     public HexMap Initialize(
         Rect bounds,
+        int seed,
+        float cellSize,
         bool wrapping,
-        bool editMode,
-        float cellOuterRadius,
-        int seed
+        bool editMode
     ) {
         if (
+            bounds.x < 0 || bounds.y < 0 ||
             !bounds.size.IsFactorOf(MeshConstants.ChunkSize)
         ) {
             RootLog.Log(
-                "Unsupported or empty map size. Clamping dimensions to chunk size."
+                "Unsupported map size. Clamping dimensions to chunk size.",
+                Severity.Warning,
+                "HexMap"
             );
+
             Vector2 clamped =
                 bounds.size.ClampToFactorOf(MeshConstants.ChunkSize);
 
@@ -248,144 +243,124 @@ public class HexMap : MonoBehaviour{
             );
         }
 
+        Debug.Log(bounds.width + ", " + bounds.height);
+
+        HexGrid = new HexGrid<HexCell>(
+            (int)bounds.height,
+            (int)bounds.width,
+            wrapping
+        );
+
+        Columns = CreateColumns(
+            Width / MeshConstants.ChunkSizeX
+        );
+        
+        Chunks = CreateChunks(
+            CreateColumns(Width / MeshConstants.ChunkSizeX),
+            Width / MeshConstants.ChunkSizeX,
+            Height / MeshConstants.ChunkSizeZ
+        );
+
+        for (
+            int index = 0;
+            index < (int)bounds.width * (int)bounds.height;
+            index++
+        ) {
+            int row = HexGrid.RowFromIndex(index);
+            int column = HexGrid.ColumnFromIndex(index);
+
+            HexGrid.SetElement(
+                CreateCell(
+                    row,
+                    column,
+                    index,
+                    cellSize,
+                    HexGrid
+                ),
+                index
+            );
+
+            int chunkX = row / MeshConstants.ChunkSizeX;
+            int chunkZ = column / MeshConstants.ChunkSizeZ;
+            
+            HexGridChunk chunk = Chunks[
+                chunkX + chunkZ * WidthInChunks
+            ];
+            
+            int localX = row - chunkX * MeshConstants.ChunkSizeX;
+            int localZ = column - chunkZ * MeshConstants.ChunkSizeZ;
+            
+            AddCellToChunk(
+                localX,
+                localZ,
+                HexGrid.GetElement(row, column),
+                chunk
+            );
+        }
+
         _editMode = editMode;
 // Set to -1 so new maps always gets centered.
         _currentCenterColumnIndex = -1;
-        _bounds = bounds;
-        IsWrapping = wrapping;
 
-        if (!_terrainMaterial)
-            _terrainMaterial = Resources.Load<Material>("Terrain");
-        
-        _chunks = CreateChunks(
-            ref _columns,
-            WidthInCells / MeshConstants.ChunkSizeX,
-            HeightInCells / MeshConstants.ChunkSizeZ
-        );
-
-        _cellMatrix = CreateCellDenseArray(
-            _bounds,
-            cellOuterRadius,
-            WidthInCells / MeshConstants.ChunkSizeX,
-            WrapSize
-        );
-
-        CreateNeighborGraph(
-            WidthInCells / MeshConstants.ChunkSizeX,
-            _cellMatrix
-        );
-
-// TODO: This value will need to be serialized when games are saved,
+        // TODO: This value will need to be serialized when games are saved,
 //       so it should probably be stored in such a way that when the
 //       maps Save() method is called it also gets saved and restored.
         HexagonPoint.InitializeHashGrid(seed);
 
         ClearUnits(_units);
-        ClearColumns(_columns);
+        ClearColumns(Columns);
+
+        if (!_terrainMaterial)
+            _terrainMaterial = Resources.Load<Material>("Terrain");
+
+        RootLog.Log(
+            "HexCell matrix created.\n\n" +
+            NeighborGraph.ToString(),
+            Severity.Information,
+            "HexMap"
+        );
 
         _cellShaderData.Initialize(
-            WidthInCells,
-            HeightInCells
+            Width,
+            Height
         );
 
         Render(
-            Cells,
-            cellOuterRadius,
-            NeighborGraph,
-            RiverGraph,
             RoadGraph,
-            ElevationGraph,
-            WrapSize
+            RiverGraph,
+            NeighborGraph,
+            HexGrid,
+            cellSize,
+            ElevationGraph
         );
 
         return this;
     }
 
+    public HexCell GetCellAtIndex(int index) {
+        return HexGrid.GetElement(index);
+    }
+
+    public HexCell GetCellAtRowAndColumn(int row, int column) {
+        return HexGrid.GetElement(row, column);
+    }
+
     public static HexMap Empty(
         Rect bounds,
-        bool wrapping,
-        bool editMode,
+        int seed,
         float cellOuterRadius,
-        int seed
+        bool wrapping,
+        bool editMode
     ) {
-        GameObject resultObj = new GameObject("HexMap");
+        HexMap result = CreateHexMapGameObject();
 
-        HexMap result = resultObj.AddComponent<HexMap>().Initialize(
+        result.GetComponent<HexMap>().Initialize(
             bounds,
-            wrapping,
-            editMode,
+            seed,
             cellOuterRadius,
-            seed
+            wrapping,
+            editMode
         );
-
-        return result;
-    }
-
-/// <summary>
-///     Add and edge to the HexGrid.
-/// </summary>
-/// <param name="source">
-///     The source of the edge.
-/// </param>
-/// <param name="target">
-///     The target of the edge.
-/// </param>
-    public void AddEdge(
-        HexCell source,
-        HexCell target,
-        HexDirection direction,
-        bool hasRoad = false,
-        bool hasRiver = false
-    ) {
-        throw new System.NotImplementedException();
-//        if (!_neighborGraph.TryGetNeighborInDirection(
-//            source,
-//            direction
-//        )) {
-//            HexEdge newEdge = new HexEdge(
-//                source,
-//                target,
-//                direction
-//            );
-//
-//            _neighborGraph.AddEdge(newEdge);
-//        }
-//
-//        if (_riverGraph.HasOutgoingRiver(source)) {
-//            _riverGraph.RemoveOutEdgeIf(
-//                source
-//            );
-//        }
-//
-//        _adjacencyEdges.Add(newEdge);
-//        _neighborGraph.AddEdge(newEdge);
-    }
-    
-/// <summary>
-///     Get a list of direct neighbors of the specified hex cell.
-/// </summary>
-/// <param name="cell">
-///     The cell adjacent to the desired cells.
-/// </param>
-/// <param name="graph">
-///     A bidirectional graph containing HexCells.
-/// </param>
-/// <returns>
-///     A list containing the targets of all out edge sof the specified
-///     cell.
-/// </returns>
-    public List<HexCell> GetNeighbors(
-        HexCell cell,
-        IBidirectionalGraph<HexCell, IEdge<HexCell>> graph
-    ) {
-        IEnumerable<IEdge<HexCell>> outEdges;
-        graph.TryGetOutEdges(cell, out outEdges);
-
-        List<HexCell> result = new List<HexCell>();
-
-        foreach(HexEdge edge in outEdges) {
-            result.Add(edge.Target);
-        }
 
         return result;
     }
@@ -447,38 +422,44 @@ public class HexMap : MonoBehaviour{
 
     public HexCell GetCell(
         Vector3 position,
-        float outerCellRadius,
-        int wrapSize
+        float outerCellRadius
     ) {
+
+        if (HexGrid == null)
+            throw new System.NullReferenceException(
+                "HexMap has not been initialized with a HexGrid."
+            );
+
         position = transform.InverseTransformPoint(position);
         
-        HexCoordinates coordinates =
-            HexCoordinates.FromPosition(
+        HexVector coordinates =
+            HexVector.FromPosition(
                 position,
-                outerCellRadius
+                outerCellRadius,
+                HexGrid.WrapSize
             );
         
         return GetCell(coordinates);
     }
 
     public HexCell GetCell(
-        HexCoordinates coordinates
+        HexVector coordinates
     ) {
         int z = coordinates.Z;
 
         // Check for array index out of bounds.
-        if (z < 0 || z >= HeightInCells) {
+        if (z < 0 || z >= Height) {
             return null;
         }
 
         int x = coordinates.X + z / 2;
         
         // Check for array index out of bounds.
-        if (x < 0 || x >= WidthInCells) {
+        if (x < 0 || x >= Width) {
             return null;
         }
         
-        return _cellMatrix[x + z * WidthInCells];
+        return HexGrid.GetElement(x + z * Width);
     }
 
     public HexCell GetCell(
@@ -491,8 +472,7 @@ public class HexMap : MonoBehaviour{
         if (Physics.Raycast(ray, out hit)) {
             return GetCell(
                 hit.point,
-                outerRadius,
-                wrapSize
+                outerRadius
             );
         }
 
@@ -500,11 +480,11 @@ public class HexMap : MonoBehaviour{
     }
 
     public HexCell GetCell(int xOffset, int zOffset) {
-        return _cellMatrix[xOffset + zOffset * WidthInCells];
+        return HexGrid.GetElement(xOffset + zOffset * Width);
     }
 
     public HexCell GetCell(int cellIndex) {
-        return _cellMatrix[cellIndex];
+        return HexGrid.GetElement(cellIndex);
     }
 
     public IEnumerable<HexEdge> GetPath(
@@ -578,8 +558,8 @@ public class HexMap : MonoBehaviour{
 // TODO: This is a presentation concern and should be moved out of this
 //       class
     public void ResetVisibility() {
-        for (int i = 0; i < _cellMatrix.Count; i++) {
-            _cellMatrix[i].ResetVisibility();
+        for (int i = 0; i < HexGrid.Size; i++) {
+            HexGrid.GetElement(i).ResetVisibility();
         }
 
         for (int i = 0; i < _units.Count; i++) {
@@ -615,7 +595,7 @@ public class HexMap : MonoBehaviour{
         Vector3 position;
         position.y = position.z = 0f;
 
-        for (int i = 0; i < _columns.Length; i++) {
+        for (int i = 0; i < Columns.Length; i++) {
             if (i < minColumnIndex) {
                 position.x = WidthInChunks *
                                 (innerDiameter * MeshConstants.ChunkSizeX);
@@ -628,12 +608,12 @@ public class HexMap : MonoBehaviour{
                 position.x = 0f;
             }
 
-            _columns[i].localPosition = position;
+            Columns[i].localPosition = position;
         }
     }
 
     public void MakeChildOfColumn(Transform child, int columnIndex) {
-        child.SetParent(_columns[columnIndex], false);
+        child.SetParent(Columns[columnIndex], false);
     }
 
 /// <summary>
@@ -658,8 +638,8 @@ public class HexMap : MonoBehaviour{
 ///     The visible state of all HexGridChunks.
 /// </param>
     private void ShowUIAllChunks(bool visible) {
-        for (int i = 0; i < _chunks.Length; i++) {
-            _chunks[i].ShowUI(visible);
+        for (int i = 0; i < Chunks.Length; i++) {
+            Chunks[i].ShowUI(visible);
         }
     }
 
@@ -805,8 +785,8 @@ public class HexMap : MonoBehaviour{
         HexCell fromCell
 //        int sightRange
     ) {
-        ElevationGraph elevationGraph = ElevationGraph.FromDenseArray(
-            _cellMatrix
+        ElevationGraph elevationGraph = ElevationGraph.FromHexGrid(
+            HexGrid
         );
 
         List<HexCell> visibleCells = new List<HexCell>();
@@ -942,130 +922,37 @@ public class HexMap : MonoBehaviour{
         */
     }
 
-    private HexGridChunk[] CreateChunks(
-        ref Transform[] columns,
-        int chunkCountX,
-        int chunkCountZ
+    private Transform[] CreateColumns(
+        int chunkColumns
     ) {
-        Debug.Log("Creating chunks.");
-        HexGridChunk[] result =
-            new HexGridChunk[chunkCountX * chunkCountZ];
-        
-        columns = new Transform[chunkCountX];
+        Transform[] result = new Transform[chunkColumns];
 
-        for (int x = 0; x < chunkCountX; x++) {
-            Debug.Log("Creating column.");
-            columns[x] = Instantiate(
-                new GameObject("Column").transform
-            );
+        for (int column = 0; column < chunkColumns; column++) {
+            GameObject columnObj = Instantiate(
+                new GameObject("Column"),
+                transform,
+                false
+            ) as GameObject;
 
-            columns[x].SetParent(this.transform, false);
+            result[column] = columnObj.transform;
         }
 
-        for (int z = 0, i = 0; z < chunkCountZ; z++) {
-            for (int x = 0; x < chunkCountX; x++) {
+        return result;
+    }
+
+    private HexGridChunk[] CreateChunks(
+        Transform[] columns,
+        int chunkRows,
+        int chunkColumns
+    ) {
+        HexGridChunk[] result =
+            new HexGridChunk[chunkRows * chunkColumns];
+
+        for (int z = 0, i = 0; z < chunkColumns; z++) {
+            for (int x = 0; x < chunkRows; x++) {
                 HexGridChunk chunk = result[i++] =
                     HexGridChunk.CreateChunk();
-                Debug.Log("Creating chunk.");
                 chunk.transform.SetParent(columns[x], false);
-            }
-        }
-
-        return result;
-    }
-
-/// <summary>
-/// Get a new cell matrix represented as a DenseArray.
-/// </summary>
-/// <param name="gridBounds">
-///     A rect representing the dimensions of the HexGrid to be represented
-///     by the matrix.
-/// </param>
-/// <param name="cellOuterRadius">
-///     The distance of each hex cell from its center to a circle intersecting each
-///     corner of the hexagon. Controls the size of each hex cell.
-/// </param>
-/// <param name="chunkSizeX">
-///     The size of a mesh chunk along the x axis.
-/// </param>
-/// <returns>
-///     A DenseArray cooresponding to the specified bounds containing HexCells
-///     corresponding to the specified radius and chunkSizeX.
-/// </returns>
-    private DenseArray<HexCell> CreateCellDenseArray(
-        Rect gridBounds,
-        float cellOuterRadius,
-        int chunkSizeX,
-        int wrapSize
-    ) {
-        int matrixRows = (int) gridBounds.height;
-        int matrixColumns = (int) gridBounds.width;
-        
-        DenseArray<HexCell> result = new DenseArray<HexCell>(
-            matrixRows,
-            matrixColumns
-        );
-
-        for (int row = 0, i = 0; row < matrixRows; row++) {
-            for (int column = 0; column < matrixColumns; column++) {
-                result[row, column] = CreateCell(
-                    column,
-                    row,
-                    i++,
-                    cellOuterRadius,
-                    chunkSizeX,
-                    wrapSize
-                );
-            }
-        }
-        
-        return result;
-    }
-
-    private NeighborGraph CreateNeighborGraph(
-        int chunkSizeX,
-        DenseArray<HexCell> cellMatrix
-    ) {        
-        NeighborGraph result = new NeighborGraph();
-
-        result.AddVerticesAndEdgeRange(
-            CreateAdjacencyEdges(cellMatrix)
-        );
-
-        return result;
-    }
-
-    private List<HexEdge> CreateAdjacencyEdges(
-        DenseArray<HexCell> cellMatrix
-    ) {
-        List<HexEdge> result = new List<HexEdge>();
-
-        int numCells = cellMatrix.Columns * cellMatrix.Rows;
-        HexDirection direction = HexDirection.SouthWest;
-
-        for (int i = 0; i < numCells; i++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    try {
-                        if (
-                            cellMatrix[dz, dx] &&
-                            cellMatrix[dz, dx] != cellMatrix[i]
-                        ) {
-                            result.Add(
-                                new HexEdge(
-                                    cellMatrix[i],
-                                    cellMatrix[dz, dx],
-                                    direction                        
-                                )
-                            );
-
-                            direction = direction.NextClockwise();
-                        }
-                    }
-                    catch (System.IndexOutOfRangeException) {
-
-                    }
-                }
             }
         }
 
@@ -1109,16 +996,14 @@ public class HexMap : MonoBehaviour{
         int z,
         int i,
         float cellOuterRadius,
-        int chunkSizeX,
-        int wrapSize
+        HexGrid<HexCell> hexGrid
     ) {
-// Get the inner diameter of the cell as a scaling value for all other
 // metrics.
         float innerDiameter =
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
 // Create the HexCell's object and monobehaviour.
-        HexCell result = HexCell.GetCell();
+        HexCell result = HexCell.Instantiate();
 
 // Set the HexCell's transform.
         result.transform.localPosition = CoordinateToLocalPosition(
@@ -1129,10 +1014,10 @@ public class HexMap : MonoBehaviour{
         );
 
 // Set the HexCell's monobehaviour properties.
-        result.Coordinates = HexCoordinates.AsAxialCoordinates(
+        result.HexCoordinates = HexVector.AsAxialCoordinates(
             x,
             z,
-            wrapSize
+            hexGrid.WrapSize
         );
 
         result.Index = i;
@@ -1142,7 +1027,7 @@ public class HexMap : MonoBehaviour{
 // If wrapping is enabled, cell is not explorable if the cell is on the
 // top or bottom border.
         if (IsWrapping) {
-            result.IsExplorable = z > 0 && z < HeightInCells - 1;
+            result.IsExplorable = z > 0 && z < Height - 1;
         }
 // If wrapping is disabled, cell is not explorable if the cell is on
 // any border.
@@ -1150,8 +1035,8 @@ public class HexMap : MonoBehaviour{
             result.IsExplorable =
                 x > 0 &&
                 z > 0 &&
-                x < WidthInCells - 1 &&
-                z < HeightInCells - 1;
+                x < Width - 1 &&
+                z < Height - 1;
         }
 
 // THIS IS NOW HANDLED BY MAPPING THE DENSEARRAY TO AN ADJACENCY GRAP
@@ -1193,7 +1078,7 @@ public class HexMap : MonoBehaviour{
 //                }
 //                else if (_wrapping)
 //                {
-//                    result.SetNeighborPair(HexDirection.SouthWest, result[i - 1]);
+//                    result.SetNeighborPair(HexDireFtion.SouthWest, result[i - 1]);
 //                }
 //            }
 //            else
@@ -1213,7 +1098,8 @@ public class HexMap : MonoBehaviour{
 //        }
 
 // TODO: Presentation considerations should be moved to a separate class.
-        Text label = Instantiate<Text>(_cellLabelPrefab);
+        Text label = new GameObject().AddComponent<Text>();
+        
         label.rectTransform.anchoredPosition =
             new Vector2(
                 result.transform.localPosition.x,
@@ -1224,24 +1110,23 @@ public class HexMap : MonoBehaviour{
         result.SetElevation(
             0,
             cellOuterRadius,
-            IsWrapping,
-            WrapSize
+            hexGrid.WrapSize
         );
 
-        AddCellToChunk(x, z, result);
+        Debug.Log(result);
         
         return result;
     }
 
-    private void AddCellToChunk(int x, int z, HexCell cell) {
-        int chunkX = x / MeshConstants.ChunkSizeX;
-        int chunkZ = z / MeshConstants.ChunkSizeZ;
-        HexGridChunk chunk = _chunks[chunkX + chunkZ * WidthInChunks];
-
-        int localX = x - chunkX * MeshConstants.ChunkSizeX;
-        int localZ = z - chunkZ * MeshConstants.ChunkSizeZ;
-
-        chunk.AddCell(localX + localZ * MeshConstants.ChunkSizeX, cell);
+    private void AddCellToChunk(
+        int localX,
+        int localZ,
+        HexCell cell,
+        HexGridChunk chunk
+    ) {
+        chunk.AddCell(
+            localX + localZ * MeshConstants.ChunkSizeX, cell
+        );
     }
 
     private void Awake() {
@@ -1254,7 +1139,7 @@ public class HexMap : MonoBehaviour{
         _cellShaderData = gameObject.AddComponent<CellShaderData>();
         _cellShaderData.HexMap = this;
 
-        _chunks = new HexGridChunk[0];
+        Chunks = new HexGridChunk[0];
     
 // TODO: This is a presentation concern and should not be in this class.
         _cellLabelPrefab = Resources.Load<Text>("Hex Cell Label");

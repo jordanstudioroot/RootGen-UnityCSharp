@@ -17,7 +17,7 @@ public class RootGenConfig : ScriptableObject
     public int seed;
 
     [Range(10f, 9999f)]
-    public int cellOuterRadius = 10;
+    public int cellSize = 10;
 
     [Range(0f, 0.5f)]
     public float jitterProbability = 0.25f;
@@ -73,7 +73,7 @@ public class RootGenConfig : ScriptableObject
     [Range(0f, 1f)]
     public float seepageFactor = 0.125f;
 
-    public HexDirection windDirection = HexDirection.Northwest;
+    public HexDirections windDirection = HexDirections.Northwest;
 
     [Range(1f, 10f)]
     public float windStrength = 4f;

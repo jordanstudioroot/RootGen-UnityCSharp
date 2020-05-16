@@ -35,17 +35,18 @@ public class RootGen {
 /// <returns>
 ///     A HexGrid generated according to the config settings.
 /// </returns>
-    public HexMap GenerateMap(RootGenConfig config) {
+    public HexMap GenerateMap(
+        RootGenConfig config,
+        bool editMode
+    ) {
         Destroy.DestroyAll<HexMap>();
 
         HexMap result = _mapGenerator.GenerateMap(
             config,
-            new NeighborGraph(),
-            new RiverGraph(),
-            new ElevationGraph()
+            editMode
         );
 
-        HexGridCamera.AttachCamera(result, config.cellOuterRadius);
+        HexGridCamera.AttachCamera(result, config.cellSize);
         return result;
     }
 
@@ -62,18 +63,24 @@ public class RootGen {
 /// <returns>
 ///     A blank hex map generated according to the specified dimensions.
 /// </returns>
-    public HexMap GenerateEmptyMap(Vector2 size, bool wrapping) {
+    public HexMap GenerateEmptyMap(
+        Vector2 size,
+        int seed,
+        float cellOuterRadius,
+        bool wrapping,
+        bool editMode
+    ) {
         Destroy.DestroyAll<HexMap>();
 
         HexMap result = HexMap.Empty(
             new Rect(0, 0, (int)size.x, (int)size.y),
+            seed,
+            cellOuterRadius,
             wrapping,
-            true,
-            5,
-            0
+            editMode
         );
 
-        HexGridCamera.AttachCamera(result, 10f);
+        HexGridCamera.AttachCamera(result, cellOuterRadius);
         return result;
     }
 

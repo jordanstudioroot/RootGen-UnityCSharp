@@ -5,6 +5,9 @@ using RootLogging;
 
 public class RootGenExampleApp : MonoBehaviour
 {
+    public int mapSizeX;
+    public int mapSizeY;
+    public int cellSize;
     private RootGen _rootGen;
     void Awake() {
         
@@ -19,7 +22,11 @@ public class RootGenExampleApp : MonoBehaviour
     {
         _rootGen = new RootGen();
         _rootGen.GenerateEmptyMap(
-            new Vector2(10, 10), true
+            new Vector2(mapSizeX, mapSizeY),
+            0,
+            10,
+            true,
+            true
         );
     }
 
@@ -28,7 +35,11 @@ public class RootGenExampleApp : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.R)) {
             _rootGen.GenerateEmptyMap(
-                new Vector2(10, 10), true
+                new Vector2(mapSizeX, mapSizeY),
+                0,
+                10,
+                true,
+                true
             );
         }
     }

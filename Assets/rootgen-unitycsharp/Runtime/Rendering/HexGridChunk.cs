@@ -182,12 +182,11 @@ public class HexGridChunk : MonoBehaviour {
 //       approach is not necessary.
     public static HexGridChunk CreateAndRenderChunk(
         float cellOuterRadius,
-        HexCell[] cells,
+        HexGrid<HexCell> hexGrid,
         NeighborGraph neighborGraph,
         RiverGraph riverGraph,
         RoadGraph roadGraph,
-        ElevationGraph elevationGraph,
-        int wrapSize
+        ElevationGraph elevationGraph
     ) {
         GameObject resultObj = new GameObject("Hex Grid Chunk");
         HexGridChunk resultMono = resultObj.AddComponent<HexGridChunk>();
@@ -265,13 +264,12 @@ public class HexGridChunk : MonoBehaviour {
         resultMono.features.name = "Features";
 
         resultMono.Triangulate(
-            cells,
+            hexGrid,
             cellOuterRadius,
             neighborGraph,
             riverGraph,
             roadGraph,
-            elevationGraph,
-            wrapSize
+            elevationGraph
         );
 
         resultMono.enabled = false;
@@ -385,13 +383,12 @@ public class HexGridChunk : MonoBehaviour {
     }
 
     public void Triangulate(
-        HexCell[] cells,
+        HexGrid<HexCell> grid,
         float cellOuterRadius,
         NeighborGraph neighborGraph,
         RiverGraph riverGraph,
         RoadGraph roadGraph,
-        ElevationGraph elevationGraph,
-        int wrapSize
+        ElevationGraph elevationGraph
     ) {
         terrain.Clear();
         rivers.Clear();
@@ -401,15 +398,15 @@ public class HexGridChunk : MonoBehaviour {
         estuaries.Clear();
         features.Clear();
 
-        for (int i = 0; i < cells.Length; i++) {
+        for (int i = 0; i < grid.Size; i++) {
             TriangulateCell(
-                cells[i],
+                grid.GetElement(i),
                 cellOuterRadius,
                 neighborGraph,
                 riverGraph,
                 roadGraph,
                 elevationGraph,
-                wrapSize
+                grid.WrapSize
             );
         }
 
@@ -479,7 +476,8 @@ public class HexGridChunk : MonoBehaviour {
                 features.AddFeature(
                     cell,
                     cell.Position,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
 
@@ -487,7 +485,8 @@ public class HexGridChunk : MonoBehaviour {
                 features.AddSpecialFeature(
                     cell,
                     cell.Position,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -543,7 +542,8 @@ public class HexGridChunk : MonoBehaviour {
                         edgeVertices,
                         neighborEdge,
                         riverGraph,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
                 else {
@@ -553,7 +553,8 @@ public class HexGridChunk : MonoBehaviour {
                         edgeVertices,
                         neighborEdge,
                         riverGraph,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
             }
@@ -565,7 +566,8 @@ public class HexGridChunk : MonoBehaviour {
                     neighborEdge,
                     roadGraph,
                     riverGraph,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -578,7 +580,8 @@ public class HexGridChunk : MonoBehaviour {
                 riverGraph,
                 roadGraph,
                 center,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             if (
@@ -590,7 +593,8 @@ public class HexGridChunk : MonoBehaviour {
                 features.AddFeature(
                     cell,
                     (center + edgeVertices.vertex1 + edgeVertices.vertex5) * (1f / 3f),
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -600,7 +604,7 @@ public class HexGridChunk : MonoBehaviour {
 *  Since the connections are triangulated from west to east, south to north,
 *  the connection will already have been triangulated for SW, W, an NW.
 */
-        if (neighborEdge.Direction <= HexDirection.SouthEast) {
+        if (neighborEdge.Direction <= HexDirections.Southeast) {
             TriangulateConnection(
                 cell,
                 neighborEdge,
@@ -609,7 +613,8 @@ public class HexGridChunk : MonoBehaviour {
                 roadGraph,
                 elevationGraph,
                 edgeVertices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -634,13 +639,15 @@ public class HexGridChunk : MonoBehaviour {
         RiverGraph riverGraph,
         RoadGraph roadGraph,
         Vector3 center,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         TriangulateEdgeFan(
             center,
             edgeVertices,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
 //        if (cell.HasRoads) {
@@ -667,7 +674,8 @@ public class HexGridChunk : MonoBehaviour {
 //                cell.HasRoadThroughEdge(direction),
                 roadGraph.HasRoad(cell),
                 cell.Index,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
     }
@@ -679,7 +687,8 @@ public class HexGridChunk : MonoBehaviour {
         EdgeVertices edgeVertices,
         HexEdge neighborEdge,
         RiverGraph riverGraph,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         Vector3 centerLeft;
         Vector3 centerRight;
@@ -816,14 +825,16 @@ public class HexGridChunk : MonoBehaviour {
             edgeVertices,
             _weights1,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddTriangle(
             centerLeft,
             middle.vertex1,
             middle.vertex2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuad(
@@ -831,7 +842,8 @@ public class HexGridChunk : MonoBehaviour {
             center,
             middle.vertex2,
             middle.vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuad(
@@ -839,14 +851,16 @@ public class HexGridChunk : MonoBehaviour {
             centerRight,
             middle.vertex3,
             middle.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddTriangle(
             centerRight,
             middle.vertex4,
             middle.vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         Vector3 indices;
@@ -873,7 +887,8 @@ public class HexGridChunk : MonoBehaviour {
                 0.4f,
                 reversed,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             TriangulateRiverQuad(
@@ -885,7 +900,8 @@ public class HexGridChunk : MonoBehaviour {
                 0.6f,
                 reversed,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
     }
@@ -896,7 +912,8 @@ public class HexGridChunk : MonoBehaviour {
         EdgeVertices edgeVertices,
         HexEdge neighborEdge,
         RiverGraph riverGraph,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         EdgeVertices middle = new EdgeVertices(
             Vector3.Lerp(center, edgeVertices.vertex1, 0.5f),
@@ -912,14 +929,16 @@ public class HexGridChunk : MonoBehaviour {
             edgeVertices,
             _weights1,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         TriangulateEdgeFan(
             center,
             middle,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         if (!cell.IsUnderwater) {
@@ -941,7 +960,8 @@ public class HexGridChunk : MonoBehaviour {
                 0.6f,
                 reversed,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             center.y =
@@ -951,7 +971,8 @@ public class HexGridChunk : MonoBehaviour {
                 center,
                 middle.vertex2,
                 middle.vertex4,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             if (reversed) {
@@ -980,7 +1001,8 @@ public class HexGridChunk : MonoBehaviour {
         HexEdge neighborEdge,
         RoadGraph roadGraph,
         RiverGraph riverGraph,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 //        if (cell.HasRoads) {
         if (roadGraph.HasRoad(cell)) {
@@ -991,7 +1013,8 @@ public class HexGridChunk : MonoBehaviour {
                 riverGraph,
                 roadGraph,
                 edgeVertices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -1067,14 +1090,16 @@ public class HexGridChunk : MonoBehaviour {
             edgeVertices,
             _weights1,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         TriangulateEdgeFan(
             center,
             middle,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         if (
@@ -1088,7 +1113,8 @@ public class HexGridChunk : MonoBehaviour {
             features.AddFeature(
                 cell,
                 (center + edgeVertices.vertex1 + edgeVertices.vertex5) * (1f / 3f),
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
     }
@@ -1101,7 +1127,8 @@ public class HexGridChunk : MonoBehaviour {
         RoadGraph roadGraph,
         ElevationGraph elevationGraph,
         EdgeVertices edgeVertices1,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 //        HexCell neighbor = cell.GetNeighbor(direction);
         HexCell neighbor = neighborGraph.TryGetNeighborInDirection(
@@ -1168,7 +1195,8 @@ public class HexGridChunk : MonoBehaviour {
                               )
                         ),
                         indices,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
                 else if(cell.Elevation > neighbor.WaterLevel) {
@@ -1179,7 +1207,8 @@ public class HexGridChunk : MonoBehaviour {
                         neighbor.RiverSurfaceY,
                         neighbor.WaterSurfaceY,
                         indices,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
             }
@@ -1196,7 +1225,8 @@ public class HexGridChunk : MonoBehaviour {
                     cell.RiverSurfaceY,
                     cell.WaterSurfaceY,
                     indices,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -1214,7 +1244,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge2, 
                 neighbor,
                 hasRoad,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
         else {
@@ -1225,7 +1256,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge2,
                 _weights2,
                 neighbor.Index,
-                cellOuterRadius, 
+                cellOuterRadius,
+                wrapSize, 
                 hasRoad
             );
         }
@@ -1237,7 +1269,8 @@ public class HexGridChunk : MonoBehaviour {
             neighbor,
             hasRiver,
             hasRoad,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
 /* Drawn and color the triangle between the bridge of the current cell
@@ -1251,7 +1284,7 @@ public class HexGridChunk : MonoBehaviour {
 
         if (
             neighborEdge.Direction <=
-            HexDirection.East && nextNeighbor != null
+            HexDirections.East && nextNeighbor != null
         ) {
 
 /* Create a 5th vertex and assign it with the elevation of the neighbor
@@ -1277,7 +1310,8 @@ public class HexGridChunk : MonoBehaviour {
                         neighbor,
                         vertex5,
                         nextNeighbor,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
                 else {
@@ -1289,7 +1323,8 @@ public class HexGridChunk : MonoBehaviour {
                         cell,
                         edge2.vertex5,
                         neighbor,
-                        cellOuterRadius
+                        cellOuterRadius,
+                        wrapSize
                     );
                 }
             }
@@ -1302,7 +1337,8 @@ public class HexGridChunk : MonoBehaviour {
                     nextNeighbor,
                     edgeVertices1.vertex5,
                     cell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
             else {
@@ -1315,7 +1351,8 @@ public class HexGridChunk : MonoBehaviour {
                     cell,
                     edge2.vertex5,
                     neighbor,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -1327,7 +1364,8 @@ public class HexGridChunk : MonoBehaviour {
         EdgeVertices end,
         HexCell endCell,
         bool hasRoad,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         EdgeVertices edge2 = EdgeVertices.TerraceLerp(begin, end, 1);
         Color weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, 1);
@@ -1343,6 +1381,7 @@ public class HexGridChunk : MonoBehaviour {
             weight2, 
             index2,
             cellOuterRadius,
+            wrapSize,
             hasRoad
         );
 
@@ -1360,6 +1399,7 @@ public class HexGridChunk : MonoBehaviour {
                 weight2, 
                 index2,
                 cellOuterRadius,
+                wrapSize,
                 hasRoad
             );
         }
@@ -1372,6 +1412,7 @@ public class HexGridChunk : MonoBehaviour {
             _weights2, 
             index2,
             cellOuterRadius,
+            wrapSize,
             hasRoad
         );
     }
@@ -1383,7 +1424,8 @@ public class HexGridChunk : MonoBehaviour {
         HexCell leftCell,
         Vector3 right,
         HexCell rightCell,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         ElevationEdgeTypes leftEdgeType = bottomCell.GetEdgeType(leftCell);
         ElevationEdgeTypes rightEdgeType = bottomCell.GetEdgeType(rightCell);
@@ -1399,7 +1441,8 @@ public class HexGridChunk : MonoBehaviour {
                     leftCell,
                     right,
                     rightCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
 
@@ -1412,7 +1455,8 @@ public class HexGridChunk : MonoBehaviour {
                     rightCell,
                     bottom,
                     bottomCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
             else {
@@ -1427,7 +1471,8 @@ public class HexGridChunk : MonoBehaviour {
                     leftCell,
                     right,
                     rightCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -1444,7 +1489,8 @@ public class HexGridChunk : MonoBehaviour {
                     bottomCell,
                     left,
                     leftCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
             else {
@@ -1459,7 +1505,8 @@ public class HexGridChunk : MonoBehaviour {
                     leftCell,
                     right,
                     rightCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -1479,7 +1526,8 @@ public class HexGridChunk : MonoBehaviour {
                     bottomCell,
                     left,
                     leftCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
 
@@ -1492,7 +1540,8 @@ public class HexGridChunk : MonoBehaviour {
                     rightCell,
                     bottom,
                     bottomCell,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -1503,7 +1552,8 @@ public class HexGridChunk : MonoBehaviour {
                 bottom,
                 left,
                 right,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             Vector3 indices;
@@ -1526,7 +1576,8 @@ public class HexGridChunk : MonoBehaviour {
             leftCell,
             right,
             rightCell,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
     }
 
@@ -1537,7 +1588,8 @@ public class HexGridChunk : MonoBehaviour {
         HexCell leftCell,
         Vector3 right,
         HexCell rightCell,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         Vector3 vertex3 = HexagonPoint.TerraceLerp(begin, left, 1);
         Vector3 vertex4 = HexagonPoint.TerraceLerp(begin, right, 1);
@@ -1554,7 +1606,8 @@ public class HexGridChunk : MonoBehaviour {
             begin,
             vertex3,
             vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddTriangleCellData(
@@ -1580,7 +1633,8 @@ public class HexGridChunk : MonoBehaviour {
                 vertex2,
                 vertex3,
                 vertex4,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
             
             terrain.AddQuadCellData(
@@ -1597,7 +1651,8 @@ public class HexGridChunk : MonoBehaviour {
             vertex4,
             left,
             right,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuadCellData(
@@ -1616,7 +1671,8 @@ public class HexGridChunk : MonoBehaviour {
         HexCell leftCell,
         Vector3 right,
         HexCell rightCell,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 /* Set boundary distance to 1 elevation level above the bottom-most cell
 * in the case.
@@ -1636,11 +1692,13 @@ public class HexGridChunk : MonoBehaviour {
             Vector3.Lerp(
                 HexagonPoint.Perturb(
                     begin,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 HexagonPoint.Perturb(
                     right,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 boundaryDistance
             );
@@ -1662,7 +1720,8 @@ public class HexGridChunk : MonoBehaviour {
             boundary,
             boundaryWeights,
             indices,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
 // Slope-Cliff-Slope. Triangulate a slope.
@@ -1675,7 +1734,8 @@ public class HexGridChunk : MonoBehaviour {
                 boundary, 
                 boundaryWeights,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -1689,11 +1749,13 @@ public class HexGridChunk : MonoBehaviour {
             terrain.AddTriangleUnperturbed(
                 HexagonPoint.Perturb(
                     left,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 HexagonPoint.Perturb(
                     right,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 boundary
             );
@@ -1714,7 +1776,8 @@ public class HexGridChunk : MonoBehaviour {
         HexCell leftCell,
         Vector3 right,
         HexCell rightCell,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 /* Set boundary distance to 1 elevation level above the bottom-most cell
 * in the case.
@@ -1732,11 +1795,13 @@ public class HexGridChunk : MonoBehaviour {
             Vector3.Lerp(
                 HexagonPoint.Perturb(
                     begin,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 HexagonPoint.Perturb(
                     left,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 boundaryDistance
             );
@@ -1762,7 +1827,8 @@ public class HexGridChunk : MonoBehaviour {
             boundary,
             boundaryWeights,
             indices,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
 // Slope-Cliff-Slope. Triangulate a slope.
@@ -1775,7 +1841,8 @@ public class HexGridChunk : MonoBehaviour {
                 boundary, 
                 boundaryWeights,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -1790,11 +1857,13 @@ public class HexGridChunk : MonoBehaviour {
             terrain.AddTriangleUnperturbed(
                 HexagonPoint.Perturb(
                     left,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 HexagonPoint.Perturb(
                     right,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 ),
                 boundary
             );
@@ -1816,7 +1885,8 @@ public class HexGridChunk : MonoBehaviour {
         Vector3 boundary,
         Color boundaryWeights,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 
 /* Immediately perturb vertex 2 as an optimization since it is not
@@ -1825,7 +1895,8 @@ public class HexGridChunk : MonoBehaviour {
         Vector3 vertex2 = 
             HexagonPoint.Perturb(
                 HexagonPoint.TerraceLerp(begin, left, 1),
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
         Color weight2 = 
@@ -1843,7 +1914,8 @@ public class HexGridChunk : MonoBehaviour {
         terrain.AddTriangleUnperturbed(
             HexagonPoint.Perturb(
                 begin,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             ),
             vertex2,
             boundary
@@ -1861,7 +1933,8 @@ public class HexGridChunk : MonoBehaviour {
 
             vertex2 = HexagonPoint.Perturb(
                 HexagonPoint.TerraceLerp(begin, left, i),
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             weight2 = HexagonPoint.TerraceLerp(
@@ -1884,7 +1957,8 @@ public class HexGridChunk : MonoBehaviour {
             vertex2,
             HexagonPoint.Perturb(
                 left,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             ),
             boundary
         );
@@ -1895,34 +1969,39 @@ public class HexGridChunk : MonoBehaviour {
         Vector3 center,
         EdgeVertices edge,
         float index,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         terrain.AddTriangle(
             center,
             edge.vertex1,
             edge.vertex2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddTriangle(
             center,
             edge.vertex2,
             edge.vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
         
         terrain.AddTriangle(
             center,
             edge.vertex3,
             edge.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddTriangle(
             center,
             edge.vertex4,
             edge.vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         Vector3 indices;
@@ -1934,8 +2013,7 @@ public class HexGridChunk : MonoBehaviour {
         terrain.AddTriangleCellData(indices, _weights1);
     }
 
-    private void TriangulateEdgeStrip
-    (
+    private void TriangulateEdgeStrip(
         EdgeVertices edge1,
         Color weight1,
         float index1,
@@ -1943,6 +2021,7 @@ public class HexGridChunk : MonoBehaviour {
         Color weight2,
         float index2,
         float cellOuterRadius,
+        int wrapSize,
         bool hasRoad = false
     ) {
         terrain.AddQuad(
@@ -1950,7 +2029,8 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex2,
             edge2.vertex1,
             edge2.vertex2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuad(
@@ -1958,7 +2038,8 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex3,
             edge2.vertex2,
             edge2.vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuad(
@@ -1966,7 +2047,8 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex4,
             edge2.vertex3,
             edge2.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         terrain.AddQuad(
@@ -1974,7 +2056,8 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex5,
             edge2.vertex4,
             edge2.vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         Vector3 indices;
@@ -1997,7 +2080,8 @@ public class HexGridChunk : MonoBehaviour {
                 weight1, 
                 weight2, 
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
     }
@@ -2011,7 +2095,8 @@ public class HexGridChunk : MonoBehaviour {
         float v,
         bool reversed,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         vertex1.y = vertex2.y = y1;
         vertex3.y = vertex4.y = y2;
@@ -2021,7 +2106,8 @@ public class HexGridChunk : MonoBehaviour {
             vertex2,
             vertex3,
             vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         if (reversed) {
@@ -2043,7 +2129,8 @@ public class HexGridChunk : MonoBehaviour {
         float v, 
         bool reversed,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         TriangulateRiverQuad(
             vertex1,
@@ -2053,7 +2140,8 @@ public class HexGridChunk : MonoBehaviour {
             y, y, v,
             reversed,
             indices,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
     }
 
@@ -2067,14 +2155,16 @@ public class HexGridChunk : MonoBehaviour {
         Color weight1,
         Color weight2,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         roads.AddQuad(
             vertex1,
             vertex2,
             vertex4,
             vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         roads.AddQuad(
@@ -2082,7 +2172,8 @@ public class HexGridChunk : MonoBehaviour {
             vertex3,
             vertex5,
             vertex6,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         roads.AddQuadUV(0f, 1f, 0f, 0f);
@@ -2097,13 +2188,15 @@ public class HexGridChunk : MonoBehaviour {
         Vector3 middleLeft, 
         Vector3 middleRight,
         float index,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         roads.AddTriangle(
             center,
             middleLeft,
             middleRight,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         roads.AddTriangleUV(
@@ -2124,7 +2217,8 @@ public class HexGridChunk : MonoBehaviour {
         RiverGraph riverGraph,
         RoadGraph roadGraph,
         EdgeVertices edgeVertices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
 //        bool hasRoadThroughEdge = cell.HasRoadThroughEdge(direction);
         bool hasRoadThroughEdge = roadGraph.HasRoadInDirection(
@@ -2231,7 +2325,8 @@ public class HexGridChunk : MonoBehaviour {
                 features.AddBridge(
                     roadCenter,
                     center - corner * 0.5f,
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
             
@@ -2292,7 +2387,7 @@ public class HexGridChunk : MonoBehaviour {
 // the river. The middle edge of these three edges must be obtained.
 // Then, the center of the road is pushed toward the middle of this edge.
         else {
-            HexDirection middle;
+            HexDirections middle;
             if (previousHasRiver) {
 //                middle = direction.Next();
                 middle = neighborEdge.Direction.NextClockwise();
@@ -2343,7 +2438,8 @@ public class HexGridChunk : MonoBehaviour {
                 features.AddBridge (
                     roadCenter,
                     center - offset * (HexagonConstants.INNER_TO_OUTER_RATIO * 0.7f),
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
             }
         }
@@ -2360,7 +2456,8 @@ public class HexGridChunk : MonoBehaviour {
             edgeVertices,
             hasRoadThroughEdge,
             cell.Index,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         if (previousHasRiver) {
@@ -2369,7 +2466,8 @@ public class HexGridChunk : MonoBehaviour {
                 center,
                 middleLeft,
                 cell.Index,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -2379,7 +2477,8 @@ public class HexGridChunk : MonoBehaviour {
                 middleRight,
                 center,
                 cell.Index,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
     }
@@ -2391,7 +2490,8 @@ public class HexGridChunk : MonoBehaviour {
         EdgeVertices edge,
         bool hasRoadThroughCellEdge,
         float index,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         Vector3 indices;
         indices.x = indices.y = indices.z = index;
@@ -2409,21 +2509,24 @@ public class HexGridChunk : MonoBehaviour {
                 _weights1,
                 _weights1,
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             roads.AddTriangle(
                 center,
                 middleLeft,
                 middleCenter,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
             
             roads.AddTriangle(
                 center,
                 middleCenter,
                 middleRight,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
             
             roads.AddTriangleUV(
@@ -2447,7 +2550,8 @@ public class HexGridChunk : MonoBehaviour {
                 middleLeft,
                 middleRight,
                 index,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
         }
 
@@ -2557,7 +2661,8 @@ public class HexGridChunk : MonoBehaviour {
             center,
             center1,
             center2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         Vector3 indices;
@@ -2565,7 +2670,7 @@ public class HexGridChunk : MonoBehaviour {
         water.AddTriangleCellData(indices, _weights1);
 
         if (
-            neighborEdge.Direction <= HexDirection.SouthEast && 
+            neighborEdge.Direction <= HexDirections.Southeast && 
             neighborEdge.Target != null
         ) {
             Vector3 bridge = HexagonPoint.GetWaterBridge(
@@ -2581,13 +2686,14 @@ public class HexGridChunk : MonoBehaviour {
                 center2,
                 edge1,
                 edge2,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
             
             indices.y = neighborEdge.Target.Index;
             water.AddQuadCellData(indices, _weights1, _weights2);
 
-            if (neighborEdge.Direction <= HexDirection.East) {
+            if (neighborEdge.Direction <= HexDirections.East) {
                 HexCell nextNeighbor =
 //                    cell.GetNeighbor(direction.NextClockwise());
                     neighborGraph.TryGetNeighborInDirection(
@@ -2606,7 +2712,8 @@ public class HexGridChunk : MonoBehaviour {
                         neighborEdge.Direction.NextClockwise(),
                         cellOuterRadius
                     ),
-                    cellOuterRadius
+                    cellOuterRadius,
+                    wrapSize
                 );
 
                 indices.z = nextNeighbor.Index;
@@ -2642,28 +2749,32 @@ public class HexGridChunk : MonoBehaviour {
             center,
             edge1.vertex1,
             edge1.vertex2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
         
         water.AddTriangle(
             center,
             edge1.vertex2,
             edge1.vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
         
         water.AddTriangle(
             center,
             edge1.vertex3,
             edge1.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
         
         water.AddTriangle(
             center,
             edge1.vertex4,
             edge1.vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         Vector3 indices = new Vector3();
@@ -2723,7 +2834,8 @@ public class HexGridChunk : MonoBehaviour {
                     neighborEdge.Direction
                 ),
                 indices,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
         }
@@ -2733,7 +2845,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge1.vertex2,
                 edge2.vertex1,
                 edge2.vertex2,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             waterShore.AddQuad(
@@ -2741,7 +2854,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge1.vertex3,
                 edge2.vertex2,
                 edge2.vertex3,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             waterShore.AddQuad(
@@ -2749,7 +2863,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge1.vertex4,
                 edge2.vertex3,
                 edge2.vertex4,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             waterShore.AddQuad(
@@ -2757,7 +2872,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge1.vertex5,
                 edge2.vertex4,
                 edge2.vertex5,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             waterShore.AddQuadUV(0f, 0f, 0f, 1f);
@@ -2810,7 +2926,8 @@ public class HexGridChunk : MonoBehaviour {
                 edge1.vertex5,
                 edge2.vertex5,
                 vertex3,
-                cellOuterRadius
+                cellOuterRadius,
+                wrapSize
             );
 
             indices.z = nextNeighbor.Index;
@@ -2832,20 +2949,23 @@ public class HexGridChunk : MonoBehaviour {
         EdgeVertices edge2,
         bool incomingRiver,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
         waterShore.AddTriangle(
             edge2.vertex1,
             edge1.vertex2,
             edge1.vertex1,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         waterShore.AddTriangle(
             edge2.vertex5,
             edge1.vertex5,
             edge1.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         waterShore.AddTriangleUV
@@ -2882,14 +3002,16 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex2, 
             edge2.vertex2, 
             edge1.vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         estuaries.AddTriangle(
             edge1.vertex3, 
             edge2.vertex2, 
             edge2.vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         estuaries.AddQuad(
@@ -2897,7 +3019,8 @@ public class HexGridChunk : MonoBehaviour {
             edge1.vertex4, 
             edge2.vertex4, 
             edge2.vertex5,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         estuaries.AddQuadUV(
@@ -2982,32 +3105,34 @@ public class HexGridChunk : MonoBehaviour {
         float y2, 
         float waterY,
         Vector3 indices,
-        float cellOuterRadius
+        float cellOuterRadius,
+        int wrapSize
     ) {
-        bool isMapWrapping = HexagonPoint.IsMapWrapping;
-        int mapWrapSize = HexagonPoint.MapWrapSize;
-
         vertex1.y = vertex2.y = y1;
         vertex3.y = vertex4.y = y2;
         
         vertex1 = HexagonPoint.Perturb(
             vertex1,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         vertex2 = HexagonPoint.Perturb(
             vertex2,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         vertex3 = HexagonPoint.Perturb(
             vertex3,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         vertex4 = HexagonPoint.Perturb(
             vertex4,
-            cellOuterRadius
+            cellOuterRadius,
+            wrapSize
         );
 
         float t = (waterY - y2) / (y1 - y2);

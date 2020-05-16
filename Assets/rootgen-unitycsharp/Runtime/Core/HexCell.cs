@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-public class HexCell : MonoBehaviour {
+public class HexCell : MonoBehaviour, IHexPoint {
     private static int MaxFeatureLevel {
         get {
             return 3;
@@ -68,7 +68,7 @@ public class HexCell : MonoBehaviour {
         }
     }
 
-    public HexCoordinates Coordinates { get; set; }
+    public HexVector HexCoordinates { get; set; }
 
     private Mesh GetInteractionMesh(float radius) {
         Mesh result = new Mesh();
@@ -120,7 +120,6 @@ public class HexCell : MonoBehaviour {
     public void SetElevation(
         int elevation,
         float cellOuterRadius,
-        bool wrapping,
         int wrapSize
     ) {
         if (Elevation == elevation) {
@@ -137,7 +136,6 @@ public class HexCell : MonoBehaviour {
 
         RefreshPosition(
             cellOuterRadius,
-            wrapping,
             wrapSize
         );
     }
@@ -181,8 +179,8 @@ public class HexCell : MonoBehaviour {
 // ~ Static
 
 // ~~ public
-    public static HexCell GetCell() {
-        GameObject resultObj = new GameObject("Hex Cell");
+    public static HexCell Instantiate() {
+        GameObject resultObj = new GameObject("HexCell");
         HexCell resultMono = resultObj.AddComponent<HexCell>();
         return resultMono;
     }
@@ -260,6 +258,10 @@ public class HexCell : MonoBehaviour {
         label.text = text;
     }
 
+    public override string ToString() {
+        return HexCoordinates.ToString();
+    }
+
     private void Awake() {
         //SetEnabledInteractionMesh(true);
         Elevation = int.MinValue;
@@ -283,7 +285,6 @@ public class HexCell : MonoBehaviour {
 
     private void RefreshPosition(
         float cellOuterRadius,
-        bool wrapping,
         int wrapSize
     ) {
         Vector3 position = transform.localPosition;
@@ -294,7 +295,6 @@ public class HexCell : MonoBehaviour {
                 HexagonPoint.SampleNoise(
                     position,
                     cellOuterRadius,
-                    wrapping,
                     wrapSize
                 ).y * 2f - 1f
             ) * HexagonPoint.elevationPerturbStrength;
@@ -311,32 +311,4 @@ public class HexCell : MonoBehaviour {
         uiPosition.z = -position.y;
         uiRect.localPosition = uiPosition;
     }
-
-// STRUCTS ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
-
-// CLASSES ~~~~~~~~~~
-
-// ~ Static
-
-// ~~ public
-
-// ~~ private
-
-// ~ Non-Static
-
-// ~~ public
-
-// ~~ private
 }

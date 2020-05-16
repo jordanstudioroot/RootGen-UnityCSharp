@@ -2,16 +2,20 @@
 using UnityEngine;
 
 public class HexEdge : Edge<HexCell> {
-    public HexDirection Direction {
+    public HexDirections Direction {
         get; private set;
     }
 
     public HexEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction
+        HexDirections direction
     ) : base(source, target) {
-           
+        Direction = direction;
+    }
+
+    public override string ToString() {
+        return Source + " -> " + Direction + " -> " + Target;
     }
 }
 
@@ -19,7 +23,7 @@ public class RiverEdge : HexEdge {
     public RiverEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction
+        HexDirections direction
     ) : base (source, target, direction) { }
 }
 
@@ -27,7 +31,7 @@ public class RoadEdge : HexEdge {
     public RoadEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction
+        HexDirections direction
     ) : base (source, target, direction) { }
 }
 
@@ -64,8 +68,16 @@ public class ElevationEdge : HexEdge {
     public ElevationEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction
+        HexDirections direction
     ) : base (source, target, direction) { }
+
+    public override string ToString() {
+        return
+            Source + " -> " +
+            "( " + Direction + ", Delta:" + Delta + ", " +
+            EdgeType + " ) -> "
+            + Target;
+    }
 }
 
 public class TraversalEdge : HexEdge {
@@ -76,7 +88,7 @@ public class TraversalEdge : HexEdge {
     public TraversalEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction
+        HexDirections direction
     ) : base(source, target, direction) {
         MovementCost = 0;
     }
@@ -84,9 +96,16 @@ public class TraversalEdge : HexEdge {
     public TraversalEdge(
         HexCell source,
         HexCell target,
-        HexDirection direction,
+        HexDirections direction,
         float movementCost
     ) : base(source, target, direction) {
         MovementCost = movementCost;
+    }
+
+    public override string ToString() {
+        return
+            Source + " -> " +
+            "( " + Direction + ", MoveCost:" + MovementCost + ") -> "
+            + Target;
     }
 }

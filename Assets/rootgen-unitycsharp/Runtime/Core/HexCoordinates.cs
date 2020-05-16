@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
+using System;
 using System.IO;
+using RootLogging;
 
 [System.Serializable]
-public struct HexCoordinates
-{
+public struct HexVector {
     [SerializeField]
     private int x, z;
 
@@ -27,30 +28,54 @@ public struct HexCoordinates
     {
         get
         {
-            /* Because having only an X and Z axis only allows movement in four directions,
-                * a Y coordinate must be added. The defining property of the Y coordinate is that
-                * adding it to the Z coordinate will always produce the same result, as the Y axis
-                * is a mirror of the X axis. Therefore:
-                *                  X + Y + Z = X + Z = -Y = -1(X + Z) = -1(-Y) = -X - Z = Y
-                */
+/* Because having only an X and Z axis only allows movement in four directions,
+* a Y coordinate must be added. The defining property of the Y coordinate is that
+* adding it to the Z coordinate will always produce the same result, as the Y axis
+* is a mirror of the X axis. Therefore:
+*                  X + Y + Z = X + Z = -Y = -1(X + Z) = -1(-Y) = -X - Z = Y
+*/
 
             return -X - Z;
         }
     }
 
-    public HexCoordinates(int x, int z) {
+    public static HexVector Northwest(int wrapSize) {
+        return new HexVector(-1, 1, wrapSize);
+    }
+
+    public static HexVector Northeast(int wrapSize) {
+        return new HexVector(0, 1, wrapSize);
+    }
+
+    public static HexVector East(int wrapSize) {
+        return new HexVector(1, 0, wrapSize);
+    }
+
+    public static HexVector Southeast(int wrapSize) {
+        return new HexVector(1, -1, wrapSize);
+    }
+
+    public static HexVector Southwest(int wrapSize) {
+        return new HexVector(0, -1, wrapSize);
+    }
+
+    public static HexVector West(int wrapSize) {
+        return new HexVector(-1, 0, wrapSize);
+    }
+
+    public HexVector(int x, int z, int wrapSize) {
         
-        if (HexagonPoint.IsMapWrapping) {
-            /* Get offset x coordinate back from axial coordinates, and
-                * check if value is outside of the wrapping range and adjust
-                * the coordinate accordingly.*/
+        if (wrapSize > 0) {
+/* Get offset x coordinate back from axial coordinates, and
+* check if value is outside of the wrapping range and adjust
+* the coordinate accordingly.*/
             int offsetX = x + z / 2;
 
             if (offsetX < 0) {
-                x += HexagonPoint.MapWrapSize;
+                x += wrapSize;
             }
-            else if (offsetX >= HexagonPoint.MapWrapSize) {
-                x -= HexagonPoint.MapWrapSize;
+            else if (offsetX >= wrapSize) {
+                x -= wrapSize;
             }
         }
 
@@ -58,9 +83,80 @@ public struct HexCoordinates
         this.z = z;
     }
 
-    public static HexCoordinates FromPosition(
+    public bool IsNeighborOf(
+        HexVector other,
+        int wrapSize
+    ) {
+        RootLog.Log(
+            DistanceTo(other,wrapSize).ToString(),
+            Severity.Information,
+            "Distance"
+        );
+        
+        return (
+            DistanceTo(
+                other,
+                wrapSize
+            ) == 1
+        );
+    }
+
+    public HexVector Minus (HexVector other, int wrapSize) {
+        return new HexVector(
+            X - other.X,
+            Z - other.Z,
+            wrapSize
+        );
+    }
+
+    public HexVector Plus (HexVector other, int wrapSize) {
+        return new HexVector(
+            x + other.X,
+            Z + other.Z,
+            wrapSize
+        );
+    }
+
+    public HexVector Normalize(int wrapSize) {
+
+        return new HexVector(
+            Mathf.Clamp(X, -1, 1),
+            Mathf.Clamp(Z, -1, 1),
+            wrapSize
+        );
+}
+
+    public HexDirections DirectionTo(
+        HexVector other,
+        int wrapSize
+    ) {
+        HexVector dir = Plus(other, wrapSize).Normalize(wrapSize);
+
+        if (dir.Equals(Northeast(wrapSize)))
+            return HexDirections.Northeast;
+        
+        if (dir.Equals(Northwest(wrapSize)))
+            return HexDirections.Northwest;
+        
+        if (dir.Equals(Southeast(wrapSize)))
+            return HexDirections.Southeast;
+
+        if (dir.Equals(Southwest(wrapSize)))
+            return HexDirections.Southwest;
+
+        if (dir.Equals(East(wrapSize)))
+            return HexDirections.East;
+        
+        if (dir.Equals(West(wrapSize)))
+            return HexDirections.West;
+
+        throw new NotImplementedException();
+    }
+
+    public static HexVector FromPosition(
         Vector3 position,
-        float outerRadius
+        float outerRadius,
+        int wrapSize
     ) {
         float innerDiameter =
             HexagonPoint.GetOuterToInnerRadius(outerRadius) * 2f;
@@ -106,37 +202,39 @@ public struct HexCoordinates
             }
         }
 
-        return new HexCoordinates(
+        return new HexVector(
             integerX,
-            integerZ
+            integerZ,
+            wrapSize
         );
 
     }
 
-    public static HexCoordinates AsAxialCoordinates(
+    public static HexVector AsAxialCoordinates(
         int x,
         int z,
         int wrapSize
     ) {
-        /* Return coordinates after subtracting the X coordinate with the Z coordinated integer
-            * divided by 2. All cells will be offset on the X axis directly proportional to Z. As
-            * Z grows larger, the magnitude of the offset increases bringing the X axis into alignment
-            * with a proposed axis which is at a (roughly) 45 degree angle with the Z axis.*/
-        return new HexCoordinates(
+/* Return coordinates after subtracting the X coordinate with the Z coordinated integer
+* divided by 2. All cells will be offset on the X axis directly proportional to Z. As
+* Z grows larger, the magnitude of the offset increases bringing the X axis into alignment
+* with a proposed axis which is at a (roughly) 45 degree angle with the Z axis.*/
+        return new HexVector(
             x - z / 2,
-            z
+            z,
+            wrapSize
         );
     }
 
     public int DistanceTo(
-        HexCoordinates other,
+        HexVector other,
         int wrapSize
     ) {
         int xy =
             (x < other.x ? other.x - x : x - other.x) +
             (Y < other.Y ? other.Y - Y : Y - other.Y);
 
-        if (HexagonPoint.IsMapWrapping) {
+        if (wrapSize > 0) {
             other.x += wrapSize;
             int xyWrapped =
                 (x < other.x ? other.x - x : x - other.x) +
@@ -181,11 +279,25 @@ public struct HexCoordinates
         writer.Write(z);
     }
 
-    public static HexCoordinates Load(BinaryReader reader)
+    public static HexVector Load(BinaryReader reader)
     {
-        HexCoordinates coordinates;
+        HexVector coordinates;
         coordinates.x = reader.ReadInt32();
         coordinates.z = reader.ReadInt32();
         return coordinates;
+    }
+
+    public override bool Equals(object other) {
+        if (other is HexVector) {
+            HexVector otherVec = (HexVector) other;
+            if (
+                otherVec.X == X &&
+                otherVec.Z == Z &&
+                otherVec.Y == Y
+            )
+                return true;
+        }
+
+        return false;
     }
 }

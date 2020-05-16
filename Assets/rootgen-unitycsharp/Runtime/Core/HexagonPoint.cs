@@ -38,14 +38,6 @@ public static class HexagonPoint {
     private const int _sqrtHashGridSize = 256;
     private const float _hashGridScale = 0.25f;
     private static RandomHash[] _hashGrid;
-    public static int MapWrapSize {
-        get; set;
-    }
-
-// TODO: Why is this property neccessary?
-    public static bool IsMapWrapping {
-        get; set;
-    }
 
     public static Vector3 WallLerp(Vector3 near, Vector3 far) {
         near.x += (far.x - near.x) * 0.5f;
@@ -87,7 +79,7 @@ public static class HexagonPoint {
 ///     A point corresponding to the first clockwise corner of a given
 ///     hex direction.
 /// </returns>
-    public static Vector3 GetFirstCorner(HexDirection direction, float radius) {
+    public static Vector3 GetFirstCorner(HexDirections direction, float radius) {
         return GetCorner((int)direction, radius);
     }
 
@@ -101,27 +93,27 @@ public static class HexagonPoint {
 ///     A point corresponding to the second clockwise corner of a given
 ///     hex direction.
 /// </returns>
-    public static Vector3 GetSecondCorner(HexDirection direction, float radius) {
+    public static Vector3 GetSecondCorner(HexDirections direction, float radius) {
         return GetCorner((int)direction + 1, radius);
     }
 
 
     public static Vector3 GetFirstSolidCorner(
-        HexDirection direction,
+        HexDirections direction,
         float outerRadius
     ) {
         return GetCorner((int)direction, outerRadius) * solidFactor;
     }
 
     public static Vector3 GetSecondSolidCorner(
-        HexDirection direction,
+        HexDirections direction,
         float outerRadius
     ) {
         return GetCorner((int)direction + 1, outerRadius) * solidFactor;
     }
 
     public static Vector3 GetSolidEdgeMiddle(
-        HexDirection direction,
+        HexDirections direction,
         float outerRadius
     ) {
         return (
@@ -130,7 +122,7 @@ public static class HexagonPoint {
         ) * (0.5f * solidFactor);
     }
 
-    public static Vector3 GetBridge(HexDirection direction, float outerRadius) {
+    public static Vector3 GetBridge(HexDirections direction, float outerRadius) {
 // Get a vector pointing from the edge of the solid region of one hexagon to the 
 // edge of the solid region of another hexagon.
         return (
@@ -190,7 +182,6 @@ public static class HexagonPoint {
     public static Vector4 SampleNoise(
         Vector3 position,
         float outerRadius,
-        bool wrapping,
         int wrapSize
     ) {
         float innerDiameter =
@@ -206,7 +197,7 @@ public static class HexagonPoint {
 // a cell width to the left to avoid seams where the cell coordinates
 // are negative.
         if (
-            wrapping &&
+            wrapSize > 0 &&
             position.x < (outerRadius * 2f) * 1.5f
         ) {
             Vector4 sample2 = noiseSource.GetPixelBilinear (
@@ -227,13 +218,13 @@ public static class HexagonPoint {
 
     public static Vector3 Perturb(
         Vector3 position,
-        float outerRadius
+        float outerRadius,
+        int wrapSize
     ) {
         Vector4 sample = SampleNoise(
             position,
             outerRadius,
-            IsMapWrapping,
-            MapWrapSize
+            wrapSize
         );
 
 // Set the range of the perturbation between -1 and 1. Because the value of the
@@ -246,15 +237,15 @@ public static class HexagonPoint {
         return position;
     }
 
-    public static Vector3 GetFirstWaterCorner(HexDirection direction, float radius) {
+    public static Vector3 GetFirstWaterCorner(HexDirections direction, float radius) {
         return GetCorner((int)direction, radius) * waterFactor;
     }
 
-    public static Vector3 GetSecondWaterCorner(HexDirection direction, float radius) {
+    public static Vector3 GetSecondWaterCorner(HexDirections direction, float radius) {
         return GetCorner((int)direction + 1, radius) * waterFactor;
     } 
 
-    public static Vector3 GetWaterBridge(HexDirection direction, float radius) {
+    public static Vector3 GetWaterBridge(HexDirections direction, float radius) {
         return (
             GetCorner((int)direction, radius) +
             GetCorner((int)direction + 1, radius)

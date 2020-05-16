@@ -114,7 +114,7 @@ public class HexClimate {
 
     private void SetTerrainTypes(
         RootGenConfig config,
-        HexMap grid,
+        HexGrid<HexCell> hexGrid,
         NeighborGraph neighborGraph,
         RiverGraph riverGraph
     ) {
@@ -125,13 +125,13 @@ public class HexClimate {
         int rockDesertElevation =
             config.elevationMax - (config.elevationMax - config.waterLevel) / 2;
 
-        for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
-            HexCell cell = grid.GetCell(i);
+        for (int i = 0; i < (hexGrid.Columns * hexGrid.Rows); i++) {
+            HexCell cell = hexGrid.GetElement(i);
             float temperature = GenerateTemperature(
                 config,
-                grid,
+                hexGrid,
                 cell,
-                config.cellOuterRadius
+                config.cellSize
             );
 
             float moisture = _climate[i].moisture;
@@ -262,7 +262,7 @@ public class HexClimate {
 
         ClimateData clearData = new ClimateData();
 
-        for (int i = 0; i < (grid.WidthInCells * grid.HeightInCells); i++) {
+        for (int i = 0; i < (grid.Width * grid.Height); i++) {
             _climate.Add(initialData);
             _nextClimate.Add(clearData);
         }
@@ -270,7 +270,7 @@ public class HexClimate {
         for (int cycle = 0; cycle < 40; cycle++) {
             for (
                 int i = 0;
-                i < (grid.WidthInCells * grid.HeightInCells);
+                i < (grid.Width * grid.Height);
                 i++
             ) {
                 StepClimate(
@@ -327,7 +327,7 @@ public class HexClimate {
             cellClimate.clouds = cloudMaximum;
         }
 
-        HexDirection mainDispersalDirection = config.windDirection.Opposite();
+        HexDirections mainDispersalDirection = config.windDirection.Opposite();
 
         float cloudDispersal = cellClimate.clouds * (1f / (5f + config.windStrength));
         float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
@@ -389,11 +389,11 @@ public class HexClimate {
 
     private float GenerateTemperature(
         RootGenConfig config, 
-        HexMap grid, 
+        HexGrid<HexCell> hexGrid, 
         HexCell cell,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.Coordinates.Z / grid.HeightInCells;
+        float latitude = (float)cell.HexCoordinates.Z / hexGrid.Rows;
 
         if (config.hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -422,8 +422,7 @@ public class HexClimate {
             HexagonPoint.SampleNoise(
                 cell.Position * 0.1f,
                 cellOuterRadius,
-                grid.IsWrapping,
-                grid.WrapSize
+                hexGrid.WrapSize
             )[_temperatureJitterChannel];
 
         temperature += (jitter * 2f - 1f) * config.temperatureJitter;

@@ -1,11 +1,11 @@
 ﻿using UnityEngine;
 
-public enum HexDirection
+public enum HexDirections
 {
     Northeast = 0,
     East = 1,
-    SouthEast = 2,
-    SouthWest = 3,
+    Southeast = 2,
+    Southwest = 3,
     West = 4,
     Northwest = 5
 }
@@ -18,7 +18,7 @@ public static class DirectionAtClockwiseAngle
         * executed by calling the method on the class predicated by 'this'
         * in the arguement list.*/
 
-    public static HexDirection Opposite(this HexDirection direction)
+    public static HexDirections Opposite(this HexDirections direction)
     {
         /* If the direction is less than 3, returns the opposite direction at
             * HexDirections + 3. If the direction is greater than 3, loops back 
@@ -27,34 +27,34 @@ public static class DirectionAtClockwiseAngle
         return (int)direction < 3 ? (direction + 3) : (direction - 3);
     }
 
-    public static HexDirection PreviousClockwise(this HexDirection direction)
+    public static HexDirections PreviousClockwise(this HexDirections direction)
     {
         /* If the hex direction is the first in the enum, wrap back and return the last enum
             * value, otherwise return the preceding enum value.
             */
 
-        return direction == HexDirection.Northeast ? HexDirection.Northwest : (direction - 1);
+        return direction == HexDirections.Northeast ? HexDirections.Northwest : (direction - 1);
     }
 
-    public static HexDirection PreviousClockwise2(this HexDirection direction)
+    public static HexDirections PreviousClockwise2(this HexDirections direction)
     {
         direction -= 2;
-        return direction >= HexDirection.Northeast ? direction : direction + 6;
+        return direction >= HexDirections.Northeast ? direction : direction + 6;
     }
 
-    public static HexDirection NextClockwise(this HexDirection direction)
+    public static HexDirections NextClockwise(this HexDirections direction)
     {
         /* If the hex direction is the last in the enu, wrap forward and return the last enum
             * value, otherwise return the next enum value.
             */
 
-        return direction == HexDirection.Northwest ? HexDirection.Northeast : (direction + 1);
+        return direction == HexDirections.Northwest ? HexDirections.Northeast : (direction + 1);
     }
 
-    public static HexDirection NextClockwise2(this HexDirection direction)
+    public static HexDirections NextClockwise2(this HexDirections direction)
     {
         direction += 2;
-        return direction <= HexDirection.Northwest ? direction : (direction - 6);
+        return direction <= HexDirections.Northwest ? direction : (direction - 6);
     }
 
 /// <summary>
@@ -73,20 +73,20 @@ public static class DirectionAtClockwiseAngle
 ///     A cartinal direction the specified number of clockwise
 ///     rotations from this direction.
 /// </returns>
-    public static HexDirection ClockwiseRotation(
-        this HexDirection direction,
+    public static HexDirections ClockwiseRotation(
+        this HexDirections direction,
         int rotation
     ) {
         if (rotation < 0) {
             int result = (int)direction + rotation;
 
             while (result < 0)
-                result = (int)HexDirection.Northwest + 1 - result;
+                result = (int)HexDirections.Northwest + 1 - result;
             
-            return (HexDirection)result;
+            return (HexDirections)result;
         }
 
-        return direction + rotation % ((int)HexDirection.Northwest + 1);
+        return direction + rotation % ((int)HexDirections.Northwest + 1);
     }
-}
+} 
 

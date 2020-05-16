@@ -352,9 +352,9 @@ public static class Defaults {
         }
     }
 
-    public static HexDirection WindDirection {
+    public static HexDirections WindDirection {
         get {
-            return HexDirection.Northwest;
+            return HexDirections.Northwest;
         }
     }
 
