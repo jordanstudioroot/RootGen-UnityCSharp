@@ -243,8 +243,6 @@ public class HexMap : MonoBehaviour{
             );
         }
 
-        Debug.Log(bounds.width + ", " + bounds.height);
-
         HexGrid = new HexGrid<HexCell>(
             (int)bounds.height,
             (int)bounds.width,
@@ -266,13 +264,13 @@ public class HexMap : MonoBehaviour{
             index < (int)bounds.width * (int)bounds.height;
             index++
         ) {
-            int row = HexGrid.RowFromIndex(index);
-            int column = HexGrid.ColumnFromIndex(index);
+            int axialRow = HexGrid.AxialRowFromIndex(index);
+            int axialColumn = HexGrid.AxialColumnFromIndex(index);
 
             HexGrid.SetElement(
                 CreateCell(
-                    row,
-                    column,
+                    axialColumn,
+                    axialRow,
                     index,
                     cellSize,
                     HexGrid
@@ -280,20 +278,20 @@ public class HexMap : MonoBehaviour{
                 index
             );
 
-            int chunkX = row / MeshConstants.ChunkSizeX;
-            int chunkZ = column / MeshConstants.ChunkSizeZ;
+            int chunkX = axialRow / MeshConstants.ChunkSizeX;
+            int chunkZ = axialColumn / MeshConstants.ChunkSizeZ;
             
             HexGridChunk chunk = Chunks[
                 chunkX + chunkZ * WidthInChunks
             ];
             
-            int localX = row - chunkX * MeshConstants.ChunkSizeX;
-            int localZ = column - chunkZ * MeshConstants.ChunkSizeZ;
+            int localX = axialRow - chunkX * MeshConstants.ChunkSizeX;
+            int localZ = axialColumn - chunkZ * MeshConstants.ChunkSizeZ;
             
             AddCellToChunk(
                 localX,
                 localZ,
-                HexGrid.GetElement(row, column),
+                HexGrid.GetElement(axialRow, axialColumn),
                 chunk
             );
         }
@@ -432,8 +430,8 @@ public class HexMap : MonoBehaviour{
 
         position = transform.InverseTransformPoint(position);
         
-        HexVector coordinates =
-            HexVector.FromPosition(
+        CubeVector coordinates =
+            CubeVector.FromPosition(
                 position,
                 outerCellRadius,
                 HexGrid.WrapSize
@@ -443,7 +441,7 @@ public class HexMap : MonoBehaviour{
     }
 
     public HexCell GetCell(
-        HexVector coordinates
+        CubeVector coordinates
     ) {
         int z = coordinates.Z;
 
@@ -1014,7 +1012,7 @@ public class HexMap : MonoBehaviour{
         );
 
 // Set the HexCell's monobehaviour properties.
-        result.HexCoordinates = HexVector.AsAxialCoordinates(
+        result.HexCoordinates = CubeVector.FromAxialCoordinates(
             x,
             z,
             hexGrid.WrapSize
@@ -1112,8 +1110,6 @@ public class HexMap : MonoBehaviour{
             cellOuterRadius,
             hexGrid.WrapSize
         );
-
-        Debug.Log(result);
         
         return result;
     }

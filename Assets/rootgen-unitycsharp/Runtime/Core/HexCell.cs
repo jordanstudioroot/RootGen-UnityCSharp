@@ -68,7 +68,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
         }
     }
 
-    public HexVector HexCoordinates { get; set; }
+    public CubeVector HexCoordinates { get; set; }
 
     private Mesh GetInteractionMesh(float radius) {
         Mesh result = new Mesh();

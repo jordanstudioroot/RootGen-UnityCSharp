@@ -34,7 +34,7 @@ public class HexGrid<T> where T : IHexPoint {
 
         for (int index = 0, row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
-                index = RowAndColumnToIndex(row, column);
+                index = AxialCoordinatesToIndex(row, column);
                 _dictionary.Add(
                     index,
                     default(T)
@@ -56,21 +56,18 @@ public class HexGrid<T> where T : IHexPoint {
     }
 
     public void SetElement(T element, int row, int column) {
-        int index = RowAndColumnToIndex(row, column);
+        int index = AxialCoordinatesToIndex(row, column);
         SetElement(element, index);
     }
 
     public T GetElement(int row, int column) {
-        int index = RowAndColumnToIndex(row, column);
-
+        int index = AxialCoordinatesToIndex(row, column);
         return GetElement(index);
     }
 
     public void SetElement(T element, int index) {
-        Debug.Log(index);
         if (IsInBounds(index)) {
             _dictionary[index] = element;
-            Debug.Log(_dictionary[index]);
         }
         else {
             throw new OutOfGridBoundsException();
@@ -100,8 +97,8 @@ public class HexGrid<T> where T : IHexPoint {
         List<T> result = new List<T>();
 
         if (IsInBounds(index)) {
-            int row = RowFromIndex(index);
-            int column = ColumnFromIndex(index);
+            int row = AxialRowFromIndex(index);
+            int column = AxialColumnFromIndex(index);
             
             T origin = GetElement(index);
 
@@ -109,7 +106,7 @@ public class HexGrid<T> where T : IHexPoint {
                 for (int j = column - 1; j <= column + 1; j++) {
                     try {
                         T neighborCandidate =
-                            GetElement(row, column);
+                            GetElement(row + i, row + j);
 
                         if (
                             origin.HexCoordinates.IsNeighborOf(
@@ -118,17 +115,24 @@ public class HexGrid<T> where T : IHexPoint {
                             )
                         ) {
                             RootLog.Log(
-                                GetElement(row, column).ToString(),
+                                origin + " -> " + neighborCandidate +
+                                " was a neighbor edge.",
                                 Severity.Information,
-                                "Neighbors"
+                                "HexGrid.Neighbors"
                             );
+
                             result.Add(
-                                GetElement(row, column)
+                                neighborCandidate
                             );
                         }
                     }
-                    catch(System.ArgumentException e) {
-
+                    catch(OutOfGridBoundsException e) {
+                        RootLog.Log(
+                            "Row: " + i + ", Column: " + j + " is " + 
+                            "outside of the grid bounds.",
+                            Severity.Information,
+                            "HexGrid.Neighbors"
+                        );
                     }
                 }
             }
@@ -147,16 +151,36 @@ public class HexGrid<T> where T : IHexPoint {
         return result;
     }
 
-    public int RowFromIndex(int index) {
+    public int AxialRowFromIndex(int index) {
         if (Rows == 0) {
             return 0;
         }
 
-        return (index / Rows);
+        return (index / Columns);
     }
 
-    public int ColumnFromIndex(int index) {
-        return index - ((RowFromIndex(index)) * Columns);
+    public int AxialColumnFromIndex(int index) {
+        return index - (AxialRowFromIndex(index) * Columns);
+    }
+
+    public override string ToString() {
+        string leftPad = "              ";
+        string innerPad = "   ";
+
+        string result = leftPad;
+
+        for (int row = Rows - 1; row > -1; row--) {
+            for (int column = 0; column < Columns; column++) {
+                result +=
+                    GetElement(row, column).HexCoordinates.ToString() +
+                    innerPad;
+            }
+            result += "\n\n";
+            for (int i = 0; i < Rows - row + 1; i++)
+                result += leftPad;
+        }
+
+        return result;
     }
 
     private bool IsInBounds(int row, int column) {
@@ -175,7 +199,7 @@ public class HexGrid<T> where T : IHexPoint {
         );
     }
 
-    private int RowAndColumnToIndex(int row, int column) {
-        return (row * Columns) + column;
+    private int AxialCoordinatesToIndex(int row, int column) {
+        return (row  * Columns) + column;
     }
 }

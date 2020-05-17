@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-[CustomPropertyDrawer(typeof(HexVector))]
+[CustomPropertyDrawer(typeof(CubeVector))]
 public class HexCoordinatesDrawer : PropertyDrawer
 {
     public override void OnGUI(
@@ -10,7 +10,7 @@ public class HexCoordinatesDrawer : PropertyDrawer
         SerializedProperty property,
         GUIContent label
     ) {
-        HexVector coordinates = new HexVector
+        CubeVector coordinates = new CubeVector
             (
                 property.FindPropertyRelative("x").intValue,
                 property.FindPropertyRelative("z").intValue,

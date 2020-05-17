@@ -491,7 +491,7 @@ public class MapGenerator {
 
         open.Enqueue(firstCell, 0);
 
-        HexVector center = firstCell.HexCoordinates;
+        CubeVector center = firstCell.HexCoordinates;
 
         int sink = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
@@ -617,7 +617,7 @@ public class MapGenerator {
 //        firstCell.SearchHeuristic = 0;
 //        _searchFrontier.Enqueue(firstCell);
 
-        HexVector center = firstCell.HexCoordinates;
+        CubeVector center = firstCell.HexCoordinates;
 
         int rise = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;

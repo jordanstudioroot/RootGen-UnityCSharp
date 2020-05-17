@@ -233,6 +233,12 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     public static NeighborGraph FromHexGrid(
         HexGrid<HexCell> hexGrid
     ) {
+        RootLog.Log(
+            "Creating neighbor graph for HexGrid: \n" + hexGrid,
+            Severity.Information,
+            "NeighborGraph.FromHexGrid"
+        );
+
         List<HexEdge> edges = new List<HexEdge>();
 
         for (
@@ -240,29 +246,25 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
             index < hexGrid.Rows * hexGrid.Columns;
             index++
         ) {
-            RootLog.Log(
-                index.ToString(),
-                Severity.Information,
-                "HexGraph"
-            );
 
             foreach(HexCell neighbor in hexGrid.Neighbors(index)) {
                 RootLog.Log(
-                    neighbor.ToString(),
-                    Severity.Information,
-                    "HexGraph"
-                );
-                
-                edges.Add(
-                    new HexEdge(
-                        hexGrid.GetElement(index),
+                    hexGrid.GetElement(index) + " -> " +
                         neighbor,
-                        hexGrid.GetElement(index).HexCoordinates.DirectionTo(
-                            neighbor.HexCoordinates,
-                            hexGrid.WrapSize
-                        )
+                    Severity.Information,
+                    "NeighborGraph.FromhexGrid"
+                );
+
+                HexEdge newEdge = new HexEdge(
+                    hexGrid.GetElement(index),
+                    neighbor,
+                    hexGrid.GetElement(index).HexCoordinates.DirectionTo(
+                        neighbor.HexCoordinates,
+                        hexGrid.WrapSize
                     )
                 );
+
+                edges.Add(newEdge);
             }
         }
 
