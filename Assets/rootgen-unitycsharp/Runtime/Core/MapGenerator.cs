@@ -491,7 +491,7 @@ public class MapGenerator {
 
         open.Enqueue(firstCell, 0);
 
-        CubeVector center = firstCell.HexCoordinates;
+        CubeVector center = firstCell.CubeCoordinates;
 
         int sink = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
@@ -565,10 +565,15 @@ public class MapGenerator {
 //                    searchFrontier.Enqueue(neighbor);
 
                     int priority =
-                        neighbor.HexCoordinates.DistanceTo(
+                        CubeVector.HexTileDistance(
+                            neighbor.CubeCoordinates,
                             center,
                             hexMap.WrapSize
                         ) +
+//                        neighbor.CubeCoordinates.DistanceTo(
+//                            center,
+//                            hexMap.WrapSize
+//                        ) +
                         Random.value < jitterProbability ? 1 : 0;
 
                     open.Enqueue(
@@ -617,7 +622,7 @@ public class MapGenerator {
 //        firstCell.SearchHeuristic = 0;
 //        _searchFrontier.Enqueue(firstCell);
 
-        CubeVector center = firstCell.HexCoordinates;
+        CubeVector center = firstCell.CubeCoordinates;
 
         int rise = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
@@ -689,10 +694,15 @@ public class MapGenerator {
 
 //                    _searchFrontier.Enqueue(neighbor);
                     int priority =
-                        neighbor.HexCoordinates.DistanceTo(
+                        CubeVector.HexTileDistance(
+                            neighbor.CubeCoordinates,
                             center,
                             hexMap.WrapSize
                         ) +
+//                        neighbor.CubeCoordinates.DistanceTo(
+//                            center,
+//                            hexMap.WrapSize
+//                        ) +
                         Random.value < jitterProbability ? 1 : 0;
 
                     open.Enqueue(neighbor, priority);
@@ -917,7 +927,7 @@ public class MapGenerator {
 //            direction <= HexDirection.Northwest;
 //            direction++
 //        ) {
-        foreach (HexEdge edge in neighborGraph.Edges(cell)) {
+        foreach (HexEdge edge in neighborGraph.CellEdges(cell)) {
 //            HexCell neighbor = cell.GetNeighbor(direction);
 
 //            if (!neighbor) {
@@ -1435,7 +1445,7 @@ public class MapGenerator {
         float highTemperature,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.HexCoordinates.Z / hexMap.Height;
+        float latitude = (float)cell.CubeCoordinates.Z / hexMap.Height;
 
         if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;

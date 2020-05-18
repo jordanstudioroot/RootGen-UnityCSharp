@@ -337,7 +337,7 @@ public class HexClimate {
 //            HexDirection direction = HexDirection.Northeast;
 //            direction <= HexDirection.Northwest;
 //            direction++
-        foreach (HexEdge edge in neighborGraph.Edges(cell)) {
+        foreach (HexEdge edge in neighborGraph.CellEdges(cell)) {
 //            HexCell neighbor = cell.GetNeighbor(direction);
 
 //            if (!neighbor) {
@@ -393,7 +393,7 @@ public class HexClimate {
         HexCell cell,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.HexCoordinates.Z / hexGrid.Rows;
+        float latitude = (float)cell.CubeCoordinates.Z / hexGrid.Rows;
 
         if (config.hemisphere == HemisphereMode.Both) {
             latitude *= 2f;

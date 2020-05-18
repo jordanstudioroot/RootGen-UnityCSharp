@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using RootLogging;
 
 public class HexGridChunk : MonoBehaviour {
 // FIELDS ~~~~~~~~~~
@@ -390,6 +391,11 @@ public class HexGridChunk : MonoBehaviour {
         RoadGraph roadGraph,
         ElevationGraph elevationGraph
     ) {
+        RootLog.Log(
+            "Rendering hex grid: " + "\n" + grid + "\n" + neighborGraph,
+            Severity.Information,
+            "NeighborGraph.FromHexGrid"
+        );
         terrain.Clear();
         rivers.Clear();
         roads.Clear();
@@ -432,7 +438,7 @@ public class HexGridChunk : MonoBehaviour {
         _cellOuterRadius = cellOuterRadius;
 
         List<HexEdge> edges =
-            neighborGraph.Edges(cell);
+            neighborGraph.CellEdges(cell);
 
 // USING GRAPH EDGES INSTEAD OF HEX DIRECTIONS
 //

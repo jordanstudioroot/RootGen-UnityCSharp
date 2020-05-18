@@ -16,11 +16,16 @@ public struct CubeVector {
 /// The longitudinal axis of the vector in the cube coordinate system.
 /// </summary>
 /// <value></value>
-    public int X
-    {
+    public int X {
         get
         {
             return x;
+        }
+    }
+
+    public int XOffset {
+        get {
+            return (x + z) * 2;
         }
     }
 
@@ -29,8 +34,7 @@ public struct CubeVector {
 /// system.
 /// </summary>
 /// <value></value>
-    public int Z
-    {
+    public int Z {
         get
         {
             return z;
@@ -42,48 +46,62 @@ public struct CubeVector {
 /// system and the inverse of the Z axis.
 /// </summary>
 /// <value></value>
-    public int Y
-    {
-        get
-        {
-
+    public int Y {
+        get {
 //  X + Y + Z = 0->
 //  X + Z = -Y ->
 //  (X + Z) / -1 = -Y / -1 ->
 //  -X - Z = Y
-            return -X - Z;
+            return -x - z;
         }
     }
 
 //  [x, z, y]
 //
 //     NW                   NE
-//      [ 0,-1,+1][ 1, -1, 0]
-// W [-1, 0, 1][0, 0, 0][1, 0, 1] E
-//      [-1, 1, 0][ 0, 1, -1]
+//      [-1, 0, 1][ 0, -1, 1]
+// W [-1, 1, 0][0, 0, 0][1, -1, 0] E
+//      [0, 1, -1][1, 0, -1]
 //     SW                   SE
-    public static CubeVector Northwest(int wrapSize) {
-        return FromAxialCoordinates(0, -1, wrapSize);
+    public static CubeVector Northeast {
+        get {
+            return new CubeVector(0, 1);
+        }
     }
 
-    public static CubeVector Northeast(int wrapSize) {
-        return FromAxialCoordinates(1, -1, wrapSize);
+    public static CubeVector East {
+        get {
+            return new CubeVector(1, 0);
+        }
     }
 
-    public static CubeVector East(int wrapSize) {
-        return FromAxialCoordinates(1, 0, wrapSize);
+    public static CubeVector Southeast {
+        get {
+            return new CubeVector(1, -1);
+        }
     }
 
-    public static CubeVector Southeast(int wrapSize) {
-        return FromAxialCoordinates(0, 1, wrapSize);
+    public static CubeVector Southwest {
+        get {
+            return new CubeVector(0, -1);
+        }
     }
 
-    public static CubeVector Southwest(int wrapSize) {
-        return FromAxialCoordinates(-1, 1, wrapSize);
+    public static CubeVector West {
+        get {
+            return new CubeVector(-1, 0);
+        }
     }
 
-    public static CubeVector West(int wrapSize) {
-        return FromAxialCoordinates(-1, 0, wrapSize);
+    public static CubeVector Northwest {
+        get {
+            return new CubeVector(-1, 1);
+        }
+    }
+
+    public CubeVector(int x, int z) {
+        this.x = x;
+        this.z = z;
     }
 
     public CubeVector(int x, int z, int wrapSize) {
@@ -102,77 +120,76 @@ public struct CubeVector {
         this.z = z;
     }
 
-    public bool IsNeighborOf(
-        CubeVector other,
+    public static bool AreAdjacent(
+        CubeVector a,
+        CubeVector b,
         int wrapSize
     ) {
-        RootLog.Log(
-            DistanceTo(
-                other,
-                wrapSize
-            ).ToString(),
-            Severity.Information,
-            "Distance"
-        );
-
-        return (
-            DistanceTo(
-                other,
-                wrapSize
-            ) == 1
-        );
+        return HexTileDistance(a, b, wrapSize) == 1;
     }
 
-    public CubeVector Minus(CubeVector other, int wrapSize) {
-        return new CubeVector(
+    public CubeVector Minus(CubeVector other) {
+        CubeVector result = new CubeVector(
             X - other.X,
-            Z - other.Z,
-            wrapSize
+            Z - other.Z
         );
+        
+        return result;
     }
 
-    public CubeVector Plus(CubeVector other, int wrapSize) {
-        return new CubeVector(
+    public CubeVector Plus(CubeVector other) {
+        CubeVector result =  new CubeVector(
             x + other.X,
-            Z + other.Z,
-            wrapSize
+            Z + other.Z
         );
+
+        return result;
     }
 
-    public CubeVector Normalized(int wrapSize) {
-        return FromAxialCoordinates(
-            Mathf.Clamp(X, -1, 1),
-            Mathf.Clamp(Z, -1, 1),
-            wrapSize
-        );
+    public CubeVector Normalized {
+        get {
+            return new CubeVector(
+                Mathf.Clamp(X, -1, 1),
+                Mathf.Clamp(Z, -1, 1)
+            );
+        }
     }
 
-    public HexDirections DirectionTo(
-        CubeVector other,
-        int wrapSize
+    public static CubeVector Direction(
+        CubeVector from,
+        CubeVector to
     ) {
-        CubeVector dir = Plus(other, wrapSize).Normalized(wrapSize);
-        Debug.Log(this + " + " + other + " normalized = " + dir);
+        return to.Minus(from).Normalized;
+    }
 
-        if (dir.Equals(Northeast(wrapSize)))
+    public static HexDirections HexDirection(
+        CubeVector from,
+        CubeVector to
+    ) {
+        CubeVector direction = Direction(from, to);
+
+        if (direction.Equals(Northeast))
             return HexDirections.Northeast;
         
-        if (dir.Equals(Northwest(wrapSize)))
+        if (direction.Equals(Northwest))
             return HexDirections.Northwest;
         
-        if (dir.Equals(Southeast(wrapSize)))
+        if (direction.Equals(Southeast))
             return HexDirections.Southeast;
 
-        if (dir.Equals(Southwest(wrapSize)))
+        if (direction.Equals(Southwest))
             return HexDirections.Southwest;
 
-        if (dir.Equals(East(wrapSize)))
+        if (direction.Equals(East))
             return HexDirections.East;
         
-        if (dir.Equals(West(wrapSize)))
+        if (direction.Equals(West))
             return HexDirections.West;
 
-        throw new NotImplementedException();
+        throw new NotImplementedException(
+            "There is no matching hex direction for the specified " +
+            "cube vector:\n\t" + direction
+        );
     }
 
     public static CubeVector FromPosition(
@@ -232,20 +249,141 @@ public struct CubeVector {
 
     }
 
-    public static CubeVector FromAxialCoordinates(
+/// <summary>
+///     Create cube vector from offset coordinates.
+/// </summary>
+/// <param name="x">
+///     The x axis.
+/// </param>
+/// <param name="z">
+///     The z (offset) axis.
+/// </param>
+/// <param name="wrapSize">
+///     The wrap size for the coordinates if the coordinate system
+///     is wrapping.
+/// </param>
+/// <returns></returns>
+    public static CubeVector FromOffsetCoordinates(
         int x,
         int z,
         int wrapSize
     ) {
-/* Return coordinates after subtracting the X coordinate with the Z coordinated integer
-* divided by 2. All cells will be offset on the X axis directly proportional to Z. As
-* Z grows larger, the magnitude of the offset increases bringing the X axis into alignment
-* with a proposed axis which is at a (roughly) 45 degree angle with the Z axis.*/
+// Return coordinates after subtracting the X coordinate with the Z
+// coordinate integer divided by 2.
+// 
+// All cells will be offset on the X axis directly proportional to Z. As
+// Z grows larger, the magnitude of the offset increases bringing the X
+// axis into alignment with a proposed axis which is at a (roughly) 45
+// degree angle with the Z axis.
         return new CubeVector(
             x - z / 2,
             z,
             wrapSize
         );
+    }
+
+/// <summary>
+/// Get the distance in hex tiles between two cube vectors representing
+/// tiles on a hex grid.
+/// </summary>
+/// <param name="source">
+/// A cube vector representing the source tile.
+/// </param>
+/// <param name="target">
+/// A cube vector representing the target tile.
+/// </param>
+/// <returns>
+/// The distance in hex tiles between the source tile and the target tile.
+/// </returns>
+    public static int HexTileDistance(CubeVector source, CubeVector target) {
+        int result =  
+            (int)Mathf.Floor(
+                Mathf.Sqrt(
+                    CubicDistance(source, target)
+                )
+            );
+
+        RootLog.Log(
+            "Source: " + source + " -> Target: " + target + " distance: " +
+            result,
+            Severity.Information,
+            "General"
+        );
+
+        return result;
+    }
+
+    public static int HexTileDistance(
+        CubeVector source,
+        CubeVector target,
+        int wrapSize
+    ) {
+        if (wrapSize < 0)
+            throw new ArgumentException(
+                "The wrap size must be greater than or equal to 0."
+            );
+
+        int unwrappedDistance = HexTileDistance(source, target);
+
+        CubeVector rightWrapped =
+            new CubeVector(
+                target.x + wrapSize,
+                target.z
+            );
+
+        int rightWrappedDistance = HexTileDistance(source, rightWrapped);
+
+        if (rightWrappedDistance < unwrappedDistance)
+            return rightWrappedDistance;
+
+        CubeVector leftWrapped =
+            new CubeVector(
+                target.x - wrapSize,
+                target.z
+            );
+
+        int leftWrappedDistance = HexTileDistance(source, leftWrapped);
+
+        if (leftWrappedDistance < unwrappedDistance)
+            return leftWrappedDistance;
+
+        return unwrappedDistance;
+    }
+
+/// <summary>
+/// Get the cubic distance between two cube vectors.
+/// </summary>
+/// <param name="source">
+///     The source cube vector.
+/// </param>
+/// <param name="target">
+///     The target cube vector.
+/// </param>
+/// <returns>
+///     The raw distance between two cube vectors using cube coordinates.
+/// </returns>
+    public static float CubicDistance(CubeVector source, CubeVector target) {
+        return Mathf.Sqrt(
+            Mathf.Pow(source.x - target.x, 2f) +
+            Mathf.Pow(source.Y - target.Y, 2f) +
+            Mathf.Pow(source.z - target.z, 2f)
+        );
+    }
+
+/// <summary>
+/// Get the axial distance between two cube vectors.
+/// </summary>
+/// <param name="source">
+/// The source cube vector.
+/// </param>
+/// <param name="target">
+/// The target cube vector.
+/// </param>
+/// <returns>
+/// The axial distance between two cube vectors.
+/// </returns>
+    public float OffsetDistance(CubeVector source, CubeVector target) {
+        throw new NotImplementedException();
     }
 
     public int DistanceTo(
@@ -307,11 +445,11 @@ public struct CubeVector {
     public override string ToString() {
         return
             "[X: " +
-            X.ToString() +
-            ", Y: " +
-            Y.ToString() +
-            ", Z: " +
-            Z.ToString() +
+                X.ToString() +
+                ", Y: " +
+                Y.ToString() +
+                ", Z: " +
+                Z.ToString() +
             "]";
     }
 

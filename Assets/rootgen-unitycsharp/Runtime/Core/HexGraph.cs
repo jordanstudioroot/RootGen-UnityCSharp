@@ -14,7 +14,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     public NeighborGraph(int vertexCapacity, int edgeCapacity) :
         base(false, vertexCapacity, edgeCapacity) { }
 
-    public List<HexEdge> Edges(HexCell cell) {
+    public List<HexEdge> CellEdges(HexCell cell) {
         IEnumerable<HexEdge> edges;
 
         TryGetOutEdges(cell, out edges);
@@ -27,7 +27,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public List<HexCell> Neighbors(HexCell cell) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
 
         if (edges == null)
             return null;
@@ -46,7 +46,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         List<HexEdge> result = new List<HexEdge>();
 
         if (edges != null && edges.Count > 0) {
@@ -81,7 +81,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexEdge edge
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -98,7 +98,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -115,7 +115,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexEdge edge
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -132,7 +132,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -149,7 +149,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexEdge edge
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -166,7 +166,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -183,7 +183,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexEdge edge
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -200,7 +200,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -217,7 +217,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         HexCell cell,
         HexDirections direction
     ) {
-        List<HexEdge> edges = Edges(cell);
+        List<HexEdge> edges = CellEdges(cell);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -233,12 +233,6 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     public static NeighborGraph FromHexGrid(
         HexGrid<HexCell> hexGrid
     ) {
-        RootLog.Log(
-            "Creating neighbor graph for HexGrid: \n" + hexGrid,
-            Severity.Information,
-            "NeighborGraph.FromHexGrid"
-        );
-
         List<HexEdge> edges = new List<HexEdge>();
 
         for (
@@ -246,21 +240,15 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
             index < hexGrid.Rows * hexGrid.Columns;
             index++
         ) {
+            HexCell current = hexGrid.GetElement(index);
 
             foreach(HexCell neighbor in hexGrid.Neighbors(index)) {
-                RootLog.Log(
-                    hexGrid.GetElement(index) + " -> " +
-                        neighbor,
-                    Severity.Information,
-                    "NeighborGraph.FromhexGrid"
-                );
-
                 HexEdge newEdge = new HexEdge(
-                    hexGrid.GetElement(index),
+                    current,
                     neighbor,
-                    hexGrid.GetElement(index).HexCoordinates.DirectionTo(
-                        neighbor.HexCoordinates,
-                        hexGrid.WrapSize
+                    CubeVector.HexDirection(
+                        current.CubeCoordinates,
+                        neighbor.CubeCoordinates
                     )
                 );
 
@@ -283,7 +271,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
             if (outEdges != null) {
                 foreach (HexEdge edge in outEdges)
-                    result += edge.ToString() + "\n";
+                    result += edge + "\n";
             }
 
             result += "\n\n";

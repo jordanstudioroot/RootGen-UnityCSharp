@@ -243,6 +243,16 @@ public class HexMap : MonoBehaviour{
             );
         }
 
+        HexagonPoint.InitializeHashGrid(seed);
+
+        _cellShaderData.Initialize(
+            (int)bounds.width,
+            (int)bounds.height
+        );
+
+        if (!_terrainMaterial)
+            _terrainMaterial = Resources.Load<Material>("Terrain");
+
         HexGrid = new HexGrid<HexCell>(
             (int)bounds.height,
             (int)bounds.width,
@@ -264,34 +274,37 @@ public class HexMap : MonoBehaviour{
             index < (int)bounds.width * (int)bounds.height;
             index++
         ) {
-            int axialRow = HexGrid.AxialRowFromIndex(index);
-            int axialColumn = HexGrid.AxialColumnFromIndex(index);
+            int row = HexGrid.RowIndex(index);
+            int column = HexGrid.ColumnIndex(index);
 
-            HexGrid.SetElement(
+            RootLog.Log(
+                "Row: " + row + ", "+
+                "Column: " + column
+            );
+
+            HexGrid[row, column] =
                 CreateCell(
-                    axialColumn,
-                    axialRow,
+                    column,
+                    row,
                     index,
                     cellSize,
                     HexGrid
-                ),
-                index
-            );
+                );
 
-            int chunkX = axialRow / MeshConstants.ChunkSizeX;
-            int chunkZ = axialColumn / MeshConstants.ChunkSizeZ;
+            int chunkX = row / MeshConstants.ChunkSizeX;
+            int chunkZ = column / MeshConstants.ChunkSizeZ;
             
             HexGridChunk chunk = Chunks[
                 chunkX + chunkZ * WidthInChunks
             ];
             
-            int localX = axialRow - chunkX * MeshConstants.ChunkSizeX;
-            int localZ = axialColumn - chunkZ * MeshConstants.ChunkSizeZ;
+            int localX = row - chunkX * MeshConstants.ChunkSizeX;
+            int localZ = column - chunkZ * MeshConstants.ChunkSizeZ;
             
             AddCellToChunk(
                 localX,
                 localZ,
-                HexGrid.GetElement(axialRow, axialColumn),
+                HexGrid.GetElement(row, column),
                 chunk
             );
         }
@@ -303,25 +316,10 @@ public class HexMap : MonoBehaviour{
         // TODO: This value will need to be serialized when games are saved,
 //       so it should probably be stored in such a way that when the
 //       maps Save() method is called it also gets saved and restored.
-        HexagonPoint.InitializeHashGrid(seed);
+        
 
         ClearUnits(_units);
         ClearColumns(Columns);
-
-        if (!_terrainMaterial)
-            _terrainMaterial = Resources.Load<Material>("Terrain");
-
-        RootLog.Log(
-            "HexCell matrix created.\n\n" +
-            NeighborGraph.ToString(),
-            Severity.Information,
-            "HexMap"
-        );
-
-        _cellShaderData.Initialize(
-            Width,
-            Height
-        );
 
         Render(
             RoadGraph,
@@ -983,15 +981,15 @@ public class HexMap : MonoBehaviour{
 /// <summary>
 /// Create a Cell representing the data 
 /// </summary>
-/// <param name="x"></param>
-/// <param name="z"></param>
+/// <param name="column"></param>
+/// <param name="row"></param>
 /// <param name="i"></param>
 /// <param name="cellOuterRadius"></param>
 /// <param name="chunkSizeX"></param>
 /// <returns></returns>    
     private HexCell CreateCell(
-        int x,
-        int z,
+        int column,
+        int row,
         int i,
         float cellOuterRadius,
         HexGrid<HexCell> hexGrid
@@ -1005,36 +1003,36 @@ public class HexMap : MonoBehaviour{
 
 // Set the HexCell's transform.
         result.transform.localPosition = CoordinateToLocalPosition(
-            x,
-            z,
+            column,
+            row,
             innerDiameter,
             cellOuterRadius
         );
 
 // Set the HexCell's monobehaviour properties.
-        result.HexCoordinates = CubeVector.FromAxialCoordinates(
-            x,
-            z,
+        result.CubeCoordinates = CubeVector.FromOffsetCoordinates(
+            column,
+            row,
             hexGrid.WrapSize
         );
 
         result.Index = i;
-        result.ColumnIndex = x / MeshConstants.ChunkSizeX;
+        result.ColumnIndex = column / MeshConstants.ChunkSizeX;
         result.ShaderData = _cellShaderData;
 
 // If wrapping is enabled, cell is not explorable if the cell is on the
 // top or bottom border.
         if (IsWrapping) {
-            result.IsExplorable = z > 0 && z < Height - 1;
+            result.IsExplorable = row > 0 && row < Height - 1;
         }
 // If wrapping is disabled, cell is not explorable if the cell is on
 // any border.
         else {
             result.IsExplorable =
-                x > 0 &&
-                z > 0 &&
-                x < Width - 1 &&
-                z < Height - 1;
+                column > 0 &&
+                row > 0 &&
+                column < Width - 1 &&
+                row < Height - 1;
         }
 
 // THIS IS NOW HANDLED BY MAPPING THE DENSEARRAY TO AN ADJACENCY GRAP
