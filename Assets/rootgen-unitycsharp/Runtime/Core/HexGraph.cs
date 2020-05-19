@@ -235,13 +235,13 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         ) {
             HexCell current = hexGrid[i];
 
-            foreach(HexCell neighbor in hexGrid.Neighbors(i)) {
+            foreach(HexCell neighbor in hexGrid.GetNeighbors(i)) {
                 HexEdge newEdge = new HexEdge(
                     current,
                     neighbor,
                     CubeVector.HexDirection(
-                        current.CubeCoordinates,
-                        neighbor.CubeCoordinates,
+                        current.Coordinates,
+                        neighbor.Coordinates,
                         hexGrid.WrapSize
                     )
                 );

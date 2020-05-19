@@ -618,4 +618,11 @@ public struct CubeVector {
 
         return false;
     }
-}
+
+    public static Vector2 CubeToOffset(int cubeX, int cubeY, int cubeZ) {
+        return new Vector2(
+            cubeX + (cubeZ - (cubeZ % 2)) / 2,
+            cubeZ
+        );
+    }
+ }

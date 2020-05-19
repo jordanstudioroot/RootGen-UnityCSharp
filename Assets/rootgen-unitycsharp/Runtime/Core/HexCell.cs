@@ -68,7 +68,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
         }
     }
 
-    public CubeVector CubeCoordinates { get; set; }
+    public CubeVector Coordinates { get; set; }
 
     private Mesh GetInteractionMesh(float radius) {
         Mesh result = new Mesh();
@@ -261,9 +261,9 @@ public class HexCell : MonoBehaviour, IHexPoint {
     public override string ToString() {
         return 
             "[X: " +
-                CubeCoordinates.X.ToString() + ", Y:" +
-                CubeCoordinates.Y.ToString() + ", Z:" +
-                CubeCoordinates.Z.ToString() +
+                Coordinates.X.ToString() + ", Y:" +
+                Coordinates.Y.ToString() + ", Z:" +
+                Coordinates.Z.ToString() +
             "]";
     }
 

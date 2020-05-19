@@ -404,7 +404,7 @@ public class HexGridChunk : MonoBehaviour {
         estuaries.Clear();
         features.Clear();
 
-        for (int i = 0; i < grid.Size; i++) {
+        for (int i = 0; i < grid.SizeSquared; i++) {
             TriangulateCell(
                 grid.GetElement(i),
                 cellOuterRadius,

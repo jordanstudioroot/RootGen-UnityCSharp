@@ -393,7 +393,7 @@ public class HexClimate {
         HexCell cell,
         float cellOuterRadius
     ) {
-        float latitude = (float)cell.CubeCoordinates.Z / hexGrid.Rows;
+        float latitude = (float)cell.Coordinates.Z / hexGrid.Rows;
 
         if (config.hemisphere == HemisphereMode.Both) {
             latitude *= 2f;

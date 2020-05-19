@@ -131,7 +131,7 @@ public class HexMap : MonoBehaviour{
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
-            return HexGrid.Size;
+            return HexGrid.SizeSquared;
         }
     }
 
@@ -547,7 +547,7 @@ public class HexMap : MonoBehaviour{
 // TODO: This is a presentation concern and should be moved out of this
 //       class
     public void ResetVisibility() {
-        for (int i = 0; i < HexGrid.Size; i++) {
+        for (int i = 0; i < HexGrid.SizeSquared; i++) {
             HexGrid.GetElement(i).ResetVisibility();
         }
 
@@ -917,12 +917,8 @@ public class HexMap : MonoBehaviour{
         Transform[] result = new Transform[chunkColumns];
 
         for (int column = 0; column < chunkColumns; column++) {
-            GameObject columnObj = Instantiate(
-                new GameObject("Column"),
-                transform,
-                false
-            ) as GameObject;
-
+            GameObject columnObj = new GameObject("Column");
+            columnObj.transform.SetParent(this.transform, false);
             result[column] = columnObj.transform;
         }
 
@@ -1003,7 +999,7 @@ public class HexMap : MonoBehaviour{
         );
 
 // Set the HexCell's monobehaviour properties.
-        result.CubeCoordinates = CubeVector.FromOffsetCoordinates(
+        result.Coordinates = CubeVector.FromOffsetCoordinates(
             x,
             z,
             hexGrid.WrapSize
