@@ -927,7 +927,7 @@ public class MapGenerator {
 //            direction <= HexDirection.Northwest;
 //            direction++
 //        ) {
-        foreach (HexEdge edge in neighborGraph.CellEdges(cell)) {
+        foreach (HexEdge edge in neighborGraph.GetVertexEdges(cell)) {
 //            HexCell neighbor = cell.GetNeighbor(direction);
 
 //            if (!neighbor) {

@@ -12,33 +12,49 @@ public class HexGrid<T> where T : IHexPoint {
         get; private set;
     }
 
+    public int SizeSquared {
+        get {
+            return Rows * Columns;
+        }
+    }
+
     public bool IsWrapping {
         get; private set;
     }
 
     public int WrapSize {
         get {
-            return IsWrapping ?  Rows : 0;
+            return IsWrapping ?  Columns : 0;
         }
     }
 
-    public T this[int index] {
+    public T this[int rowMajorIndex] {
         get {
-            return GetElement(index);
+            return GetElement(rowMajorIndex);
         }
 
         set {
-            SetElement(value, index);
+            SetElement(value, rowMajorIndex);
         }
     }
 
-    public T this[int row, int column] {
+    public T this[int offsetX, int offsetZ] {
         get {
-            return GetElement(row, column);
+            return GetElement(offsetX, offsetZ);
         }
 
         set {
-            SetElement(value, row, column);
+            SetElement(value, offsetX, offsetZ);
+        }
+    }
+
+    public T this[int cubicX, int cubicY, int cubicZ] {
+        get {
+            return GetElement(cubicX, cubicY, cubicZ);
+        }
+
+        set {
+            SetElement(value, cubicX, cubicY, cubicZ);
         }
     }
 
@@ -59,7 +75,7 @@ public class HexGrid<T> where T : IHexPoint {
 
         for (int index = 0, row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
-                index = AxialCoordinatesToIndex(row, column);
+                index = OffsetToIndex(row, column);
                 _dictionary.Add(
                     index,
                     default(T)
@@ -80,35 +96,45 @@ public class HexGrid<T> where T : IHexPoint {
         }
     }
 
-    public void SetElement(T element, int row, int column) {
-        int index = AxialCoordinatesToIndex(row, column);
-        SetElement(element, index);
+    public T GetElement(int x, int y, int z) {
+        throw new System.NotImplementedException();
     }
 
-    public T GetElement(int row, int column) {
-        int index = AxialCoordinatesToIndex(row, column);
+    public T SetElement(T element, int x, int y, int z) {
+        throw new System.NotImplementedException();
+    }
+
+    public T GetElement(int offsetX, int offsetZ) {
+        int index = OffsetToIndex(offsetX, offsetZ);
         return GetElement(index);
     }
 
-    public void SetElement(T element, int index) {
-        if (IsInBounds(index)) {
-            _dictionary[index] = element;
+    public void SetElement(T element, int offsetX, int offsetZ) {
+        int index = OffsetToIndex(offsetX, offsetZ);
+        SetElement(element, index);
+    }
+
+    public void SetElement(T element, int rowMajorIndex) {
+        if (IsInBounds(rowMajorIndex)) {
+            _dictionary[rowMajorIndex] = element;
         }
         else {
             throw new OutOfGridBoundsException();
         }
     }
 
-    public T GetElement(int index) {
-        if (IsInBounds(index)) {
+    public T GetElement(int rowMajorIndex) {
+        if (IsInBounds(rowMajorIndex)) {
             T value;
 
-            if (_dictionary.TryGetValue(index, out value)) {
+            if (_dictionary.TryGetValue(rowMajorIndex, out value)) {
                 if (value == null) 
-                    throw new System.NullReferenceException();
+                    throw new System.NullReferenceException(
+                        "index: " + rowMajorIndex
+                    );
             }
             else {
-                throw new System.IndexOutOfRangeException();
+                throw new OutOfGridBoundsException();
             }
 
             return value;
@@ -120,25 +146,30 @@ public class HexGrid<T> where T : IHexPoint {
 
     public List<T> Neighbors(int index) {
         List<T> result = new List<T>();
+        T origin = default(T);
 
         if (IsInBounds(index)) {
             int row = RowIndex(index);
             int column = ColumnIndex(index);
             
-            T origin = GetElement(index);
+            origin = GetElement(index);        
 
             for (int i = row - 1; i <= row + 1; i++) {
                 for (int j = column - 1; j <= column + 1; j++) {
                     try {
+                        int neighborIndex = OffsetToIndex(
+                            j, i
+                        );
+
                         T neighborCandidate =
-                            this[row + i, column + j];
+                            this[neighborIndex];
 
                         if (
-                            CubeVector.AreAdjacent(
+                            CubeVector.HexTileDistance(
                                 origin.CubeCoordinates,
                                 neighborCandidate.CubeCoordinates,
                                 WrapSize
-                            )
+                            ) == 1
                         ) {
                             result.Add(
                                 neighborCandidate
@@ -211,12 +242,13 @@ public class HexGrid<T> where T : IHexPoint {
         string result = "";
 
         for (int row = Rows - 1; row > -1; row--) {
-            for (int i = row; i > 0; i--)
-                result += leftPad;
-
+//            for (int i = row; i > 0; i--)
+//                result += leftPad;
+            if (row % 2 != 0)
+                result += leftPad;    
             for (int column = 0; column < Columns; column++) {
                 result +=
-                    GetElement(row, column).CubeCoordinates.ToString() +
+                    GetElement(column, row).CubeCoordinates +
                     innerPad;
             }
 
@@ -226,23 +258,20 @@ public class HexGrid<T> where T : IHexPoint {
         return result;
     }
 
-    private bool IsInBounds(int row, int column) {
-        return(
-            row >= 0 &&
-            column >= 0 &&
-            row < Rows &&
-            column < Columns
-        );
-    }
-
     private bool IsInBounds(int index) {
         return (
             index >= 0 &&
-            index < (Rows * Columns)
+            index < SizeSquared
         );
     }
 
-    private int AxialCoordinatesToIndex(int row, int column) {
-        return (row  * Columns) + column;
+    private int OffsetToIndex(int x, int z) {
+        if (x > Columns - 1)
+            x -= WrapSize;
+        else if (x < 0) {
+            x += WrapSize;
+        }
+        
+        return (z * Columns) + x;
     }
 }

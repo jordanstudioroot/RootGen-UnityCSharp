@@ -120,14 +120,6 @@ public struct CubeVector {
         this.z = z;
     }
 
-    public static bool AreAdjacent(
-        CubeVector a,
-        CubeVector b,
-        int wrapSize
-    ) {
-        return HexTileDistance(a, b, wrapSize) == 1;
-    }
-
     public CubeVector Minus(CubeVector other) {
         CubeVector result = new CubeVector(
             X - other.X,
@@ -146,20 +138,131 @@ public struct CubeVector {
         return result;
     }
 
+    public CubeVector Cross(CubeVector other) {
+        throw new NotImplementedException();
+    }
+
+    public CubeVector Dot(CubeVector other) {
+        throw new NotImplementedException();
+    }
+
+    public CubeVector Scale(int scalar) {
+        return new CubeVector(
+            x * scalar,
+            z * scalar
+        );
+    }
+
+    public static CubeVector operator - (CubeVector a, CubeVector b) {
+        return a.Minus(b);
+    }
+
+    public static CubeVector operator + (CubeVector a, CubeVector b) {
+        return a.Plus(b);
+    }
+
+    public static CubeVector operator * (CubeVector a, CubeVector b) {
+        return a.Dot(b);
+    }
+
+    public static CubeVector CrossProduct (CubeVector a, CubeVector b) {
+        return a.Cross(b);
+    }
+
+    public static CubeVector Scale(CubeVector vector, int scalar) {
+        return vector.Scale(scalar);
+    }
+
     public CubeVector Normalized {
         get {
+            int magnitude = (int)Mathf.Sqrt(
+                Mathf.Pow(x, 2) +
+                Mathf.Pow(Y, 2) +
+                Mathf.Pow(z, 2) 
+            );
+
+            int xNorm = ClampToHighestAbsoluteValue(x) / magnitude;
+            int zNorm = ClampToHighestAbsoluteValue(z) / magnitude;
+
             return new CubeVector(
-                Mathf.Clamp(X, -1, 1),
-                Mathf.Clamp(Z, -1, 1)
+                xNorm,
+                zNorm
             );
         }
+    }
+
+    public int ClampToHighestAbsoluteValue(float toClamp) {
+        return 
+            toClamp > 0 ?
+                Mathf.CeilToInt(toClamp) :
+                Mathf.FloorToInt(toClamp);
     }
 
     public static CubeVector Direction(
         CubeVector from,
         CubeVector to
     ) {
-        return to.Minus(from).Normalized;
+        return (to - from).Normalized;
+    }
+
+    public static CubeVector Direction(
+        CubeVector from,
+        CubeVector to,
+        int wrapping
+    ) {
+        if (
+            IsWrappingRight(
+                from, to, wrapping
+            )
+        ) {
+            CubeVector toWrapRight =
+                new CubeVector(
+                    to.X + wrapping,
+                    to.Z
+                );
+
+            return Direction(from, toWrapRight);
+        }
+        else if (
+            IsWrappingLeft(
+                from, to, wrapping
+            )
+        ) {
+            CubeVector toWrapLeft =
+                new CubeVector(
+                    to.X - wrapping,
+                    to.Z
+                );
+            
+            return Direction(from, toWrapLeft);
+        }
+
+        return Direction(from, to);
+    }
+
+    private static HexDirections HexDirectionInternal(CubeVector vector) {
+        if (vector.Equals(Northeast))
+            return HexDirections.Northeast;
+        
+        if (vector.Equals(Northwest))
+            return HexDirections.Northwest;
+        
+        if (vector.Equals(Southeast))
+            return HexDirections.Southeast;
+
+        if (vector.Equals(Southwest))
+            return HexDirections.Southwest;
+
+        if (vector.Equals(East))
+            return HexDirections.East;
+        
+        if (vector.Equals(West))
+            return HexDirections.West;
+
+        throw new NotImplementedException(
+            "There is no matching hex direction for the specified " +
+            "cube vector:\n\t" + vector
+        );
     }
 
     public static HexDirections HexDirection(
@@ -167,29 +270,16 @@ public struct CubeVector {
         CubeVector to
     ) {
         CubeVector direction = Direction(from, to);
+        return HexDirectionInternal(direction);        
+    }
 
-        if (direction.Equals(Northeast))
-            return HexDirections.Northeast;
-        
-        if (direction.Equals(Northwest))
-            return HexDirections.Northwest;
-        
-        if (direction.Equals(Southeast))
-            return HexDirections.Southeast;
-
-        if (direction.Equals(Southwest))
-            return HexDirections.Southwest;
-
-        if (direction.Equals(East))
-            return HexDirections.East;
-        
-        if (direction.Equals(West))
-            return HexDirections.West;
-
-        throw new NotImplementedException(
-            "There is no matching hex direction for the specified " +
-            "cube vector:\n\t" + direction
-        );
+    public static HexDirections HexDirection(
+        CubeVector from,
+        CubeVector to,
+        int wrapping
+    ) {
+        CubeVector direction = Direction(from, to, wrapping);
+        return HexDirectionInternal(direction);
     }
 
     public static CubeVector FromPosition(
@@ -298,19 +388,62 @@ public struct CubeVector {
     public static int HexTileDistance(CubeVector source, CubeVector target) {
         int result =  
             (int)Mathf.Floor(
-                Mathf.Sqrt(
-                    CubicDistance(source, target)
-                )
+                CubicDistance(source, target)
             );
 
-        RootLog.Log(
-            "Source: " + source + " -> Target: " + target + " distance: " +
-            result,
-            Severity.Information,
-            "General"
-        );
-
         return result;
+    }
+
+    private static bool IsWrappingRight(
+        CubeVector source,
+        CubeVector target,
+        int wrapSize
+    ) {
+        if (wrapSize < 0)
+            throw new ArgumentException(
+                "The wrap size must be greater than or equal to 0."
+            );
+
+        int unwrappedDistance = HexTileDistance(source, target);
+
+        CubeVector rightWrapped =
+            new CubeVector(
+                target.x + wrapSize,
+                target.z
+            );
+
+        int rightWrappedDistance = HexTileDistance(source, rightWrapped);
+
+        if (rightWrappedDistance < unwrappedDistance)
+            return true;
+
+        return false;
+    }
+
+    private static bool IsWrappingLeft(
+        CubeVector source,
+        CubeVector target,
+        int wrapSize
+    ) {
+        if (wrapSize < 0)
+            throw new ArgumentException(
+                "The wrap size must be greater than or equal to 0."
+            );
+
+        int unwrappedDistance = HexTileDistance(source, target);
+
+        CubeVector leftWrapped =
+            new CubeVector(
+                target.x - wrapSize,
+                target.z
+            );
+
+        int rightWrappedDistance = HexTileDistance(source, leftWrapped);
+
+        if (rightWrappedDistance < unwrappedDistance)
+            return true;
+
+        return false;
     }
 
     public static int HexTileDistance(

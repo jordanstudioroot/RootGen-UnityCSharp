@@ -438,7 +438,7 @@ public class HexGridChunk : MonoBehaviour {
         _cellOuterRadius = cellOuterRadius;
 
         List<HexEdge> edges =
-            neighborGraph.CellEdges(cell);
+            neighborGraph.GetVertexEdges(cell);
 
 // USING GRAPH EDGES INSTEAD OF HEX DIRECTIONS
 //
