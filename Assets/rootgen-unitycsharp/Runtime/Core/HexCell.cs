@@ -10,7 +10,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
         }
     }
     public RectTransform uiRect;
-    public HexGridChunk chunk;
+    public HexMeshChunk chunk;
     private int _visibility;
 
     public Vector3 Position {
@@ -148,9 +148,6 @@ public class HexCell : MonoBehaviour, IHexPoint {
     public int PlantLevel { get; set; }
     public int SpecialIndex { get; set; }
     public bool IsExplored { get; set; }
-    public int SearchHeuristic { get; set; }
-    public HexCell PathFrom { get; set; }
-    public HexCell NextWithSamePriority { get; set; }
     public int SearchPhase { get; set; }
     public HexUnit Unit { get; set; }
     public CellShaderData ShaderData { get; set; }
@@ -240,8 +237,8 @@ public class HexCell : MonoBehaviour, IHexPoint {
 ///     The value representing the magnitude of the data point
 ///     being represented.
 /// </param>
-    public void SetAndEnableMapVisualizationShaderData(float data) {
-        ShaderData.SetAndEnableMapVisualizationShaderData(this, data);
+    public void SetMapData(float data) {
+        ShaderData.SetMapData(this, data);
     }
 
 /// <summary>

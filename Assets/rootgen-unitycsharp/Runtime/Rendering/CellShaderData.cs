@@ -22,13 +22,14 @@ public class CellShaderData : MonoBehaviour
             _cellTexture = new Texture2D (
                 x, z, TextureFormat.RGBA32, false, true
             );
+
+            _cellTexture.filterMode = FilterMode.Point;
+            _cellTexture.wrapModeU = TextureWrapMode.Repeat;
+            _cellTexture.wrapModeV = TextureWrapMode.Clamp;
+
+            Shader.SetGlobalTexture("_HexCellData", _cellTexture);
         }
-
-        _cellTexture.filterMode = FilterMode.Point;
-        _cellTexture.wrapModeU = TextureWrapMode.Repeat;
-        _cellTexture.wrapModeV = TextureWrapMode.Clamp;
-
-        Shader.SetGlobalTexture("_HexCellData", _cellTexture);
+        
         Shader.SetGlobalVector(
             "_HexCellData_TexelSize",
             new Vector4(1f / x, 1f / z, x, z)
@@ -75,17 +76,46 @@ public class CellShaderData : MonoBehaviour
         enabled = true;
     }
 
+    public void SetMapData (HexCell cell, float data) {
+		_cellTextureData[cell.Index].b =
+			data < 0f ? (byte)0 : (data < 1f ? (byte)(data * 254f) : (byte)254);
+		enabled = true;
+	}
+
     public void ViewElevationChanged()
     {
         _needsVisibilityReset = true;
         enabled = true;
     }
 
-    public void SetAndEnableMapVisualizationShaderData(HexCell cell, float data)
+    private void LateUpdate()
     {
-        _cellTextureData[cell.Index].b =
-            data < 0f ? (byte)0 : (data < 1f ? (byte)(data * 254f) : (byte)254);
-        enabled = true;
+        if (_needsVisibilityReset)
+        {
+            _needsVisibilityReset = false;
+            HexMap.ResetVisibility();
+        }
+
+        int delta = (int)(Time.deltaTime * _transitionSpeed);
+
+        if (delta == 0)
+        {
+            delta = 1;
+        }
+
+        for (int i = 0; i < _transitioningCells.Count; i++)
+        {
+            if (!UpdateCellData(_transitioningCells[i], delta))
+            {
+                _transitioningCells[i--] =
+                    _transitioningCells[_transitioningCells.Count - 1];
+                _transitioningCells.RemoveAt(_transitioningCells.Count - 1);
+            }
+        }
+
+        _cellTexture.SetPixels32(_cellTextureData);
+        _cellTexture.Apply();
+        enabled = _transitioningCells.Count > 0;
     }
 
     private bool UpdateCellData(HexCell cell, int delta)
@@ -121,53 +151,5 @@ public class CellShaderData : MonoBehaviour
 
         _cellTextureData[index] = data;
         return stillUpdating;
-    }
-
-    private void Awake() { }
-
-    private void OnEnable() { }
-
-    private void Reset() { }
-
-    private void Start() { }
-
-    private void OnApplicationPause(bool pause) { }
-
-    private void FixedUpdate() { }
-
-    private void Update() { }
-
-    private void LateUpdate()
-    {
-        if (_needsVisibilityReset)
-        {
-            _needsVisibilityReset = false;
-            HexMap.ResetVisibility();
-        }
-
-        int delta = (int)(Time.deltaTime * _transitionSpeed);
-
-        if (delta == 0)
-        {
-            delta = 1;
-        }
-
-        for (int i = 0; i < _transitioningCells.Count; i++)
-        {
-            if (!UpdateCellData(_transitioningCells[i], delta))
-            {
-                _transitioningCells[i--] =
-                    _transitioningCells[_transitioningCells.Count - 1];
-                _transitioningCells.RemoveAt(_transitioningCells.Count - 1);
-            }
-        }
-
-        _cellTexture.SetPixels32(_cellTextureData);
-        _cellTexture.Apply();
-        enabled = _transitioningCells.Count > 0;
-    }
-
-    private void OnDisable() { }
-
-    private void OnDestroy() { }
+    }  
 }

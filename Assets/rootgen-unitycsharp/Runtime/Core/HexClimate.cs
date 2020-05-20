@@ -183,28 +183,19 @@ public class HexClimate {
                     int cliffs = 0;
                     int slopes = 0;
 
-//                    for
-//                    (
-//                        HexDirection direction = HexDirection.Northeast;
-//                        direction <= HexDirection.Northwest;
-//                        direction++
-                    foreach(
-                        HexCell neighbor in
-                        neighborGraph.Neighbors(cell)
-                    ) {
-//                        HexCell neighbor = cell.GetNeighbor(direction);
+                    IEnumerable<HexEdge> edges;
 
-//                        if (!neighbor) {
-//                            continue;
-//                        }
+                    if (neighborGraph.TryGetOutEdges(cell, out edges)) {
+                        foreach (HexEdge edge in edges) {
+                            int delta =
+                                edge.Target.Elevation - cell.WaterLevel;
 
-                        int delta = neighbor.Elevation - cell.WaterLevel;
-
-                        if (delta == 0) {
-                            slopes += 1;
-                        }
-                        else if (delta > 0) {
-                            cliffs += 1;
+                            if (delta == 0) {
+                                slopes += 1;
+                            }
+                            else if (delta > 0) {
+                                cliffs += 1;
+                            }
                         }
                     }
 
@@ -251,7 +242,7 @@ public class HexClimate {
 
     private void GenerateClimate(
         RootGenConfig config,
-        HexMap grid,
+        HexMap hexMap,
         NeighborGraph neighborGraph
     ) {
         _climate.Clear();
@@ -262,7 +253,7 @@ public class HexClimate {
 
         ClimateData clearData = new ClimateData();
 
-        for (int i = 0; i < (grid.Width * grid.Height); i++) {
+        for (int i = 0; i < hexMap.SizeSquared; i++) {
             _climate.Add(initialData);
             _nextClimate.Add(clearData);
         }
@@ -270,12 +261,12 @@ public class HexClimate {
         for (int cycle = 0; cycle < 40; cycle++) {
             for (
                 int i = 0;
-                i < (grid.Width * grid.Height);
+                i < (hexMap.Rows * hexMap.Columns);
                 i++
             ) {
                 StepClimate(
                     config,
-                    grid,
+                    hexMap,
                     i,
                     neighborGraph
                 );

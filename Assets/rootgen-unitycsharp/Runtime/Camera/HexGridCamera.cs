@@ -419,12 +419,12 @@ public class HexGridCamera : MonoBehaviour
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
         float xMax =
-            (grid.Width - 0.5f) * innerDiameter;
+            (grid.Columns - 0.5f) * innerDiameter;
 
         position.x = Mathf.Clamp(position.x, 0f, xMax);
 
         float zMax =
-            (grid.Height - 1) * (1.5f * cellOuterRadius);
+            (grid.Rows - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
@@ -439,7 +439,7 @@ public class HexGridCamera : MonoBehaviour
         float innerDiameter = 
             HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
 
-        float width = grid.Width * innerDiameter;
+        float width = grid.Rows * innerDiameter;
 
         while (position.x < 0f) {
             position.x += width;
@@ -450,7 +450,7 @@ public class HexGridCamera : MonoBehaviour
         }
 
         float zMax =
-            (grid.Height - 1) * (1.5f * cellOuterRadius);
+            (grid.Columns - 1) * (1.5f * cellOuterRadius);
 
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 

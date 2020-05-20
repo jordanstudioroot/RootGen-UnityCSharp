@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using RootLogging;
 
-public class RootGenExampleApp : MonoBehaviour
-{
-    public int mapSizeX;
-    public int mapSizeY;
-    public int cellSize;
+public class RootGenExampleApp : MonoBehaviour {
+    public RootGenConfig config;
     private RootGen _rootGen;
+
     void Awake() {
-        
+        _rootGen = new RootGen();
     }
 
     void OnEnable() {
@@ -18,29 +16,38 @@ public class RootGenExampleApp : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
-    {
-        _rootGen = new RootGen();
-        _rootGen.GenerateEmptyMap(
-            new Vector2(mapSizeX, mapSizeY),
-            0,
-            10,
-            true,
-            true
-        );
+    void Start() {
+        if (config) {
+            _rootGen.GenerateMap(config, true);
+        }
+        else {
+            GenerateDefaultMap(_rootGen);
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
         if (Input.GetKeyUp(KeyCode.R)) {
-            _rootGen.GenerateEmptyMap(
-                new Vector2(mapSizeX, mapSizeY),
-                0,
-                10,
-                true,
-                true
-            );
+            if (config) {
+                _rootGen.GenerateMap(config, true);
+            }
+            else {
+                GenerateDefaultMap(_rootGen);
+            }
         }
+    }
+
+    private void GenerateDefaultMap(RootGen rootGen) {
+        rootGen.GenerateEmptyMap(
+            new Vector2(
+                MeshConstants.ChunkXMax * 6,
+                MeshConstants.ChunkZMax * 6
+            ),
+            0,
+            MeshConstants.DefaultCellOuterRadius,
+            true,
+            true
+        );
     }
 }

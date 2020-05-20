@@ -7,6 +7,6 @@ public struct CellData {
     public CellShaderData CellShaderData { get; set; }
     public bool IsExplorable { get; set; }
     public Vector3 WorldPosition { get; set; }
-    public HexGridChunk HexGridChunk { get; set; }
+    public HexMeshChunk HexGridChunk { get; set; }
     
 }

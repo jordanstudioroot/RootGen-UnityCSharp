@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using RootLogging;
 
-public class HexGridChunk : MonoBehaviour {
+public class HexMeshChunk : MonoBehaviour {
 // FIELDS ~~~~~~~~~~
 
 // ~ Static
@@ -39,7 +39,6 @@ public class HexGridChunk : MonoBehaviour {
 /// </summary>
 /// <returns></returns>
     private static Color _weights3 = new Color(0f, 0f, 1f);
-    private HexCell[] _cells;
     private Canvas _canvas;
 
 // TODO: Temporarily reusing this variable as this value
@@ -145,9 +144,7 @@ public class HexGridChunk : MonoBehaviour {
 
 // ~~ public
     public HexCell[] Cells {
-        set {
-            _cells = value;
-        }
+        get; set;
     }
 
     public Canvas Canvas {
@@ -178,117 +175,17 @@ public class HexGridChunk : MonoBehaviour {
 // ~ Static
 
 // ~~ public
-// TODO: This method is a flimsy form of dependency injection and a bad
-//       fake constructor. Should refactor HexGridChunk class so that this
-//       approach is not necessary.
-    public static HexGridChunk CreateAndRenderChunk(
-        float cellOuterRadius,
-        HexGrid<HexCell> hexGrid,
-        NeighborGraph neighborGraph,
-        RiverGraph riverGraph,
-        RoadGraph roadGraph,
-        ElevationGraph elevationGraph
-    ) {
+    public static HexMeshChunk CreateEmpty() {
         GameObject resultObj = new GameObject("Hex Grid Chunk");
-        HexGridChunk resultMono = resultObj.AddComponent<HexGridChunk>();
-
-// TODO: Why was this here?      
-//        resultMono.Initialize(
-//            cellOuterRadius,
-//            neighborGraph
-//        );
+        HexMeshChunk resultMono = resultObj.AddComponent<HexMeshChunk>();
         
         resultMono.Cells = new HexCell[
-            MeshConstants.ChunkSizeX *
-            MeshConstants.ChunkSizeZ
+            MeshConstants.ChunkXMax *
+            MeshConstants.ChunkZMax
         ];
         
         GameObject resultCanvasObj = new GameObject(
-            "Hex Grid Chunk Canvas"
-        );
-        
-        Canvas resultCanvasMono = resultCanvasObj.AddComponent<Canvas>();
-
-        CanvasScaler resultCanvasScalerMono =
-            resultCanvasObj.AddComponent<CanvasScaler>();
-
-        resultCanvasObj.transform.SetParent(resultObj.transform, false);
-        resultMono.Canvas = resultCanvasMono;
-        resultCanvasScalerMono.dynamicPixelsPerUnit = 10f;
-        resultCanvasObj.transform.rotation = Quaternion.Euler(90, 0, 0);
-        resultCanvasObj.transform.position += Vector3.up * .005f;
-
-        resultMono.terrain = HexMesh.GetMesh(
-            Resources.Load<Material>("Terrain"), true, true, false, false
-        );
-        resultMono.terrain.name = "Terrain";
-        resultMono.terrain.transform.SetParent(resultObj.transform, false);
-        
-        resultMono.rivers = HexMesh.GetMesh(
-            Resources.Load<Material>("River"), false, true, true, false
-        );
-        resultMono.rivers.name = "Rivers";
-        resultMono.rivers.transform.SetParent(resultObj.transform, false);
-
-        resultMono.roads = HexMesh.GetMesh(
-            Resources.Load<Material>("Road"), false, true, true, false
-        );
-        resultMono.roads.name = "Roads";
-        resultMono.roads.transform.SetParent(resultObj.transform, false);
-
-        resultMono.water = HexMesh.GetMesh(
-            Resources.Load<Material>("Water"), false, true, false, false
-        );
-        resultMono.water.name = "Water";
-        resultMono.water.transform.SetParent(resultObj.transform, false);
-
-        resultMono.waterShore = HexMesh.GetMesh(
-            Resources.Load<Material>("WaterShore"), false, true, true, false
-        );
-        resultMono.waterShore.name = "Water Shore";
-        resultMono.waterShore.transform.SetParent(resultObj.transform, false);
-
-        resultMono.estuaries = HexMesh.GetMesh(
-            Resources.Load<Material>("Estuary"), false, true, true, true
-        );
-        resultMono.estuaries.name = "Estuaries";
-        resultMono.estuaries.transform.SetParent(resultObj.transform, false);
-
-        HexMesh walls = HexMesh.GetMesh(
-            Resources.Load<Material>("Urban"), false, false, false, false
-        );
-        walls.transform.SetParent(resultObj.transform, false);
-        walls.name = "Walls";
-
-        resultMono.features = FeatureContainer.GetFeatureContainer(walls);
-        resultMono.features.transform.SetParent(resultObj.transform, false);
-        resultMono.features.name = "Features";
-
-        resultMono.Triangulate(
-            hexGrid,
-            cellOuterRadius,
-            neighborGraph,
-            riverGraph,
-            roadGraph,
-            elevationGraph
-        );
-
-        resultMono.enabled = false;
-
-        return resultMono;
-    }
-
-    public static HexGridChunk CreateChunk() {
-        GameObject resultObj = new GameObject("Hex Grid Chunk");
-        HexGridChunk resultMono = resultObj.AddComponent<HexGridChunk>();
-        
-        resultMono.Cells = new HexCell[
-            MeshConstants.ChunkSizeX *
-            MeshConstants.ChunkSizeZ
-        ];
-        
-        GameObject resultCanvasObj = new GameObject(
-            "Hex Grid Chunk Canvas"
+            "Hex Mesh Chunk Canvas"
         );
         
         Canvas resultCanvasMono = resultCanvasObj.AddComponent<Canvas>();
@@ -360,16 +257,27 @@ public class HexGridChunk : MonoBehaviour {
         enabled = true;
     }
 
-    public void AddCell(int index, HexCell cell) {
-        _cells[index] = cell;
-        cell.chunk = this;
+    public bool AddCell(int index, HexCell cell) {
+        try {
+            Cells[index] = cell;
+            cell.chunk = this;
 
-/* Set WorldPositionStays to false for both the cells transform
-* and ui rect or they will not move initally to be oriented with
-* the chunk.
-*/
-        cell.transform.SetParent(transform, false);
-        cell.uiRect.SetParent(_canvas.transform, false);
+    /* Set WorldPositionStays to false for both the cells transform
+    * and ui rect or they will not move initally to be oriented with
+    * the chunk.
+    */
+            cell.transform.SetParent(transform, false);
+            cell.uiRect.SetParent(_canvas.transform, false);
+            return true;
+        }
+        catch (System.IndexOutOfRangeException) {
+            RootLog.Log(
+                "The specified cell " + cell + " could not be added to " +
+                " the mesh chunk because the specified index " + index +
+                " was outside the bounds of the chunks cell array."
+            );
+            return false;
+        }
     }
 
 /// <summary>
@@ -384,18 +292,18 @@ public class HexGridChunk : MonoBehaviour {
     }
 
     public void Triangulate(
-        HexGrid<HexCell> grid,
+        HexMap hexMap,
         float cellOuterRadius,
         NeighborGraph neighborGraph,
         RiverGraph riverGraph,
         RoadGraph roadGraph,
         ElevationGraph elevationGraph
     ) {
-        RootLog.Log(
-            "Rendering hex grid: " + "\n" + grid + "\n" + neighborGraph,
+        /*RootLog.Log(
+            "Rendering hex grid: " + "\n" + hexMap.HexGrid + "\n" + neighborGraph,
             Severity.Information,
             "NeighborGraph.FromHexGrid"
-        );
+        );*/
         terrain.Clear();
         rivers.Clear();
         roads.Clear();
@@ -404,15 +312,15 @@ public class HexGridChunk : MonoBehaviour {
         estuaries.Clear();
         features.Clear();
 
-        for (int i = 0; i < grid.SizeSquared; i++) {
+        for(int i = 0; i < Cells.Length; i++) {
             TriangulateCell(
-                grid.GetElement(i),
+                Cells[i],
                 cellOuterRadius,
                 neighborGraph,
                 riverGraph,
                 roadGraph,
                 elevationGraph,
-                grid.WrapSize
+                hexMap.WrapSize
             );
         }
 

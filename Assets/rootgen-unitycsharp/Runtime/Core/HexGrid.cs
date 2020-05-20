@@ -17,7 +17,8 @@ public class HexGrid<T> where T : IHexPoint {
     /// The value dictionary for elements of the grid, indexed by
     /// row-major coordinates.
     /// </summary>
-    private Dictionary<int, T> _dictionary;
+    private Dictionary<int, T> _elements;
+    private Dictionary<T, int> _indicies;
 
     #endregion
 
@@ -50,15 +51,18 @@ public class HexGrid<T> where T : IHexPoint {
 
         Rows = rows;
         Columns = columns;
-        _dictionary = new Dictionary<int, T>();
+        _elements = new Dictionary<int, T>();
+        _indicies = new Dictionary<T, int>();
         IsWrapping = wrapping;
 
         for (int index = 0, row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
                 index = ConvertOffsetToIndex(row, column);
-                _dictionary.Add(
+                T element = default(T);
+
+                _elements.Add(
                     index,
-                    default(T)
+                    element
                 );
             }
         }
@@ -308,7 +312,7 @@ public class HexGrid<T> where T : IHexPoint {
         if (IsInBounds(rowMajorIndex)) {
             T value;
 
-            if (_dictionary.TryGetValue(rowMajorIndex, out value)) {
+            if (_elements.TryGetValue(rowMajorIndex, out value)) {
                 if (value == null) 
                     throw new System.NullReferenceException(
                         "index: " + rowMajorIndex
@@ -326,6 +330,26 @@ public class HexGrid<T> where T : IHexPoint {
     }
 
     /// <summary>
+    /// Gets the index of the specified element, or -1 if the element
+    /// is not present in the grid.
+    /// </summary>
+    /// <param name="element">
+    /// The specified element to obtain the index of.
+    /// </param>
+    /// <returns>
+    /// The index of the specified element, or -1 if it is not present.
+    /// </returns>
+    private int TryGetRowMajorIndex(T element) {
+        int index;
+
+        if (_indicies.TryGetValue(element, out index)) {
+            return index;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
     /// Assigns the specified element to the specified row-major index.
     /// </summary>
     /// <param name="element">
@@ -339,7 +363,15 @@ public class HexGrid<T> where T : IHexPoint {
         int rowMajorIndex
     ) {
         if (IsInBounds(rowMajorIndex)) {
-            _dictionary[rowMajorIndex] = element;
+            _elements[rowMajorIndex] = element;
+
+            int index;
+            if (_indicies.TryGetValue(element, out index)) {
+
+            }
+            else {
+                _indicies[element] = rowMajorIndex;
+            }
         }
         else {
             throw new OutOfGridBoundsException();
@@ -349,20 +381,20 @@ public class HexGrid<T> where T : IHexPoint {
     /// <summary>
     /// Gets a list of elements adjacent to the element at the specified index.
     /// </summary>
-    /// <param name="index">
+    /// <param name="rowMajorIndex">
     /// The index of the element whose neighbors should be returned.
     /// </param>
     /// <returns>
     /// A list of elements adjacent to the specified index.
     /// </returns>
-    public List<T> GetNeighbors(int index) {
+    public List<T> GetNeighbors(int rowMajorIndex) {
         List<T> result = new List<T>();
 
-        if (IsInBounds(index)) {
-            int row = GetRowIndex(index);
-            int column = GetColumnIndex(index);
+        if (IsInBounds(rowMajorIndex)) {
+            int row = GetRowIndex(rowMajorIndex);
+            int column = GetOffsetColumnIndex(rowMajorIndex);
             
-            T origin = GetElement(index);        
+            T origin = GetElement(rowMajorIndex);        
 
             for (int i = row - 1; i <= row + 1; i++) {
                 for (int j = column - 1; j <= column + 1; j++) {
@@ -405,6 +437,19 @@ public class HexGrid<T> where T : IHexPoint {
         return result;
     }
 
+    public bool TryGetNeighbors(T element, out List<T> neighbors) {
+        
+        int index = TryGetRowMajorIndex(element);
+
+        if (index > -1) {
+            neighbors = GetNeighbors(index);
+            return true;
+        }
+
+        neighbors = null;
+        return false;
+    }
+
     /// <summary>
     /// Gets a list of elements adjacent to the element at the specified
     /// offset coordinates.
@@ -419,40 +464,12 @@ public class HexGrid<T> where T : IHexPoint {
     /// A list of elements adjacent to the element at the specified offset
     /// coordinates.
     /// </returns>
-    public List<T> GetNeighbors(int offsetX, int offsetZ) {
+    public List<T> TryGetNeighbors(int offsetX, int offsetZ) {
         return
             GetNeighbors(
                 ConvertOffsetToIndex(
                     offsetX,
                     offsetZ
-                )
-            );
-    }
-
-    /// <summary>
-    /// Gets a list of elements adjacent to the element at the specified
-    /// cube coordinates.
-    /// </summary>
-    /// <param name="cubeX">
-    /// The x (left diagonal longitudinal) cube coordinate.
-    /// </param>
-    /// <param name="cubeY">
-    /// The y (right diagonal longitudinal) cube coordinate.
-    /// </param>
-    /// <param name="cubeZ">
-    /// The z (latitudinal) cube coordinate.
-    /// </param>
-    /// <returns>
-    /// A list of elements adjacent to the elemnt at the specified
-    /// cube coordinates.
-    /// </returns>
-    public List<T> GetNeighbors(int cubeX, int cubeY, int cubeZ) {
-        return
-            GetNeighbors(
-                ConvertCubeToIndex(
-                    cubeX,
-                    cubeY,
-                    cubeZ
                 )
             );
     }
@@ -485,7 +502,7 @@ public class HexGrid<T> where T : IHexPoint {
     /// The zero-indexed row corresponding to the zero-indexed row-major
     /// array index.
     /// </returns>
-    public int GetColumnIndex(int index) {
+    public int GetOffsetColumnIndex(int index) {
         return IsInBounds(index) ?
             index - (GetRowIndex(index) * Columns) :
             throw new OutOfGridBoundsException();
@@ -499,15 +516,10 @@ public class HexGrid<T> where T : IHexPoint {
     /// A flat array composed of the elements of the grid in row-major
     /// order
     /// </returns>
-     
-    public T[] ToArray() {
-        T[] result = new T[_dictionary.Keys.Count];
-
-        for (int i = 0; i < result.Length; i++) {
-            result[i] = _dictionary[i];
+    public IEnumerable<T> Cells {
+        get {
+            return _elements.Values;
         }
-
-        return result;
     }
 
     /// <inhertidoc />
