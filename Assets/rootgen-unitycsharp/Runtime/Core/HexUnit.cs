@@ -20,10 +20,10 @@ public class HexUnit : MonoBehaviour
 // ~~ public
 
 // ~~ private
-    private HexCell _location;
-    private HexCell _currentDestination;
+    private Hex _location;
+    private Hex _currentDestination;
     private float _orientation;
-    private List<HexCell> _pathToTravel;
+    private List<Hex> _pathToTravel;
     private const float _travelSpeed = 4f;
     private const float _rotationSpeed = 180f;
     private const int _visionRange = 3;
@@ -151,7 +151,7 @@ public class HexUnit : MonoBehaviour
 // ~ Non-Static
 
 // ~~ public
-    public HexCell Location
+    public Hex Location
     {
         get { return _location; }
         set {
@@ -206,13 +206,13 @@ public class HexUnit : MonoBehaviour
         writer.Write(_orientation);
     }
 
-    public bool IsValidDestination(HexCell cell) {
-        return cell.IsExplored && !cell.IsUnderwater && !cell.Unit;
+    public bool IsValidDestination(Hex hex) {
+        return hex.IsExplored && !hex.IsUnderwater && !hex.Unit;
     }
 
     public void Travel(
-        List<HexCell> path,
-        float cellOuterRadius,
+        List<Hex> path,
+        float hexOuterRadius,
         HexMap hexMap
     ) {
         _location.Unit = null;
@@ -222,7 +222,7 @@ public class HexUnit : MonoBehaviour
         StopAllCoroutines();
         StartCoroutine(
             TravelPath(
-                cellOuterRadius,
+                hexOuterRadius,
                 hexMap
             )
         );
@@ -232,41 +232,41 @@ public class HexUnit : MonoBehaviour
 //       probably be located in the HexMap.
 //    public int GetMoveCost
 //    (
-//        HexCell fromCell, 
-//       HexCell toCell, 
+//        Hex fromHex, 
+//       Hex toHex, 
 //        HexDirection direction
 //    ) {
 //        int moveCost;
 //
-//        ElevationEdgeTypes edgeType = fromCell.GetEdgeType(toCell);
+//        ElevationEdgeTypes edgeType = fromHex.GetEdgeType(toHex);
 //        if (edgeType == ElevationEdgeTypes.Cliff) {
 //            return -1;
 //        }
 //
-//        if (fromCell.HasRoadThroughEdge(direction)) {
+//        if (fromHex.HasRoadThroughEdge(direction)) {
 //            moveCost = 1;
 //        }
-//        else if (fromCell.HasWalls != toCell.HasWalls) {
+//        else if (fromHex.HasWalls != toHex.HasWalls) {
 //            return -1;
 //        }
 //        else {
 //            moveCost = edgeType == ElevationEdgeTypes.Flat ? 5 : 10;
 //            moveCost +=
-//                toCell.UrbanLevel + toCell.FarmLevel + toCell.PlantLevel;
+//                toHex.UrbanLevel + toHex.FarmLevel + toHex.PlantLevel;
 //        }
 //
 //        return moveCost;
 //    }
     
 // ~~ private
-    private IEnumerator TravelPath(float cellOuterRadius, HexMap hexMap) {
+    private IEnumerator TravelPath(float hexOuterRadius, HexMap hexMap) {
         float innerDiameter = 
-            HexagonPoint.GetOuterToInnerRadius(cellOuterRadius) * 2f;
+            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
         Vector3 pointA, pointB, pointC = _pathToTravel[0].Position;
         
         yield return LookAt(
             _pathToTravel[1].Position,
-            cellOuterRadius,
+            hexOuterRadius,
             hexMap
         );
 
@@ -282,10 +282,10 @@ public class HexUnit : MonoBehaviour
         for (int i = 1; i < _pathToTravel.Count; i++) {
             _currentDestination = _pathToTravel[i];
 
-// Start or previous cell midpoint.
+// Start or previous hex midpoint.
             pointA = pointC;
 
-// Current cell position.
+// Current hex position.
             pointB = _pathToTravel[i - 1].Position;
 
             int nextColumn = _currentDestination.ColumnIndex;
@@ -335,7 +335,7 @@ public class HexUnit : MonoBehaviour
         pointA = pointC;
 
 /* Can simply use destination, as the unit is at the
-* last cell before the end of the path.
+* last hex before the end of the path.
 */
         pointB = Location.Position;
 
@@ -374,13 +374,13 @@ public class HexUnit : MonoBehaviour
         pointA = pointB = pointC = _pathToTravel[0].Position;
 
         for (int i = 1; i < _pathToTravel.Count; i++) {
-// Start or previous cell midpoint.
+// Start or previous hex midpoint.
             pointA = pointC;
             
-// Current cell position.
+// Current hex position.
             pointB = _pathToTravel[i - 1].Position;
 
-// Next cell midpoint.
+// Next hex midpoint.
             pointC = (pointB + _pathToTravel[i].Position) * 0.5f;
 
             for (float t = 0f; t < 1f; t += Time.deltaTime * _travelSpeed) {
@@ -399,11 +399,11 @@ public class HexUnit : MonoBehaviour
 
     private IEnumerator LookAt(
         Vector3 point,
-        float cellOuterRadius,
+        float hexOuterRadius,
         HexMap hexMap
     ) {
         
-        float innerRadius = HexagonPoint.GetOuterToInnerRadius(cellOuterRadius);
+        float innerRadius = HexagonPoint.GetOuterToInnerRadius(hexOuterRadius);
         float innerDiameter = innerRadius * 2f;
 
         if (hexMap.IsWrapping) {

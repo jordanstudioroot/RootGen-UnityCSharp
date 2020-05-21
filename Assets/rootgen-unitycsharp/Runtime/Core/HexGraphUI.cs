@@ -16,7 +16,7 @@ public class HexGraphUI : MonoBehaviour {
         int distance = 0;
 
         for (int i = 0; i < path.Count; i++) {
-            HexCell current = path[i].Target;
+            Hex current = path[i].Target;
             int turn = distance / speed;
             current.SetLabel(turn.ToString());
 

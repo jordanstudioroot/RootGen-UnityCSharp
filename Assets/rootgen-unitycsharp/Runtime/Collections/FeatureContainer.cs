@@ -126,19 +126,19 @@ public class FeatureContainer : MonoBehaviour
     }
 
     public void AddFeature(
-        HexCell cell,
+        Hex hex,
         Vector3 position,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
 
-        if (cell.IsSpecial) {
+        if (hex.IsSpecial) {
             return;
         }
 
 /* Randomness of rotation is obtained by sampling a Hash
 * World rather than using Random, so the rotation of objects
-* will not be changed when the cell is refreshed.
+* will not be changed when the hex is refreshed.
 */
 
         RandomHash randomHash = HexagonPoint.SampleHashGrid(position);
@@ -149,11 +149,11 @@ public class FeatureContainer : MonoBehaviour
         float e = randomHash.GetValue(4);
 
         Transform prefab = PickPrefab(
-            urbanCollections, cell.UrbanLevel, a, d
+            urbanCollections, hex.UrbanLevel, a, d
         );
 
         Transform otherPrefab = PickPrefab(
-            farmCollections, cell.FarmLevel, b, d
+            farmCollections, hex.FarmLevel, b, d
         );
 
         float usedHash = randomHash.GetValue(0);
@@ -169,7 +169,7 @@ public class FeatureContainer : MonoBehaviour
         }
 
         otherPrefab = PickPrefab (
-            plantCollections, cell.PlantLevel, c, d
+            plantCollections, hex.PlantLevel, c, d
         );
 
         if (prefab) {
@@ -192,7 +192,7 @@ public class FeatureContainer : MonoBehaviour
 
         instance.localPosition = HexagonPoint.Perturb(
             position,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
         
@@ -222,25 +222,25 @@ public class FeatureContainer : MonoBehaviour
 
     public void AddWall(
         EdgeVertices near,
-        HexCell nearCell,
+        Hex nearHex,
         EdgeVertices far,
-        HexCell farCell,
+        Hex farHex,
         bool hasRiver,
         bool hasRoad,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         if  (
-            nearCell.HasWalls != farCell.HasWalls &&
-            !nearCell.IsUnderwater && !farCell.IsUnderwater &&
-            nearCell.GetEdgeType(farCell) != ElevationEdgeTypes.Cliff
+            nearHex.HasWalls != farHex.HasWalls &&
+            !nearHex.IsUnderwater && !farHex.IsUnderwater &&
+            nearHex.GetEdgeType(farHex) != ElevationEdgeTypes.Cliff
         ) {
             AddWallSegment(
                 near.vertex1,
                 far.vertex1,
                 near.vertex2,
                 far.vertex2,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             );
 
@@ -248,14 +248,14 @@ public class FeatureContainer : MonoBehaviour
                 AddWallCap(
                     near.vertex2,
                     far.vertex2,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
 
                 AddWallCap(
                     far.vertex4,
                     near.vertex4,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
@@ -265,7 +265,7 @@ public class FeatureContainer : MonoBehaviour
                     far.vertex2,
                     near.vertex3,
                     far.vertex3,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
 
@@ -274,7 +274,7 @@ public class FeatureContainer : MonoBehaviour
                     far.vertex3,
                     near.vertex4,
                     far.vertex4,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
@@ -284,94 +284,94 @@ public class FeatureContainer : MonoBehaviour
                 far.vertex4,
                 near.vertex5,
                 far.vertex5,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             );
         }
     }
 
     public void AddWall(
-        Vector3 corner1, HexCell cell1,
-        Vector3 corner2, HexCell cell2,
-        Vector3 corner3, HexCell cell3,
-        float cellOuterRadius,
+        Vector3 corner1, Hex hex1,
+        Vector3 corner2, Hex hex2,
+        Vector3 corner3, Hex hex3,
+        float hexOuterRadius,
         int wrapSize
     ) {
-        if (cell1.HasWalls) {
-            if (cell2.HasWalls) {
-                if (!cell3.HasWalls) {
+        if (hex1.HasWalls) {
+            if (hex2.HasWalls) {
+                if (!hex3.HasWalls) {
                     AddWallSegment(
                         corner3,
-                        cell3,
+                        hex3,
                         corner1,
-                        cell1,
+                        hex1,
                         corner2,
-                        cell2,
-                        cellOuterRadius,
+                        hex2,
+                        hexOuterRadius,
                         wrapSize
                     );
                 }
             }
-            else if (cell3.HasWalls) {
+            else if (hex3.HasWalls) {
                 AddWallSegment(
                     corner2,
-                    cell2,
+                    hex2,
                     corner3,
-                    cell3,
+                    hex3,
                     corner1,
-                    cell1,
-                    cellOuterRadius,
+                    hex1,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
             else {
                 AddWallSegment(
                     corner1,
-                    cell1,
+                    hex1,
                     corner2,
-                    cell2,
+                    hex2,
                     corner3,
-                    cell3,
-                    cellOuterRadius,
+                    hex3,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
         }
-        else if (cell2.HasWalls) {
-            if (cell3.HasWalls) {
+        else if (hex2.HasWalls) {
+            if (hex3.HasWalls) {
                 AddWallSegment(
                     corner1,
-                    cell1,
+                    hex1,
                     corner2,
-                    cell2,
+                    hex2,
                     corner3,
-                    cell3,
-                    cellOuterRadius,
+                    hex3,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
             else {
                 AddWallSegment(
                     corner2,
-                    cell2,
+                    hex2,
                     corner3,
-                    cell3,
+                    hex3,
                     corner1,
-                    cell1,
-                    cellOuterRadius,
+                    hex1,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
         }
-        else if (cell3.HasWalls) {
+        else if (hex3.HasWalls) {
             AddWallSegment(
                 corner3,
-                cell3,
+                hex3,
                 corner1,
-                cell1,
+                hex1,
                 corner2,
-                cell2,
-                cellOuterRadius,
+                hex2,
+                hexOuterRadius,
                 wrapSize
             );
         }
@@ -383,31 +383,31 @@ public class FeatureContainer : MonoBehaviour
         Vector3 farLeft,
         Vector3 nearRight,
         Vector3 farRight,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize,
         bool addTower = false
     ) {
         nearLeft = HexagonPoint.Perturb(
             nearLeft,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
         
         farLeft = HexagonPoint.Perturb(
             farLeft,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
         
         nearRight = HexagonPoint.Perturb(
             nearRight,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
         
         farRight = HexagonPoint.Perturb(
             farRight,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
@@ -455,27 +455,27 @@ public class FeatureContainer : MonoBehaviour
     }
 
     private void AddWallSegment (
-        Vector3 pivot, HexCell pivotCell,
-        Vector3 left, HexCell leftCell,
-        Vector3 right, HexCell rightCell,
-        float cellOuterRadius,
+        Vector3 pivot, Hex pivotHex,
+        Vector3 left, Hex leftHex,
+        Vector3 right, Hex rightHex,
+        float hexOuterRadius,
         int wrapSize
     ) {
-        if (pivotCell.IsUnderwater) {
+        if (pivotHex.IsUnderwater) {
             return;
         }
 
-        bool hasLeftWall = !leftCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(leftCell) != ElevationEdgeTypes.Cliff;
+        bool hasLeftWall = !leftHex.IsUnderwater &&
+                            pivotHex.GetEdgeType(leftHex) != ElevationEdgeTypes.Cliff;
 
-        bool hasRightWall = !rightCell.IsUnderwater &&
-                            pivotCell.GetEdgeType(rightCell) != ElevationEdgeTypes.Cliff;
+        bool hasRightWall = !rightHex.IsUnderwater &&
+                            pivotHex.GetEdgeType(rightHex) != ElevationEdgeTypes.Cliff;
 
         if (hasLeftWall) {
             if (hasRightWall) {
                 bool hasTower = false;
 
-                if (leftCell.Elevation == rightCell.Elevation) {
+                if (leftHex.Elevation == rightHex.Elevation) {
                     RandomHash rootHash = HexagonPoint.SampleHashGrid (
                         (pivot + left + right) * 1f / 3f
                     );
@@ -490,17 +490,17 @@ public class FeatureContainer : MonoBehaviour
                     left,
                     pivot,
                     right,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize,
                     hasTower
                 );
             }
-            else if (leftCell.Elevation < rightCell.Elevation) {
+            else if (leftHex.Elevation < rightHex.Elevation) {
                 AddWallWedge(
                     pivot,
                     left,
                     right,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
@@ -508,18 +508,18 @@ public class FeatureContainer : MonoBehaviour
                 AddWallCap(
                     pivot,
                     left,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
         }
         else if (hasRightWall) {
-            if (rightCell.Elevation < leftCell.Elevation) {
+            if (rightHex.Elevation < leftHex.Elevation) {
                 AddWallWedge(
                     right,
                     pivot,
                     left,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
@@ -528,7 +528,7 @@ public class FeatureContainer : MonoBehaviour
                 AddWallCap(
                     right,
                     pivot,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 );
             }
@@ -538,18 +538,18 @@ public class FeatureContainer : MonoBehaviour
     private void AddWallCap(
         Vector3 near,
         Vector3 far,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         near = HexagonPoint.Perturb(
             near,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
         far = HexagonPoint.Perturb(
             far,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
@@ -571,24 +571,24 @@ public class FeatureContainer : MonoBehaviour
         Vector3 near,
         Vector3 far,
         Vector3 point,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         near = HexagonPoint.Perturb(
             near,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
         far = HexagonPoint.Perturb(
             far,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
         point = HexagonPoint.Perturb(
             point,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
@@ -615,18 +615,18 @@ public class FeatureContainer : MonoBehaviour
     public void AddBridge(
         Vector3 roadCenter1,
         Vector3 roadCenter2,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         roadCenter1 = HexagonPoint.Perturb(
             roadCenter1,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
         roadCenter2 = HexagonPoint.Perturb(
             roadCenter2,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 
@@ -647,16 +647,16 @@ public class FeatureContainer : MonoBehaviour
     }
 
     public void AddSpecialFeature(
-        HexCell cell,
+        Hex hex,
         Vector3 position,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
-        Transform instance = Instantiate(special[cell.SpecialIndex - 1]);
+        Transform instance = Instantiate(special[hex.SpecialIndex - 1]);
 
         instance.localPosition = HexagonPoint.Perturb(
             position,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
 

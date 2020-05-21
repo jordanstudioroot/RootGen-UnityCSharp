@@ -45,7 +45,7 @@ public class RootGenExampleApp : MonoBehaviour {
                 MeshConstants.ChunkZMax * 4
             ),
             0,
-            MeshConstants.DefaultCellOuterRadius,
+            MeshConstants.DefaulthexOuterRadius,
             true,
             true
         );

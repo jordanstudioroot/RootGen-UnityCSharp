@@ -17,7 +17,7 @@ public static class HexagonPoint {
     public const int terracesPerSlope = 2;
     public const float horizontalTerraceStepSize = 1f / terraceSteps;
     public const float verticalTerraceStepSize = 1f / (terracesPerSlope + 1);
-    public const float cellPerturbStrength = 4f; //0f;
+    public const float hexPerturbStrength = 4f; //0f;
     public const float noiseScale = 0.003f;
     public const float wallThickness = 0.75f;
     public const float wallElevationOffset = verticalTerraceStepSize;
@@ -194,7 +194,7 @@ public static class HexagonPoint {
         );
 
 // Scale the wrapping transition up by half, and then move it half
-// a cell width to the left to avoid seams where the cell coordinates
+// a hex width to the left to avoid seams where the hex coordinates
 // are negative.
         if (
             wrapSize > 0 &&
@@ -231,9 +231,9 @@ public static class HexagonPoint {
 // noise will be between 0 and 1, sample * 2f - 1f can be no less than -1 and no
 // no greater than 1.
         position.x +=
-            (sample.x * 2f - 1f) * cellPerturbStrength;
+            (sample.x * 2f - 1f) * hexPerturbStrength;
         position.z +=
-            (sample.z * 2f - 1f) * cellPerturbStrength;
+            (sample.z * 2f - 1f) * hexPerturbStrength;
         return position;
     }
 

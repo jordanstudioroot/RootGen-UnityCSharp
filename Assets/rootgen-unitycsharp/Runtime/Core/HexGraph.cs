@@ -6,34 +6,34 @@ using UnityEngine;
 
 
 
-public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
+public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
 
-    public RiverGraph() : base(false) { }
+    public RiverDigraph() : base(false) { }
     
 /// <summary>
-///     Returns true if the given cell in the graph has a river.
+///     Returns true if the given hex in the graph has a river.
 /// </summary>
-/// <param name="cell">
-///     The cell which is the subject of the query.
+/// <param name="hex">
+///     The hex which is the subject of the query.
 /// </param>
 /// <returns>
-///     A boolean value representing whether the query cell has a river.
+///     A boolean value representing whether the query hex has a river.
 /// </returns>
-    public bool HasRiver(HexCell cell) {
+    public bool HasRiver(Hex hex) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             return true;
         }
 
         return false;
     }
 
-    public List<HexDirections> IncomingRiverDirections(HexCell cell) {
+    public List<HexDirections> IncomingRiverDirections(Hex hex) {
         IEnumerable<RiverEdge> edges;
         List<HexDirections> result = null;
 
-        if (!TryGetInEdges(cell, out edges)) {
+        if (!TryGetInEdges(hex, out edges)) {
             result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
@@ -44,11 +44,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         return result;
     }
 
-    public List<HexDirections> OutgoingRiverDirections(HexCell cell) {
+    public List<HexDirections> OutgoingRiverDirections(Hex hex) {
         IEnumerable<RiverEdge> edges;
         List<HexDirections> result = null;
 
-        if (!TryGetOutEdges(cell, out edges)) {
+        if (!TryGetOutEdges(hex, out edges)) {
             result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
@@ -60,26 +60,26 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     /// <summary>
-///     Returns true if the given cell in the graph contains
+///     Returns true if the given hex in the graph contains
 ///     the termination of a river.
 /// </summary>
-/// <param name="cell">
-///     The cell which is the subject of the query.
+/// <param name="hex">
+///     The hex which is the subject of the query.
 /// </param>
 /// <returns>
-///     A boolean value representing whether the query cell
+///     A boolean value representing whether the query hex
 ///     contains the termination of a river.
 /// </returns>
     public bool HasRiverEnd(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             return false;
         }
 
-        if (TryGetInEdges(cell, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             int count = 0;
             foreach(RiverEdge edge in edges) {
                 count++;
@@ -94,15 +94,15 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasRiverStart(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetInEdges(cell, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             return false;
         }
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             int count = 0;
             foreach(RiverEdge edge in edges) {
                 count++;
@@ -117,12 +117,12 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasRiverStartOrEnd(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<RiverEdge> edges;
         int count = 0;
 
-        if (TryGetInEdges(cell, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             foreach(RiverEdge edge in edges) {
                 count++;
                 
@@ -132,7 +132,7 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
             }
         }
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             foreach(RiverEdge edge in edges) {
                 count++;
                 
@@ -146,11 +146,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasIncomingRiver(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetInEdges(cell, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             return true;
         }
 
@@ -158,12 +158,12 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasIncomingRiverInDirection(
-        HexCell cell,
+        Hex hex,
         HexDirections direction
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetInEdges(cell, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             foreach(RiverEdge edge in edges) {
                 if (edge.Direction == direction) {
                     return true;
@@ -175,11 +175,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasOutgoingRiver(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             return true;
         }
 
@@ -187,12 +187,12 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasOutgoingRiverInDirection(
-        HexCell cell,
+        Hex hex,
         HexDirections direction
     ) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             foreach(RiverEdge edge in edges) {
                 if (edge.Direction == direction) {
                     return true;
@@ -204,24 +204,24 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
     
     public bool HasRiverInDirection(
-        HexCell cell,
+        Hex hex,
         HexDirections direction
     ) {
-        if (HasIncomingRiverInDirection(cell, direction))
+        if (HasIncomingRiverInDirection(hex, direction))
             return true;
 
-        if (HasOutgoingRiverInDirection(cell, direction))
+        if (HasOutgoingRiverInDirection(hex, direction))
             return true;
 
         return false;
     }
 
     public bool HasStraightRiver(
-        HexCell cell
+        Hex hex
     ) {
         if (
-            IncomingRiverDirections(cell)[0] ==
-            OutgoingRiverDirections(cell)[0].Opposite()
+            IncomingRiverDirections(hex)[0] ==
+            OutgoingRiverDirections(hex)[0].Opposite()
         ) {
             return true;
         }
@@ -230,11 +230,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasClockwiseCornerRiver(
-        HexCell cell
+        Hex hex
     ) {
         if(
-            IncomingRiverDirections(cell)[0] ==
-            OutgoingRiverDirections(cell)[0].ClockwiseRotation(1)
+            IncomingRiverDirections(hex)[0] ==
+            OutgoingRiverDirections(hex)[0].ClockwiseRotation(1)
         ) {
             return true;
         }
@@ -243,11 +243,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasCounterClockwiseCornerRiver(
-        HexCell cell
+        Hex hex
     ) {
         if(
-            IncomingRiverDirections(cell)[0] ==
-            OutgoingRiverDirections(cell)[0].ClockwiseRotation(-1)
+            IncomingRiverDirections(hex)[0] ==
+            OutgoingRiverDirections(hex)[0].ClockwiseRotation(-1)
         ) {
             return true;
         }
@@ -256,11 +256,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasClockwiseRiverBend(
-        HexCell cell
+        Hex hex
     ) {
         if(
-            IncomingRiverDirections(cell)[0] ==
-            OutgoingRiverDirections(cell)[0].ClockwiseRotation(2)
+            IncomingRiverDirections(hex)[0] ==
+            OutgoingRiverDirections(hex)[0].ClockwiseRotation(2)
         ) {
             return true;
         }
@@ -269,11 +269,11 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public bool HasCounterClockwiseRiverBend(
-        HexCell cell
+        Hex hex
     ) {
         if(
-            IncomingRiverDirections(cell)[0] ==
-            OutgoingRiverDirections(cell)[0].ClockwiseRotation(-2)
+            IncomingRiverDirections(hex)[0] ==
+            OutgoingRiverDirections(hex)[0].ClockwiseRotation(-2)
         ) {
             return true;
         }
@@ -282,19 +282,19 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
     }
 
     public HexDirections RiverStartOrEndDirection(
-        HexCell cell
+        Hex hex
     ) {
-        if (HasRiverStartOrEnd(cell)) {
-            return AnyRiverDirection(cell);
+        if (HasRiverStartOrEnd(hex)) {
+            return AnyRiverDirection(hex);
         }
 
         throw new ArgumentException(
-            "Cell has no incoming or outgoing rivers."
+            "The hex has no incoming or outgoing rivers."
         );
     }
 
     public HexDirections AnyRiverDirection(
-        HexCell cell
+        Hex hex
     ) {
         List<RiverEdge> edges = (List<RiverEdge>)Edges;
         if (edges != null && edges.Count > 0) {
@@ -302,30 +302,30 @@ public class RiverGraph : BidirectionalGraph<HexCell, RiverEdge> {
         }
         
         throw new ArgumentException(
-            "Cell has no incoming or outgoing rivers."
+            "The hex has no incoming or outgoing rivers."
         );
     }
 // TODO: STUB
-    public static RiverGraph FromHexGrid(HexGrid<HexCell> hexGrid) {
-        return new RiverGraph();
+    public static RiverDigraph FromHexGrid(HexGrid<Hex> hexGrid) {
+        return new RiverDigraph();
     }
 }
 
-public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
+public class RoadUndirectedGraph : UndirectedGraph<Hex, RoadEdge> {
 /// <summary>
-///     Returns true if the given cell in the graph has a road.
+///     Returns true if the given hex in the graph has a road.
 /// </summary>
-/// <param name="cell">
-///     The cell which is the subject of the query.
+/// <param name="hex">
+///     The hex which is the subject of the query.
 /// </param>
 /// <returns>
-///     A boolean value representing whether the query cell has a road.
+///     A boolean value representing whether the query hex has a road.
 /// </returns>
-    public bool HasRoad(HexCell cell) {
-        if (!ContainsVertex(cell))
+    public bool HasRoad(Hex hex) {
+        if (!ContainsVertex(hex))
             return false;
 
-        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(cell);
+        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(hex);
 
         if (edges != null && edges.Count > 0) {
             return true;
@@ -335,13 +335,13 @@ public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
     }
 
     public bool HasRoadInDirection(
-        HexCell cell,
+        Hex hex,
         HexDirections direction
     ) {
-        if (!ContainsVertex(cell))
+        if (!ContainsVertex(hex))
             return false;
             
-        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(cell);
+        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(hex);
 
         if (edges != null && edges.Count > 0) {
             foreach (RoadEdge edge in edges) {
@@ -354,19 +354,19 @@ public class RoadGraph : UndirectedGraph<HexCell, RoadEdge> {
     }
 
 // TODO: STUB
-    public static RoadGraph FromHexGrid(HexGrid<HexCell> array) {
-        return new RoadGraph();
+    public static RoadUndirectedGraph FromHexGrid(HexGrid<Hex> array) {
+        return new RoadUndirectedGraph();
     }
 }
 
-public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
+public class ElevationBidirectionalGraph : BidirectionalGraph<Hex, ElevationEdge> {
     public ElevationEdgeTypes GetEdgeTypeInDirection(
-        HexCell cell,
+        Hex hex,
         HexDirections direction
     ) {
         IEnumerable<ElevationEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             foreach(ElevationEdge edge in edges) {
                 if (edge.Direction == direction) {
                     return edge.EdgeType;
@@ -378,11 +378,11 @@ public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
     }
 
     public bool AnyDirectionVisible(
-        HexCell cell
+        Hex hex
     ) {
         IEnumerable<ElevationEdge> edges;
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             foreach(ElevationEdge edge in edges) {
                 if (edge.Delta <= 0)
                     return true;
@@ -393,13 +393,13 @@ public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
     }
 
     public List<HexEdge> GetVisibleEdges(
-        HexCell cell
+        Hex hex
     ) {
 
         IEnumerable<ElevationEdge> edges;
         List<HexEdge> result = new List<HexEdge>();
 
-        if (TryGetOutEdges(cell, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             foreach(ElevationEdge edge in edges) {
                 if (edge.Delta <= 0)
                     result.Add(edge);
@@ -409,8 +409,10 @@ public class ElevationGraph : BidirectionalGraph<HexCell, ElevationEdge> {
         return result;
     }
 
-    public static ElevationGraph FromHexGrid(HexGrid<HexCell> denseArray) {
-        ElevationGraph result = new ElevationGraph();
+    public static ElevationBidirectionalGraph FromHexGrid(
+        HexGrid<Hex> denseArray
+    ) {
+        ElevationBidirectionalGraph result = new ElevationBidirectionalGraph();
         return result;
     }
 }

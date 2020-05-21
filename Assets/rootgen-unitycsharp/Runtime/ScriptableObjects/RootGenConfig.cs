@@ -17,7 +17,7 @@ public class RootGenConfig : ScriptableObject
     public int seed;
 
     [Range(10f, 9999f)]
-    public int cellSize = 10;
+    public int hexSize = 10;
 
     [Range(0f, 0.5f)]
     public float jitterProbability = 0.25f;

@@ -29,7 +29,7 @@
 			sampler2D _GridTex;
 
 			#include "HexMetrics.cginc"	
-			#include "HexCellData.cginc"
+			#include "HexData.cginc"
 			
 			UNITY_DECLARE_TEX2DARRAY(_MainTex);
 

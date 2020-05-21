@@ -1,13 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class CellShaderData : MonoBehaviour
+public class HexShaderData : MonoBehaviour
 {
     private Texture2D _cellTexture;
     private Color32[] _cellTextureData;
     private bool _needsVisibilityReset;
 
-    private List<HexCell> _transitioningCells = new List<HexCell>();
+    private List<Hex> _transitioningCells = new List<Hex>();
 
     private const float _transitionSpeed = 255f;
 
@@ -27,11 +27,11 @@ public class CellShaderData : MonoBehaviour
             _cellTexture.wrapModeU = TextureWrapMode.Repeat;
             _cellTexture.wrapModeV = TextureWrapMode.Clamp;
 
-            Shader.SetGlobalTexture("_HexCellData", _cellTexture);
+            Shader.SetGlobalTexture("_hexData", _cellTexture);
         }
         
         Shader.SetGlobalVector(
-            "_HexCellData_TexelSize",
+            "_hexData_TexelSize",
             new Vector4(1f / x, 1f / z, x, z)
         );
 
@@ -52,13 +52,13 @@ public class CellShaderData : MonoBehaviour
         enabled = true;
     }
 
-    public void RefreshTerrain(HexCell cell)
+    public void RefreshTerrain(Hex cell)
     {
         _cellTextureData[cell.Index].a = (byte)cell.TerrainTypeIndex;
         enabled = true;
     }
 
-    public void RefreshVisibility(HexCell cell)
+    public void RefreshVisibility(Hex cell)
     {
         int index = cell.Index;
 
@@ -76,7 +76,7 @@ public class CellShaderData : MonoBehaviour
         enabled = true;
     }
 
-    public void SetMapData (HexCell cell, float data) {
+    public void SetMapData (Hex cell, float data) {
 		_cellTextureData[cell.Index].b =
 			data < 0f ? (byte)0 : (data < 1f ? (byte)(data * 254f) : (byte)254);
 		enabled = true;
@@ -118,7 +118,7 @@ public class CellShaderData : MonoBehaviour
         enabled = _transitioningCells.Count > 0;
     }
 
-    private bool UpdateCellData(HexCell cell, int delta)
+    private bool UpdateCellData(Hex cell, int delta)
     {
         int index = cell.Index;
         Color32 data = _cellTextureData[index];

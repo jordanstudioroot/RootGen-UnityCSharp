@@ -5,7 +5,7 @@ using QuikGraph;
 
 #endregion
 
-public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
+public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     #region ConstantFields
     #endregion
 
@@ -14,7 +14,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
 
     #region Constructors
     
-    public NeighborGraph() : base(false) { }
+    public HexAdjacencyGraph() : base(false) { }
 
     #endregion
 
@@ -46,7 +46,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     /// </summary>
     /// <param name="cell"></param>
     /// <returns></returns>
-    public List<HexEdge> GetVertexEdges(HexCell cell) {
+    public List<HexEdge> GetVertexEdges(Hex cell) {
         IEnumerable<HexEdge> outEdge;
 
         TryGetOutEdges(cell, out outEdge);
@@ -59,7 +59,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public IEnumerable<HexEdge> TryGetEdgeInDirection(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -75,8 +75,8 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         return result;
     }
 
-    public HexCell TryGetNeighborInDirection(
-        HexCell cell,
+    public Hex TryGetNeighborInDirection(
+        Hex cell,
         HexDirections direction
     ) {
         IEnumerable<HexEdge> edges;
@@ -94,7 +94,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionOppositeEdge(
-        HexCell cell,
+        Hex cell,
         HexEdge edge
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -111,7 +111,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionOppositeEdge(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -128,7 +128,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNextEdge(
-        HexCell cell,
+        Hex cell,
         HexEdge edge
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -145,7 +145,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNextEdge(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -162,7 +162,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPreviousEdge(
-        HexCell cell,
+        Hex cell,
         HexEdge edge
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -179,7 +179,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPreviousEdge(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -196,7 +196,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNext2Edge(
-        HexCell cell,
+        Hex cell,
         HexEdge edge
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -213,7 +213,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNext2Edge(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -230,7 +230,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPrevious2Edge(
-        HexCell cell,
+        Hex cell,
         HexDirections direction
     ) {
         List<HexEdge> edges = GetVertexEdges(cell);
@@ -246,8 +246,8 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
         return null;
     }
 
-    public static NeighborGraph FromHexGrid(
-        HexGrid<HexCell> hexGrid
+    public static HexAdjacencyGraph FromHexGrid(
+        HexGrid<Hex> hexGrid
     ) {
         List<HexEdge> edges = new List<HexEdge>();
 
@@ -256,10 +256,10 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
             i < hexGrid.Rows * hexGrid.Columns;
             i++
         ) {
-            HexCell current = hexGrid[i];
+            Hex current = hexGrid[i];
 
             foreach(
-                HexCell neighbor in hexGrid.GetNeighbors(i)
+                Hex neighbor in hexGrid.GetNeighbors(i)
             ) {
                 HexEdge newEdge = new HexEdge(
                     current,
@@ -275,7 +275,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
             }
         }
 
-        NeighborGraph result = new NeighborGraph();
+        HexAdjacencyGraph result = new HexAdjacencyGraph();
         result.AddVerticesAndEdgeRange(edges);
         return result;
     }
@@ -283,7 +283,7 @@ public class NeighborGraph : AdjacencyGraph<HexCell, HexEdge> {
     public override string ToString() {
         string result = "Neighbor Graph Edges \n\n";
         
-        foreach (HexCell vertex in Vertices) {
+        foreach (Hex vertex in Vertices) {
             result += vertex + " edges: \n";
 
             foreach (HexEdge edge in GetVertexEdges(vertex)) {

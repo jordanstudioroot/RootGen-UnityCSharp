@@ -14,7 +14,7 @@ public class HexClimate {
 /// </summary>
 /// TODO: 
 ///     Indirect coupling between _climate and HexGrid in GenerateClimate() and
-///     StepClimate() requiring both the list of HexCells in HexGrid and _climate
+///     StepClimate() requiring both the list of hex in HexGrid and _climate
 ///     to maintain the same order.
 /// 
 ///     Need to either make this dependency explicit or elimnate the coupling.
@@ -30,7 +30,7 @@ public class HexClimate {
 /// </summary>
 /// TODO: 
 ///     Indirect coupling between _nextClimate and HexGrid in GenerateClimate() and
-///     StepClimate() requiring both the list of HexCells in HexGrid and _nextClimate
+///     StepClimate() requiring both the list of hex in HexGrid and _nextClimate
 ///     to maintain the same order.
 /// 
 ///     Need to either make this dependency explicit or elimnate the coupling.
@@ -73,7 +73,7 @@ public class HexClimate {
 /// <summary>
 ///     An array of floats representing thresholds for different temperature bands.
 ///     Used along with moisture bands to determine the index of biomes to be used
-///     for the biome of a specific cell.
+///     for the biome of a specific hex.
 /// </summary>
 /// TODO:
 ///     Extract with other climate modeling data and algorithms into a separate
@@ -83,7 +83,7 @@ public class HexClimate {
 /// <summary>
 ///     An array of floats representing thresholds for different moisture bands.
 ///     Used along with moisture bands to determine the index of biomes to be
-///     used for the biome of a specific cell.
+///     used for the biome of a specific hex.
 /// </summary>
 /// TODO:
 ///     Extract with other climate modeling data and algorithms into a separate
@@ -100,7 +100,7 @@ public class HexClimate {
         * */
 /// <summary>
 ///     An array of Biome structs representing a matrix of possible biomes
-///     for a particular cell, indexed by its temperature and moisture.
+///     for a particular hex, indexed by its temperature and moisture.
 /// </summary>
 /// TODO:
 ///     Extract with other climate modeling data and algoritms into a
@@ -114,9 +114,9 @@ public class HexClimate {
 
     private void SetTerrainTypes(
         RootGenConfig config,
-        HexGrid<HexCell> hexGrid,
-        NeighborGraph neighborGraph,
-        RiverGraph riverGraph
+        HexGrid<Hex> hexGrid,
+        HexAdjacencyGraph neighborGraph,
+        RiverDigraph riverGraph
     ) {
 // Select the temperature jitter channel.
         _temperatureJitterChannel = Random.Range(0, 4);
@@ -126,17 +126,17 @@ public class HexClimate {
             config.elevationMax - (config.elevationMax - config.waterLevel) / 2;
 
         for (int i = 0; i < (hexGrid.Columns * hexGrid.Rows); i++) {
-            HexCell cell = hexGrid.GetElement(i);
+            Hex hex = hexGrid.GetElement(i);
             float temperature = GenerateTemperature(
                 config,
                 hexGrid,
-                cell,
-                config.cellSize
+                hex,
+                config.hexSize
             );
 
             float moisture = _climate[i].moisture;
 
-            if (!cell.IsUnderwater) {
+            if (!hex.IsUnderwater) {
                 int temperatureBand = 0;
 
                 for (; temperatureBand < temperatureBands.Length; temperatureBand++) {
@@ -153,42 +153,42 @@ public class HexClimate {
                     }
                 }
 
-                Biome cellBiome = biomes[temperatureBand * 4 + moistureBand];
+                Biome hexBiome = biomes[temperatureBand * 4 + moistureBand];
 
-                if (cellBiome.terrain == 0) {
-                    if (cell.Elevation >= rockDesertElevation) {
-                        cellBiome.terrain = Terrains.Stone;
+                if (hexBiome.terrain == 0) {
+                    if (hex.Elevation >= rockDesertElevation) {
+                        hexBiome.terrain = Terrains.Stone;
                     }
                 }
-                else if (cell.Elevation == config.elevationMax) {
-                    cellBiome.terrain = Terrains.Snow;
+                else if (hex.Elevation == config.elevationMax) {
+                    hexBiome.terrain = Terrains.Snow;
                 }
 
-                if (cellBiome.terrain == Terrains.Snow) {
-                    cellBiome.plant = 0;
+                if (hexBiome.terrain == Terrains.Snow) {
+                    hexBiome.plant = 0;
                 }
 
-//                if (cellBiome.plant < 3 && cell.HasRiver) {
-                if (riverGraph.HasRiver(cell)) {
-                    cellBiome.plant += 1;
+//                if (hexBiome.plant < 3 && hex.HasRiver) {
+                if (riverGraph.HasRiver(hex)) {
+                    hexBiome.plant += 1;
                 }
 
-                cell.TerrainTypeIndex = (int)cellBiome.terrain;
-                cell.PlantLevel = cellBiome.plant;
+                hex.TerrainTypeIndex = (int)hexBiome.terrain;
+                hex.PlantLevel = hexBiome.plant;
             }
             else {
                 Terrains terrain;
 
-                if (cell.Elevation == config.waterLevel - 1) {
+                if (hex.Elevation == config.waterLevel - 1) {
                     int cliffs = 0;
                     int slopes = 0;
 
                     IEnumerable<HexEdge> edges;
 
-                    if (neighborGraph.TryGetOutEdges(cell, out edges)) {
+                    if (neighborGraph.TryGetOutEdges(hex, out edges)) {
                         foreach (HexEdge edge in edges) {
                             int delta =
-                                edge.Target.Elevation - cell.WaterLevel;
+                                edge.Target.Elevation - hex.WaterLevel;
 
                             if (delta == 0) {
                                 slopes += 1;
@@ -218,10 +218,10 @@ public class HexClimate {
                         terrain = Terrains.Grass;
                     }
                 }
-                else if (cell.Elevation >= config.waterLevel) {
+                else if (hex.Elevation >= config.waterLevel) {
                     terrain = Terrains.Grass;
                 }
-                else if (cell.Elevation < 0) {
+                else if (hex.Elevation < 0) {
                     terrain = Terrains.Stone;
                 }
                 else {
@@ -235,7 +235,7 @@ public class HexClimate {
                     terrain = Terrains.Mud;
                 }
 
-                cell.TerrainTypeIndex = (int)terrain;
+                hex.TerrainTypeIndex = (int)terrain;
             }
         }
     }
@@ -243,7 +243,7 @@ public class HexClimate {
     private void GenerateClimate(
         RootGenConfig config,
         HexMap hexMap,
-        NeighborGraph neighborGraph
+        HexAdjacencyGraph neighborGraph
     ) {
         _climate.Clear();
         _nextClimate.Clear();
@@ -261,7 +261,7 @@ public class HexClimate {
         for (int cycle = 0; cycle < 40; cycle++) {
             for (
                 int i = 0;
-                i < (hexMap.Rows * hexMap.Columns);
+                i < (hexMap.HexOffsetRows * hexMap.HexOffsetColumns);
                 i++
             ) {
                 StepClimate(
@@ -290,46 +290,46 @@ public class HexClimate {
     private void StepClimate(
         RootGenConfig config,
         HexMap grid,
-        int cellIndex,
-        NeighborGraph neighborGraph
+        int hexIndex,
+        HexAdjacencyGraph neighborGraph
     ) {
-        HexCell cell = grid.GetCell(cellIndex);
-        ClimateData cellClimate = _climate[cellIndex];
+        Hex hex = grid.GetHex(hexIndex);
+        ClimateData hexClimate = _climate[hexIndex];
 
-        if (cell.IsUnderwater) {
-            cellClimate.moisture = 1f;
-            cellClimate.clouds += config.evaporationFactor;
+        if (hex.IsUnderwater) {
+            hexClimate.moisture = 1f;
+            hexClimate.clouds += config.evaporationFactor;
         }
         else {
-            float evaporation = cellClimate.moisture * config.evaporationFactor;
-            cellClimate.moisture -= evaporation;
-            cellClimate.clouds += evaporation;
+            float evaporation = hexClimate.moisture * config.evaporationFactor;
+            hexClimate.moisture -= evaporation;
+            hexClimate.clouds += evaporation;
         }
 
-        float precipitation = cellClimate.clouds * config.precipitationFactor;
-        cellClimate.clouds -= precipitation;
-        cellClimate.moisture += precipitation;
+        float precipitation = hexClimate.clouds * config.precipitationFactor;
+        hexClimate.clouds -= precipitation;
+        hexClimate.moisture += precipitation;
 
         // Cloud maximum has an inverse relationship with elevation maximum.
-        float cloudMaximum = 1f - cell.ViewElevation / (config.elevationMax + 1f);
+        float cloudMaximum = 1f - hex.ViewElevation / (config.elevationMax + 1f);
 
-        if (cellClimate.clouds > cloudMaximum) {
-            cellClimate.moisture += cellClimate.clouds - cloudMaximum;
-            cellClimate.clouds = cloudMaximum;
+        if (hexClimate.clouds > cloudMaximum) {
+            hexClimate.moisture += hexClimate.clouds - cloudMaximum;
+            hexClimate.clouds = cloudMaximum;
         }
 
         HexDirections mainDispersalDirection = config.windDirection.Opposite();
 
-        float cloudDispersal = cellClimate.clouds * (1f / (5f + config.windStrength));
-        float runoff = cellClimate.moisture * config.runoffFactor * (1f / 6f);
-        float seepage = cellClimate.moisture * config.seepageFactor * (1f / 6f);
+        float cloudDispersal = hexClimate.clouds * (1f / (5f + config.windStrength));
+        float runoff = hexClimate.moisture * config.runoffFactor * (1f / 6f);
+        float seepage = hexClimate.moisture * config.seepageFactor * (1f / 6f);
 
 //        for (
 //            HexDirection direction = HexDirection.Northeast;
 //            direction <= HexDirection.Northwest;
 //            direction++
-        foreach (HexEdge edge in neighborGraph.GetVertexEdges(cell)) {
-//            HexCell neighbor = cell.GetNeighbor(direction);
+        foreach (HexEdge edge in neighborGraph.GetVertexEdges(hex)) {
+//            hexNeighbor = hex.GetNeighbor(direction);
 
 //            if (!neighbor) {
 //                continue;
@@ -344,47 +344,46 @@ public class HexClimate {
                 neighborClimate.clouds += cloudDispersal;
             }
 
-            int elevationDelta = edge.Target.ViewElevation - cell.ViewElevation;
+            int elevationDelta = edge.Target.ViewElevation - hex.ViewElevation;
 
             if (elevationDelta < 0) {
-                cellClimate.moisture -= runoff;
+                hexClimate.moisture -= runoff;
                 neighborClimate.moisture += runoff;
             }
             else if (elevationDelta == 0) {
-                cellClimate.moisture -= seepage;
+                hexClimate.moisture -= seepage;
                 neighborClimate.moisture += seepage;
             }
 
             _climate[edge.Target.Index] = neighborClimate;
         }
 
-        // Create a cell for the next climate.
-        ClimateData nextCellClimate = _nextClimate[cellIndex];
+        // Create a hex for the next climate.
+        ClimateData nextHexClimate = _nextClimate[hexIndex];
 
         // Modify the data for the next climate.
-        nextCellClimate.moisture += cellClimate.moisture;
+        nextHexClimate.moisture += hexClimate.moisture;
 
-        /* Ensure that no cell can have more moisture than
-            *a cell that is underwater.
-            */
-        if (nextCellClimate.moisture > 1f) {
-            nextCellClimate.moisture = 1f;
+// Ensure that no hex can have more moisture than
+// a hex that is underwater.
+        if (nextHexClimate.moisture > 1f) {
+            nextHexClimate.moisture = 1f;
         }
 
-        //Store the data for the next climate.
-        _nextClimate[cellIndex] = nextCellClimate;
+//Store the data for the next climate.
+        _nextClimate[hexIndex] = nextHexClimate;
 
-        //Clear the current climate data.
-        _climate[cellIndex] = new ClimateData();
+//Clear the current climate data.
+        _climate[hexIndex] = new ClimateData();
     }
 
     private float GenerateTemperature(
         RootGenConfig config, 
-        HexGrid<HexCell> hexGrid, 
-        HexCell cell,
-        float cellOuterRadius
+        HexGrid<Hex> hexGrid, 
+        Hex hex,
+        float hexOuterRadius
     ) {
-        float latitude = (float)cell.Coordinates.Z / hexGrid.Rows;
+        float latitude = (float)hex.Coordinates.Z / hexGrid.Rows;
 
         if (config.hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -406,13 +405,13 @@ public class HexClimate {
 
         temperature *= 
             1f - 
-            (cell.ViewElevation - config.waterLevel) /
+            (hex.ViewElevation - config.waterLevel) /
             (config.elevationMax - config.waterLevel + 1f);
 
         float jitter =
             HexagonPoint.SampleNoise(
-                cell.Position * 0.1f,
-                cellOuterRadius,
+                hex.Position * 0.1f,
+                hexOuterRadius,
                 hexGrid.WrapSize
             )[_temperatureJitterChannel];
 

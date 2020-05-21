@@ -46,7 +46,7 @@ public class RootGen {
             editMode
         );
 
-        HexGridCamera.AttachCamera(result, config.cellSize);
+        HexGridCamera.AttachCamera(result, config.hexSize);
         return result;
     }
 
@@ -66,7 +66,7 @@ public class RootGen {
     public HexMap GenerateEmptyMap(
         Vector2 size,
         int seed,
-        float cellOuterRadius,
+        float hexOuterRadius,
         bool wrapping,
         bool editMode
     ) {
@@ -75,12 +75,12 @@ public class RootGen {
         HexMap result = HexMap.Empty(
             new Rect(0, 0, (int)size.x, (int)size.y),
             seed,
-            cellOuterRadius,
+            hexOuterRadius,
             wrapping,
             editMode
         );
 
-        HexGridCamera.AttachCamera(result, cellOuterRadius);
+        HexGridCamera.AttachCamera(result, hexOuterRadius);
         return result;
     }
 

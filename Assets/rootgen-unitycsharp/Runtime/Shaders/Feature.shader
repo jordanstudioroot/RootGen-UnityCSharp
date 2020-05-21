@@ -16,7 +16,7 @@
 		#pragma multi_compile _ HEX_MAP_EDIT_MODE
 		#pragma target 3.0
 
-		#include "HexCellData.cginc"
+		#include "HexData.cginc"
 
 		sampler2D _MainTex, _GridCoordinates;
 

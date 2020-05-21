@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 /* Possible optimizations for this class:
 *  -Turn the class into a Dictionary of lists.
-*  -Abstract out the property in Cell for the next cell
+*  -Abstract out the property in hex for the next hex
 *   with the same priority and put it in this class.
 */
 public class PriorityQueue<T> {

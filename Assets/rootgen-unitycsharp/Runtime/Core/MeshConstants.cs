@@ -11,7 +11,7 @@ public static class MeshConstants {
 /// </summary>
     public const int ChunkZMax = 5;
 
-    public const int DefaultCellOuterRadius = 10;
+    public const int DefaulthexOuterRadius = 10;
 
     public static readonly Vector2 ChunkSize =
         new Vector2(

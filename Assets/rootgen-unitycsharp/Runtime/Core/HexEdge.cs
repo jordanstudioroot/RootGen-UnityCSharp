@@ -1,14 +1,14 @@
 ﻿using QuikGraph;
 using UnityEngine;
 
-public class HexEdge : Edge<HexCell> {
+public class HexEdge : Edge<Hex> {
     public HexDirections Direction {
         get; private set;
     }
 
     public HexEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction
     ) : base(source, target) {
         Direction = direction;
@@ -21,16 +21,16 @@ public class HexEdge : Edge<HexCell> {
 
 public class RiverEdge : HexEdge {
     public RiverEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction
     ) : base (source, target, direction) { }
 }
 
 public class RoadEdge : HexEdge {
     public RoadEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction
     ) : base (source, target, direction) { }
 }
@@ -66,8 +66,8 @@ public class ElevationEdge : HexEdge {
     }
 
     public ElevationEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction
     ) : base (source, target, direction) { }
 
@@ -86,16 +86,16 @@ public class TraversalEdge : HexEdge {
     }
 
     public TraversalEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction
     ) : base(source, target, direction) {
         MovementCost = 0;
     }
 
     public TraversalEdge(
-        HexCell source,
-        HexCell target,
+        Hex source,
+        Hex target,
         HexDirections direction,
         float movementCost
     ) : base(source, target, direction) {

@@ -1,5 +1,5 @@
   [NW]   [NE]
-[W] [CELL]  [E]
+[W] [ORIGIN] [E]
   [SW]   [SE]
 
 [][][]

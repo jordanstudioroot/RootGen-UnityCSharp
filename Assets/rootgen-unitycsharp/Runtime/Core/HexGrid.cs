@@ -516,7 +516,7 @@ public class HexGrid<T> where T : IHexPoint {
     /// A flat array composed of the elements of the grid in row-major
     /// order
     /// </returns>
-    public IEnumerable<T> Cells {
+    public IEnumerable<T> Hexes {
         get {
             return _elements.Values;
         }

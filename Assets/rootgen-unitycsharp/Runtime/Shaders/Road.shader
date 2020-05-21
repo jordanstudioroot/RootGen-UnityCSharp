@@ -19,7 +19,7 @@
 		#pragma target 3.0
 
 		#include "HexMetrics.cginc"
-		#include "HexCellData.cginc"
+		#include "HexData.cginc"
 
 		sampler2D _MainTex;
 

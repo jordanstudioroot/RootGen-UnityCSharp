@@ -88,7 +88,7 @@ public class HexMesh : MonoBehaviour {
         Vector3 vertex1, 
         Vector3 vertex2, 
         Vector3 vertex3,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         /* The vertex index is equal to the length of the vertices list before
@@ -98,7 +98,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex1,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -106,7 +106,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex2,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -114,7 +114,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex3,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -144,7 +144,7 @@ public class HexMesh : MonoBehaviour {
         Vector3 vertex2, 
         Vector3 vertex3, 
         Vector3 vertex4,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
 
@@ -152,7 +152,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex1,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -160,7 +160,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex2,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -168,7 +168,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex3,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );
@@ -176,7 +176,7 @@ public class HexMesh : MonoBehaviour {
         _vertices.Add(
             HexagonPoint.Perturb(
                 vertex4,
-                cellOuterRadius,
+                hexOuterRadius,
                 wrapSize
             )
         );

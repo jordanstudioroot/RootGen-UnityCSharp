@@ -361,7 +361,7 @@ public struct CubeVector {
 // Return coordinates after subtracting the X coordinate with the Z
 // coordinate integer divided by 2.
 // 
-// All cells will be offset on the X axis directly proportional to Z. As
+// All hexes will be offset on the X axis directly proportional to Z. As
 // Z grows larger, the magnitude of the offset increases bringing the X
 // axis into alignment with a proposed axis which is at a (roughly) 45
 // degree angle with the Z axis.

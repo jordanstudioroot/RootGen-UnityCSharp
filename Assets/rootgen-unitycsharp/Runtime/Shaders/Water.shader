@@ -15,7 +15,7 @@
 			#pragma target 3.0
 
 			#include "Water.cginc"
-			#include "HexCellData.cginc"
+			#include "HexData.cginc"
 
 			sampler2D _MainTex;
 
@@ -32,15 +32,15 @@
 			void vert(inout appdata_full v, out Input data) {
 				UNITY_INITIALIZE_OUTPUT(Input, data);
 
-				float4 cell0 = GetCellData(v, 0);
-				float4 cell1 = GetCellData(v, 1);
-				float4 cell2 = GetCellData(v, 2);
+				float4 hex0 = GetCellData(v, 0);
+				float4 hex1 = GetCellData(v, 1);
+				float4 hex2 = GetCellData(v, 2);
 
 				data.visibility.x =
-					cell0.x * v.color.x + cell1.x * v.color.y + cell2.x * v.color.z;
+					hex0.x * v.color.x + hex1.x * v.color.y + hex2.x * v.color.z;
 				data.visibility.x = lerp(0.25, 1, data.visibility.x);
 				data.visibility.y =
-					cell0.y * v.color.x + cell1.y * v.color.y + cell2.y * v.color.z;
+					hex0.y * v.color.x + hex1.y * v.color.y + hex2.y * v.color.z;
 			}
 
 			void surf(Input IN, inout SurfaceOutputStandardSpecular o) {

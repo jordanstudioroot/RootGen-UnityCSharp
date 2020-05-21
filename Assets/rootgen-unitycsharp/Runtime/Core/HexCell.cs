@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-public class HexCell : MonoBehaviour, IHexPoint {
+public class Hex : MonoBehaviour, IHexPoint {
     private static int MaxFeatureLevel {
         get {
             return 3;
@@ -119,7 +119,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
 
     public void SetElevation(
         int elevation,
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         if (Elevation == elevation) {
@@ -135,7 +135,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
         }
 
         RefreshPosition(
-            cellOuterRadius,
+            hexOuterRadius,
             wrapSize
         );
     }
@@ -150,7 +150,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
     public bool IsExplored { get; set; }
     public int SearchPhase { get; set; }
     public HexUnit Unit { get; set; }
-    public CellShaderData ShaderData { get; set; }
+    public HexShaderData ShaderData { get; set; }
     public int Index { get; set; }
     public int ColumnIndex { get; set; }
     public bool IsExplorable { get; set; }
@@ -176,9 +176,9 @@ public class HexCell : MonoBehaviour, IHexPoint {
 // ~ Static
 
 // ~~ public
-    public static HexCell Instantiate() {
-        GameObject resultObj = new GameObject("HexCell");
-        HexCell resultMono = resultObj.AddComponent<HexCell>();
+    public static Hex Instantiate() {
+        GameObject resultObj = new GameObject("Hex");
+        Hex resultMono = resultObj.AddComponent<Hex>();
         return resultMono;
     }
 
@@ -195,8 +195,8 @@ public class HexCell : MonoBehaviour, IHexPoint {
         }
     }
 
-    public ElevationEdgeTypes GetEdgeType(HexCell otherCell) {
-        return HexagonPoint.GetEdgeType(Elevation, otherCell.Elevation);
+    public ElevationEdgeTypes GetEdgeType(Hex otherHex) {
+        return HexagonPoint.GetEdgeType(Elevation, otherHex.Elevation);
     }
 
     public void DisableHighlight() {
@@ -228,7 +228,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
     }
 
 /// <summary>
-///     Set the map data visualization value for this hex cell cell,
+///     Set the map data visualization value for this hex,
 ///     and enable the associated shader.
 ///     TODO: This method has too many cross cutting concerns. Should
 ///           separate data and rendering concerns.
@@ -242,13 +242,13 @@ public class HexCell : MonoBehaviour, IHexPoint {
     }
 
 /// <summary>
-///     Set the text label for this HexCell.
+///     Set the text label for this hex.
 /// 
 ///     TODO: This method has too many cross cutting concerns. Should
 ///           separate data and rendering concerns.
 /// </summary>
 /// <param name="text">
-///     The text that the HexCell should display when the HexCell ui is visible.
+///     The text that the hex should display when the hex ui is visible.
 /// </param>
     public void SetLabel(string text) {
         UnityEngine.UI.Text label = uiRect.GetComponent<Text>();
@@ -269,7 +269,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
         Elevation = int.MinValue;
     }
 
-    private bool IsValidRiverDestination(HexCell neighbor) {
+    private bool IsValidRiverDestination(Hex neighbor) {
         return neighbor &&
         (
             Elevation >= neighbor.Elevation || WaterLevel == neighbor.Elevation
@@ -286,7 +286,7 @@ public class HexCell : MonoBehaviour, IHexPoint {
     }
 
     private void RefreshPosition(
-        float cellOuterRadius,
+        float hexOuterRadius,
         int wrapSize
     ) {
         Vector3 position = transform.localPosition;
@@ -296,16 +296,16 @@ public class HexCell : MonoBehaviour, IHexPoint {
             (
                 HexagonPoint.SampleNoise(
                     position,
-                    cellOuterRadius,
+                    hexOuterRadius,
                     wrapSize
                 ).y * 2f - 1f
             ) * HexagonPoint.elevationPerturbStrength;
 
         transform.localPosition = position;
 
-/* Adjust the position of the cells UI elements
-* when the elevation of the cell itself has changed.
-* Because UI elements are laid down flat on the cell,
+/* Adjust the position of the hex UI elements
+* when the elevation of the hex itself has changed.
+* Because UI elements are laid down flat on the hex,
 * the forward facing Z axis is adjusted instead of the
 * upward facing Y axis.
 */
