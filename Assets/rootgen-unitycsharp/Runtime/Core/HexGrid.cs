@@ -164,7 +164,7 @@ public class HexGrid<T> where T : IHexPoint {
     /// </value>
     public T Center {
         get {
-            return GetElement(Rows/2, Columns/2);
+            return GetElement(Columns/2, Rows/2);
         }
     }
 

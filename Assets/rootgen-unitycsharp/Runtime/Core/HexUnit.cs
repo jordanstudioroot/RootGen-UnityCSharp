@@ -165,8 +165,8 @@ public class HexUnit : MonoBehaviour
             value.Unit = this;
 // TODO: This is a circular dependency that needs to be fixed.
 //   Grid.IncreaseVisibility(Location, _visionRange);
-            transform.StandOn(value.Position);
-            Grid.MakeChildOfColumn(transform, value.ColumnIndex);
+//            transform.StandOn(value.Position);
+//            Grid.MakeChildOfColumn(transform, value.ColumnIndex);
         }
     }
 
@@ -298,7 +298,7 @@ public class HexUnit : MonoBehaviour
                     pointA.x += innerDiameter * hexMap.WrapSize;
                     pointB.x += innerDiameter * hexMap.WrapSize;
                 }
-                Grid.MakeChildOfColumn(transform, nextColumn);
+//                Grid.MakeChildOfColumn(transform, nextColumn);
                 currentColumn = nextColumn;
             }
 

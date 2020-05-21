@@ -11,9 +11,6 @@ public class HexMap : MonoBehaviour{
     private bool _editMode;
     private Text _cellLabelPrefab;
     private List<HexUnit> _units = new List<HexUnit>();
-    public Transform[] ColumnTransforms {
-        get; private set;
-    }
 
     public int ChunkColumns {
         get {
@@ -206,7 +203,6 @@ public class HexMap : MonoBehaviour{
         bool editMode
     ) {
         ClearUnits(_units);
-        ClearColumns(ColumnTransforms);
 
         int columns, rows;
 
@@ -250,8 +246,8 @@ public class HexMap : MonoBehaviour{
             wrapping
         );
         
-        for (int i = 0, x = 0; x < Rows; x++) {
-            for (int z = 0; z < Columns; z++) {
+        for (int i = 0, x = 0; x < Columns; x++) {
+            for (int z = 0; z < Rows; z++) {
                 HexGrid[x, z] =
                     CreateCell(
                         x, z, i++,
@@ -290,40 +286,45 @@ public class HexMap : MonoBehaviour{
         HexGrid<HexCell> grid,
         float cellOuterRadius
     ) {
-        int chunkColumns = grid.Columns / MeshConstants.ChunkXMax;
-        int chunkRows = grid.Rows / MeshConstants.ChunkZMax;
-
         HexMeshChunk[] result = new HexMeshChunk[
-            chunkColumns * chunkRows
+            ChunkColumns * ChunkRows
         ];
 
         for (int i = 0; i < result.Length; i++) {
             result[i] = HexMeshChunk.CreateEmpty();
         }
 
-        for (int cellZ = 0; cellZ < grid.Rows; cellZ++) {
-            for (int cellX = 0; cellX < grid.Columns; cellX++) {
-                HexCell cell = grid.GetElement(cellX, cellZ);
+        for (int cellRow = 0; cellRow < Rows; cellRow++) {
+            for (int cellColumn = 0; cellColumn < Columns; cellColumn++) {
+                
+                HexCell cell = grid.GetElement(cellColumn, cellRow);
 
-                Debug.Log(cell);
+                int chunkColumn =
+                    cellColumn / MeshConstants.ChunkXMax;
+                
+                int chunkRow =
+                    cellRow / MeshConstants.ChunkZMax;
 
-                int chunkX = cellX / MeshConstants.ChunkXMax;
-                int chunkZ = cellZ / MeshConstants.ChunkZMax;
+                int cellLocalColumn =
+                    cellColumn % MeshConstants.ChunkZMax;
 
-                int localX =
-                    cellX - (chunkZ * MeshConstants.ChunkXMax);
+                int cellLocalRow =
+                    cellRow % MeshConstants.ChunkXMax;
 
-                int localZ =
-                    cellZ - (chunkZ * MeshConstants.ChunkZMax);
-
-                result[(chunkZ * chunkColumns) + chunkX].AddCell(
-                    (localZ * chunkColumns) + localX,
-                    cell
-                );    
+                result[(chunkRow * ChunkColumns) + chunkColumn]
+                    .AddCell(
+                        (cellLocalRow * MeshConstants.ChunkZMax) +
+                            cellLocalColumn,
+                        cell
+                    );    
             }
         }
 
         return result;
+    }
+
+    private Vector2 CelltoChunkIndex(int cellX, int cellZ) {
+        throw new System.NotImplementedException();
     }
 
     public bool TryGetNeighbors(
@@ -594,26 +595,6 @@ public class HexMap : MonoBehaviour{
 
         Vector3 position;
         position.y = position.z = 0f;
-
-        for (int i = 0; i < ColumnTransforms.Length; i++) {
-            if (i < minColumnIndex) {
-                position.x = ChunkColumns *
-                                (innerDiameter * MeshConstants.ChunkXMax);
-            }
-            else if (i > maxColumnIndex) {
-                position.x = ChunkColumns *
-                                -(innerDiameter * MeshConstants.ChunkXMax);
-            }
-            else {
-                position.x = 0f;
-            }
-
-            ColumnTransforms[i].localPosition = position;
-        }
-    }
-
-    public void MakeChildOfColumn(Transform child, int columnIndex) {
-        child.SetParent(ColumnTransforms[columnIndex], false);
     }
 
 /// <summary>

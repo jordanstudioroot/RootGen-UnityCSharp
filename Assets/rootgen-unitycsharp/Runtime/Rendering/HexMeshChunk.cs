@@ -313,15 +313,17 @@ public class HexMeshChunk : MonoBehaviour {
         features.Clear();
 
         for(int i = 0; i < Cells.Length; i++) {
-            TriangulateCell(
-                Cells[i],
-                cellOuterRadius,
-                neighborGraph,
-                riverGraph,
-                roadGraph,
-                elevationGraph,
-                hexMap.WrapSize
-            );
+            if (Cells[i]) {
+                TriangulateCell(
+                    Cells[i],
+                    cellOuterRadius,
+                    neighborGraph,
+                    riverGraph,
+                    roadGraph,
+                    elevationGraph,
+                    hexMap.WrapSize
+                );
+            }
         }
 
         terrain.Apply();
