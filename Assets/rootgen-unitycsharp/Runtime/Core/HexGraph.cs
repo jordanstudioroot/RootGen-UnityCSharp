@@ -157,15 +157,26 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         return false;
     }
 
+    /// <summary>
+    /// Returns a boolean value indicating whether the specified hex has a
+    /// river flowing in to it opposite the specified direction.
+    /// </summary>
+    /// <param name="hex">
+    /// The specified hex.
+    /// </param>
+    /// <param name="directionToward">
+    /// The direction pointing outward toward the incoming river.
+    /// </param>
+    /// <returns></returns>
     public bool HasIncomingRiverInDirection(
         Hex hex,
-        HexDirections direction
+        HexDirections directionToward
     ) {
         IEnumerable<RiverEdge> edges;
 
         if (TryGetInEdges(hex, out edges)) {
             foreach(RiverEdge edge in edges) {
-                if (edge.Direction == direction) {
+                if (edge.Direction.Opposite() == directionToward) {
                     return true;
                 }
             }

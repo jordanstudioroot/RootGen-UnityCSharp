@@ -38,14 +38,14 @@
 			float4 gridUV = float4(pos.xz, 0, 0);
 			gridUV.x *= 1 / (4 * 8.66025404);
 			gridUV.y *= 1 / (2 * 15.0);
-			float2 cellDataCoordinates =
+			float2 hexDataCoordinates =
 				floor(gridUV.xy) + tex2Dlod(_GridCoordinates, gridUV).rg;
-			cellDataCoordinates *= 2;
+			hexDataCoordinates *= 2;
 
-			float4 cellData = GetCellData(cellDataCoordinates);
-			data.visibility.x = cellData.x;
+			float4 hexData = GetHexData(hexDataCoordinates);
+			data.visibility.x = hexData.x;
 			data.visibility.x = lerp(0.25, 1, data.visibility.x);
-			data.visibility.y = cellData.y;
+			data.visibility.y = hexData.y;
 		}
 
 		void surf (Input IN, inout SurfaceOutputStandardSpecular o) {

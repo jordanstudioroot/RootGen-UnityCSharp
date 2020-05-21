@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 public class HexShaderData : MonoBehaviour
 {
-    private Texture2D _cellTexture;
-    private Color32[] _cellTextureData;
+    private Texture2D _hexTexture;
+    private Color32[] _hexTextureData;
     private bool _needsVisibilityReset;
 
-    private List<Hex> _transitioningCells = new List<Hex>();
+    private List<Hex> _transitioningHexes = new List<Hex>();
 
     private const float _transitionSpeed = 255f;
 
@@ -15,19 +15,19 @@ public class HexShaderData : MonoBehaviour
     public HexMap HexMap { get; set; }
 
     public void Initialize(int x, int z) {
-        if (_cellTexture) {
-            _cellTexture.Resize(x, z);
+        if (_hexTexture) {
+            _hexTexture.Resize(x, z);
         }
         else {
-            _cellTexture = new Texture2D (
+            _hexTexture = new Texture2D (
                 x, z, TextureFormat.RGBA32, false, true
             );
 
-            _cellTexture.filterMode = FilterMode.Point;
-            _cellTexture.wrapModeU = TextureWrapMode.Repeat;
-            _cellTexture.wrapModeV = TextureWrapMode.Clamp;
+            _hexTexture.filterMode = FilterMode.Point;
+            _hexTexture.wrapModeU = TextureWrapMode.Repeat;
+            _hexTexture.wrapModeV = TextureWrapMode.Clamp;
 
-            Shader.SetGlobalTexture("_hexData", _cellTexture);
+            Shader.SetGlobalTexture("_hexData", _hexTexture);
         }
         
         Shader.SetGlobalVector(
@@ -36,48 +36,48 @@ public class HexShaderData : MonoBehaviour
         );
 
         if (
-            _cellTextureData == null ||
-            _cellTextureData.Length != x * z
+            _hexTextureData == null ||
+            _hexTextureData.Length != x * z
         ) {
-            _cellTextureData = new Color32[x * z];
+            _hexTextureData = new Color32[x * z];
         }
         else {
-            for (int i = 0; i < _cellTextureData.Length; i++)
+            for (int i = 0; i < _hexTextureData.Length; i++)
             {
-                _cellTextureData[i] = new Color32(0, 0, 0, 0);
+                _hexTextureData[i] = new Color32(0, 0, 0, 0);
             }
         }
 
-        _transitioningCells.Clear();
+        _transitioningHexes.Clear();
         enabled = true;
     }
 
-    public void RefreshTerrain(Hex cell)
+    public void RefreshTerrain(Hex hex)
     {
-        _cellTextureData[cell.Index].a = (byte)cell.TerrainTypeIndex;
+        _hexTextureData[hex.Index].a = (byte)hex.TerrainTypeIndex;
         enabled = true;
     }
 
-    public void RefreshVisibility(Hex cell)
+    public void RefreshVisibility(Hex hex)
     {
-        int index = cell.Index;
+        int index = hex.Index;
 
         if (ImmediateMode)
         {
-            _cellTextureData[index].r = cell.IsVisible ? (byte)255 : (byte)0;
-            _cellTextureData[index].g = cell.IsExplored ? (byte)255 : (byte)0;
+            _hexTextureData[index].r = hex.IsVisible ? (byte)255 : (byte)0;
+            _hexTextureData[index].g = hex.IsExplored ? (byte)255 : (byte)0;
         }
-        else if (_cellTextureData[index].b != 255)
+        else if (_hexTextureData[index].b != 255)
         {
-            _cellTextureData[index].b = 255;
-            _transitioningCells.Add(cell);
+            _hexTextureData[index].b = 255;
+            _transitioningHexes.Add(hex);
         }
 
         enabled = true;
     }
 
-    public void SetMapData (Hex cell, float data) {
-		_cellTextureData[cell.Index].b =
+    public void SetMapData (Hex hex, float data) {
+		_hexTextureData[hex.Index].b =
 			data < 0f ? (byte)0 : (data < 1f ? (byte)(data * 254f) : (byte)254);
 		enabled = true;
 	}
@@ -103,35 +103,35 @@ public class HexShaderData : MonoBehaviour
             delta = 1;
         }
 
-        for (int i = 0; i < _transitioningCells.Count; i++)
+        for (int i = 0; i < _transitioningHexes.Count; i++)
         {
-            if (!UpdateCellData(_transitioningCells[i], delta))
+            if (!UpdateHexData(_transitioningHexes[i], delta))
             {
-                _transitioningCells[i--] =
-                    _transitioningCells[_transitioningCells.Count - 1];
-                _transitioningCells.RemoveAt(_transitioningCells.Count - 1);
+                _transitioningHexes[i--] =
+                    _transitioningHexes[_transitioningHexes.Count - 1];
+                _transitioningHexes.RemoveAt(_transitioningHexes.Count - 1);
             }
         }
 
-        _cellTexture.SetPixels32(_cellTextureData);
-        _cellTexture.Apply();
-        enabled = _transitioningCells.Count > 0;
+        _hexTexture.SetPixels32(_hexTextureData);
+        _hexTexture.Apply();
+        enabled = _transitioningHexes.Count > 0;
     }
 
-    private bool UpdateCellData(Hex cell, int delta)
+    private bool UpdateHexData(Hex hex, int delta)
     {
-        int index = cell.Index;
-        Color32 data = _cellTextureData[index];
+        int index = hex.Index;
+        Color32 data = _hexTextureData[index];
         bool stillUpdating = false;
 
-        if (cell.IsExplored && data.g < 255)
+        if (hex.IsExplored && data.g < 255)
         {
             stillUpdating = true;
             int time = data.g + delta;
             data.g = time >= 255 ? (byte)255 : (byte)time;
         }
 
-        if (cell.IsVisible && data.r < 255)
+        if (hex.IsVisible && data.r < 255)
         {
             stillUpdating = true;
             int t = data.r + delta;
@@ -149,7 +149,7 @@ public class HexShaderData : MonoBehaviour
             data.b = 0;
         }
 
-        _cellTextureData[index] = data;
+        _hexTextureData[index] = data;
         return stillUpdating;
     }  
 }

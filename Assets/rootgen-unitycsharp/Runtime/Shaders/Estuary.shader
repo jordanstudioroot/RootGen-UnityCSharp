@@ -34,12 +34,12 @@
 			UNITY_INITIALIZE_OUTPUT(Input, data);
 			data.riverUV = v.texcoord1.xy;
 
-			float4 cell0 = GetCellData(v, 0);
-			float4 cell1 = GetCellData(v, 1);
+			float4 hex0 = GetHexData(v, 0);
+			float4 hex1 = GetHexData(v, 1);
 
-			data.visibility.x = cell0.x * v.color.x + cell1.x * v.color.y;
+			data.visibility.x = hex0.x * v.color.x + hex1.x * v.color.y;
 			data.visibility.x = lerp(0.25, 1, data.visibility.x);
-			data.visibility.y = cell0.y * v.color.x + cell1.y * v.color.y;
+			data.visibility.y = hex0.y * v.color.x + hex1.y * v.color.y;
 		}
 
 		void surf (Input IN, inout SurfaceOutputStandardSpecular o) {

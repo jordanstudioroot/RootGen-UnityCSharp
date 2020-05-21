@@ -10,7 +10,7 @@ public enum HexDirections
     Northwest = 5
 }
 
-public static class DirectionAtClockwiseAngle
+public static class HexDirectionExtensions
 {
     /* 'this' keyword is required to add the functionality of this method to
         * the 'HexDirections' enum. The class referenced after 'this' is the

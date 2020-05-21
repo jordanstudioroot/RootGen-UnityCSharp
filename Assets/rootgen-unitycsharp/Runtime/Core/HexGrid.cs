@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using UnityEngine;
 using RootLogging;
 
@@ -396,15 +397,25 @@ public class HexGrid<T> where T : IHexPoint {
             
             T origin = GetElement(rowMajorIndex);        
 
-            for (int i = row - 1; i <= row + 1; i++) {
-                for (int j = column - 1; j <= column + 1; j++) {
+            HexDirections currentDirection = HexDirections.Southwest;
 
-                    if (i == row && j == column)
+            for (
+                int neighborRow = row - 1;
+                neighborRow <= row + 1;
+                neighborRow++
+            ) {
+                for (
+                    int neighborColumn = column - 1;
+                    neighborColumn <= column + 1;
+                    neighborColumn++
+                ) {
+
+                    if (neighborRow == row && neighborColumn == column)
                         continue;
 
                     try {
                         int neighborIndex = ConvertOffsetToIndex(
-                            j, i
+                            neighborColumn, neighborRow
                         );
 
                         T neighborCandidate =
@@ -420,11 +431,14 @@ public class HexGrid<T> where T : IHexPoint {
                             result.Add(
                                 neighborCandidate
                             );
+
+                            currentDirection =
+                                currentDirection.NextClockwise();
                         }
                     }
-                    catch(OutOfGridBoundsException e) {
+                    catch(OutOfGridBoundsException) {
                         RootLog.Log(
-                            "Row: " + i + ", Column: " + j + " is " + 
+                            "Row: " + neighborRow + ", Column: " + neighborColumn + " is " + 
                             "outside of the grid bounds.",
                             Severity.Warning,
                             "HexGrid.Neighbors"

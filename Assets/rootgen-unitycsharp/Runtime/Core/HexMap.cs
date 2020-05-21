@@ -21,7 +21,6 @@ public class HexMap : MonoBehaviour {
     /// <summary>
     /// The index of the MeshChunk column currently centered below the camera.
     /// </summary>
-    private int _currentCenterColumnIndex = -1;
     private HexShaderData _hexShaderData;
     private Material _terrainMaterial;
     private bool _uiVisible;
@@ -69,29 +68,33 @@ public class HexMap : MonoBehaviour {
 
     #region Public Read Only Properties
 
+    public Transform[] HexMeshColumnTransforms {
+        get; private set;
+    }
+
     /// <summary>
     /// The hex mesh chunks contained in the hex map.
     /// </summary>
     /// <value></value>
-    public HexMeshChunk[] Chunks {
+    public HexMeshChunk[] HexMeshChunks {
         get; private set;
     }
 
     /// <summary>
     /// The number of columns of hex mesh chunks in the hex map.
     /// </summary>
-    public int ChunkColumns {
+    public int HexMeshChunkRows {
         get {
-            return HexOffsetColumns / MeshConstants.ChunkXMax;
+            return HexOffsetRows / MeshConstants.ChunkSizeX;
         }
     }
 
     /// <summary>
     /// The number of rows of hex mesh chunks in the hex map.
     /// </summary>
-    public int ChunkRows {
+    public int HexMeshChunkColumns {
         get {
-            return HexOffsetRows / MeshConstants.ChunkZMax;
+            return HexOffsetColumns / MeshConstants.ChunkSizeZ;
         }
     }
 
@@ -174,14 +177,21 @@ public class HexMap : MonoBehaviour {
     }
 
     /// <summary>
-    /// The hex at the center of the hex map.
+    /// The hex tile at the absolute center of the hex grid.
     /// </summary>
-    public Hex Center {
+    public Hex GridCenter {
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
             return HexGrid.Center;
         }
+    }
+
+    /// <summary>
+    /// The index of the centermost column of hex mesh chunks.
+    /// </summary>
+    public int CenterHexMeshColumnIndex {
+        get; private set;
     }
 
     /// <summary>
@@ -286,6 +296,7 @@ public class HexMap : MonoBehaviour {
         bool editMode
     ) {
         ClearHexUnits(_units);
+        ClearColumnTransforms(HexMeshColumnTransforms);
 
         int columns, rows;
 
@@ -312,6 +323,9 @@ public class HexMap : MonoBehaviour {
 
         columns = (int)bounds.width;
         rows = (int)bounds.height;
+
+        // Set to -1 so new maps always gets centered.
+        CenterHexMeshColumnIndex = -1;
 
         HexagonPoint.InitializeHashGrid(seed);
 
@@ -340,16 +354,16 @@ public class HexMap : MonoBehaviour {
             }
         }
 
-        Chunks = GetChunks(
+        HexMeshChunks = GetHexMeshChunks(
             HexGrid,
             hexOuterRadius
         );
 
-// Set to -1 so new maps always gets centered.
-        _currentCenterColumnIndex = -1;
+        HexMeshColumnTransforms =
+            GetHexMeshChunkColumns(HexMeshChunks);
 
 
-        foreach(HexMeshChunk chunk in Chunks) {
+        foreach(HexMeshChunk chunk in HexMeshChunks) {
             chunk.Triangulate(
                 this,
                 hexOuterRadius,
@@ -406,7 +420,7 @@ public class HexMap : MonoBehaviour {
         return result;
     }
 
-    public void ClearColumns(Transform[] columns) {
+    public void ClearColumnTransforms(Transform[] columns) {
          if (columns != null) {
             for (int i = 0; i < columns.Length; i++) {
                 Destroy(columns[i].gameObject);
@@ -576,22 +590,43 @@ public class HexMap : MonoBehaviour {
         float hexOuterRadius
     ) {
         float innerDiameter = 
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
+            HexagonPoint.InnerDiameterFromOuterRadius(hexOuterRadius);
         // Get the column index which the x axis coordinate is over.
         int centerColumnIndex =
-            (int) (xPosition / (innerDiameter * MeshConstants.ChunkXMax));
+            (int) (xPosition / (innerDiameter * MeshConstants.ChunkSizeX));
 
-        if (centerColumnIndex == _currentCenterColumnIndex) {
+        if (centerColumnIndex == CenterHexMeshColumnIndex) {
             return;
         }
 
-        _currentCenterColumnIndex = centerColumnIndex;
+        CenterHexMeshColumnIndex = centerColumnIndex;
 
-        int minColumnIndex = centerColumnIndex - ChunkColumns / 2;
-        int maxColumnIndex = centerColumnIndex + ChunkColumns / 2;
+        int minColumnIndex =
+            centerColumnIndex - HexMeshChunkColumns / 2;
+        
+        int maxColumnIndex =
+            centerColumnIndex + HexMeshChunkColumns / 2;
 
-        Vector3 position;
-        position.y = position.z = 0f;
+        Vector3 position = new Vector3(0, 0, 0);
+
+        for (int i = 0; i < HexMeshColumnTransforms.Length; i++) {
+            float posX =
+                HexagonPoint.InnerDiameterFromOuterRadius(
+                    hexOuterRadius
+                ) * MeshConstants.ChunkSizeX;
+            
+            if (i < minColumnIndex) {
+                position.x = HexMeshChunkColumns * posX;
+            }
+            else if (i > maxColumnIndex) {
+                position.x = HexMeshChunkColumns * -posX;
+            }
+            else {
+                position.x = 0f;
+            }
+
+            HexMeshColumnTransforms[i].localPosition = position;
+        }
     }
 
     #endregion
@@ -626,16 +661,16 @@ public class HexMap : MonoBehaviour {
         
     }
 
-    private HexMeshChunk[] GetChunks(
+    private HexMeshChunk[] GetHexMeshChunks(
         HexGrid<Hex> grid,
         float hexOuterRadius
     ) {
         HexMeshChunk[] result = new HexMeshChunk[
-            ChunkColumns * ChunkRows
+            HexMeshChunkRows * HexMeshChunkColumns
         ];
 
         for (int i = 0; i < result.Length; i++) {
-            result[i] = HexMeshChunk.CreateEmpty();
+            result[i] = HexMeshChunk.CreateEmpty(this.transform);
         }
 
         for (int hexRow = 0; hexRow < HexOffsetRows; hexRow++) {
@@ -644,23 +679,53 @@ public class HexMap : MonoBehaviour {
                 Hex hex = grid.GetElement(hexColumn, hexRow);
 
                 int hexChunkColumn =
-                    hexColumn / MeshConstants.ChunkXMax;
+                    hexColumn / MeshConstants.ChunkSizeZ;
                 
                 int hexChunkRow =
-                    hexRow / MeshConstants.ChunkZMax;
+                    hexRow / MeshConstants.ChunkSizeX;
 
                 int hexLocalColumn =
-                    hexColumn % MeshConstants.ChunkZMax;
+                    hexColumn % MeshConstants.ChunkSizeX;
 
                 int hexLocalRow =
-                    hexRow % MeshConstants.ChunkXMax;
+                    hexRow % MeshConstants.ChunkSizeZ;
 
-                result[(hexChunkRow * ChunkColumns) + hexChunkColumn]
+                result[(hexChunkRow * HexMeshChunkColumns) + hexChunkColumn]
                     .AddHex(
-                        (hexLocalRow * MeshConstants.ChunkZMax) +
+                        (hexLocalRow * MeshConstants.ChunkSizeZ) +
                             hexLocalColumn,
                         hex
                     );    
+            }
+        }
+
+        return result;
+    }
+
+    private Transform[] GetHexMeshChunkColumns(
+        HexMeshChunk[] chunks
+    ) {
+        Transform[] result = new Transform[HexMeshChunkColumns];
+
+        for (int i = 0; i < result.Length; i++) {
+            result[i] = new GameObject(
+                "Hex Mesh Chunk Column"
+            ).transform;
+
+            result[i].transform.SetParent(transform, false);
+        }
+
+        for (int row = 0; row < HexOffsetRows; row++) {
+            for (int column = 0; column < HexOffsetColumns; column++) {
+                int hexChunkRow =
+                    row / MeshConstants.ChunkSizeX;
+                int hexChunkColumn =
+                    column / MeshConstants.ChunkSizeZ;
+
+                chunks[(hexChunkRow * HexMeshChunkColumns) + hexChunkColumn]
+                    .transform.SetParent(
+                        result[hexChunkColumn]
+                    );
             }
         }
 
@@ -676,8 +741,8 @@ public class HexMap : MonoBehaviour {
     /// The visible state of all HexGridChunks.
     /// </param>
     private void ShowUIAllHexChunks(bool visible) {
-        for (int i = 0; i < Chunks.Length; i++) {
-            Chunks[i].ShowUI(visible);
+        for (int i = 0; i < HexMeshChunks.Length; i++) {
+            HexMeshChunks[i].ShowUI(visible);
         }
     }
 
@@ -1015,7 +1080,7 @@ public class HexMap : MonoBehaviour {
     ) {
 // metrics.
         float innerDiameter =
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
+            HexagonPoint.OuterToInnerRadius(hexOuterRadius) * 2f;
 
 // Create the Hexes object and monobehaviour.
         Hex result = Hex.Instantiate();
@@ -1036,7 +1101,7 @@ public class HexMap : MonoBehaviour {
         );
 
         result.Index = rowMajorIndex;
-        result.ColumnIndex = offsetX / MeshConstants.ChunkXMax;
+        result.ColumnIndex = offsetX / MeshConstants.ChunkSizeX;
         result.ShaderData = _hexShaderData;
 
 // If wrapping is enabled, hex is not explorable if the hex is on the

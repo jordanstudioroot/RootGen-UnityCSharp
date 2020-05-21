@@ -328,7 +328,7 @@ public class HexClimate {
 //            HexDirection direction = HexDirection.Northeast;
 //            direction <= HexDirection.Northwest;
 //            direction++
-        foreach (HexEdge edge in neighborGraph.GetVertexEdges(hex)) {
+        foreach (HexEdge edge in neighborGraph.GetOutEdges(hex)) {
 //            hexNeighbor = hex.GetNeighbor(direction);
 
 //            if (!neighbor) {

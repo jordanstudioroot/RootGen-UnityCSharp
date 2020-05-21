@@ -48,24 +48,24 @@
 		void vert(inout appdata_full v, out Input data) {
 			UNITY_INITIALIZE_OUTPUT(Input, data);
 
-			float4 cell0 = GetCellData(v, 0);
-			float4 cell1 = GetCellData(v, 1);
-			float4 cell2 = GetCellData(v, 2);
+			float4 hex0 = GetHexData(v, 0);
+			float4 hex1 = GetHexData(v, 1);
+			float4 hex2 = GetHexData(v, 2);
 
-			data.terrain.x = cell0.w;
-			data.terrain.y = cell1.w;
-			data.terrain.z = cell2.w;
+			data.terrain.x = hex0.w;
+			data.terrain.y = hex1.w;
+			data.terrain.z = hex2.w;
 
-			data.visibility.x = cell0.x;
-			data.visibility.y = cell1.x;
-			data.visibility.z = cell2.x;
+			data.visibility.x = hex0.x;
+			data.visibility.y = hex1.x;
+			data.visibility.z = hex2.x;
 			data.visibility.xyz = lerp(0.25, 1, data.visibility.xyz);
 			data.visibility.w =
-				cell0.y * v.color.x + cell1.y * v.color.y + cell2.y * v.color.z;
+				hex0.y * v.color.x + hex1.y * v.color.y + hex2.y * v.color.z;
 
 			#if defined(SHOW_MAP_DATA)
-				data.mapData = cell0.z * v.color.x + cell1.z * v.color.y +
-					cell2.z * v.color.z;
+				data.mapData = hex0.z * v.color.x + hex1.z * v.color.y +
+					hex2.z * v.color.z;
 			#endif
 		}
 
@@ -94,7 +94,7 @@
 
 		void surf (Input IN, inout SurfaceOutputStandardSpecular o) {
 			/* Scale the texture by 0.02, whcih tiles the texture roughly
-			 * every 4 cells.*/
+			 * every 4 hexes.*/
 			// float2 uv = IN.worldPos.xz * 0.02;
 
 			fixed4 c =

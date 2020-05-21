@@ -44,44 +44,47 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     /// <summary>
     /// Gets all of the edges for a particular 
     /// </summary>
-    /// <param name="cell"></param>
+    /// <param name="hex"></param>
     /// <returns></returns>
-    public List<HexEdge> GetVertexEdges(Hex cell) {
-        IEnumerable<HexEdge> outEdge;
+    public List<HexEdge> GetOutEdges(Hex hex) {
+        IEnumerable<HexEdge> result;
 
-        TryGetOutEdges(cell, out outEdge);
+        TryGetOutEdges(hex, out result);
 
-        if (outEdge == null) {
+        if (result == null) {
             return null;
         }
         
-        return outEdge as List<HexEdge>;            
+        return result as List<HexEdge>;            
     }
 
-    public IEnumerable<HexEdge> TryGetEdgeInDirection(
-        Hex cell,
-        HexDirections direction
+    public bool TryGetEdgeInDirection(
+        Hex hex,
+        HexDirections direction,
+        out HexEdge hexEdge
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
-        List<HexEdge> result = new List<HexEdge>();
+        IEnumerable<HexEdge> edges;
 
-        if (edges != null && edges.Count > 0) {
-            foreach(HexEdge edge in edges) {
-                if (edge.Direction == direction)
-                    result.Add(edge);
+        if (TryGetOutEdges(hex, out edges)) {
+            foreach (HexEdge edge in edges) {
+                if (edge.Direction == direction) {
+                    hexEdge = edge;
+                    return true;
+                }
             }
         }
 
-        return result;
+        hexEdge = null;
+        return false;
     }
 
     public Hex TryGetNeighborInDirection(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
         IEnumerable<HexEdge> edges;
 
-        TryGetOutEdges(cell, out edges);
+        TryGetOutEdges(hex, out edges);
             
         if (edges != null) {
             foreach(HexEdge edge in edges) {
@@ -94,10 +97,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionOppositeEdge(
-        Hex cell,
+        Hex hex,
         HexEdge edge
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -111,10 +114,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionOppositeEdge(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -128,10 +131,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNextEdge(
-        Hex cell,
+        Hex hex,
         HexEdge edge
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -145,10 +148,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNextEdge(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -162,10 +165,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPreviousEdge(
-        Hex cell,
+        Hex hex,
         HexEdge edge
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -179,10 +182,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPreviousEdge(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -196,10 +199,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNext2Edge(
-        Hex cell,
+        Hex hex,
         HexEdge edge
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -213,10 +216,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionNext2Edge(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -230,10 +233,10 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     }
 
     public HexEdge GetHexDirectionPrevious2Edge(
-        Hex cell,
+        Hex hex,
         HexDirections direction
     ) {
-        List<HexEdge> edges = GetVertexEdges(cell);
+        List<HexEdge> edges = GetOutEdges(hex);
         
         if (edges != null && edges.Count > 0) {
             foreach(HexEdge currentEdge in edges) {
@@ -286,7 +289,7 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
         foreach (Hex vertex in Vertices) {
             result += vertex + " edges: \n";
 
-            foreach (HexEdge edge in GetVertexEdges(vertex)) {
+            foreach (HexEdge edge in GetOutEdges(vertex)) {
                 result += edge + "\n";
             }
 
@@ -295,6 +298,25 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
 
         return result;
     }
+
+    public List<HexDirections> GetBorderDirections(Hex hex) {
+        List<HexDirections> result = new List<HexDirections>();
+        int numDirections =
+            System.Enum.GetValues(typeof(HexDirections)).Length;
+
+        for (
+            HexDirections i = 0; (int)i < numDirections; i = i.NextClockwise()
+        ) {
+            HexEdge found;
+
+            if (!TryGetEdgeInDirection(hex, i, out found)) {
+                result.Add(i);
+            }
+        }
+
+        return result;
+    }
+
     #endregion
 
     #region Structs

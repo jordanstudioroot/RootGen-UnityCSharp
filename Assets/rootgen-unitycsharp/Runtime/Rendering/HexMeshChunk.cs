@@ -143,7 +143,7 @@ public class HexMeshChunk : MonoBehaviour {
 // ~ Non-Static
 
 // ~~ public
-    public Hex[] Cells {
+    public Hex[] Hexes {
         get; set;
     }
 
@@ -176,12 +176,12 @@ public class HexMeshChunk : MonoBehaviour {
 
 // ~~ public
     public static HexMeshChunk CreateEmpty() {
-        GameObject resultObj = new GameObject("Hex Grid Chunk");
+        GameObject resultObj = new GameObject("Hex Mesh Chunk");
         HexMeshChunk resultMono = resultObj.AddComponent<HexMeshChunk>();
         
-        resultMono.Cells = new Hex[
-            MeshConstants.ChunkXMax *
-            MeshConstants.ChunkZMax
+        resultMono.Hexes = new Hex[
+            MeshConstants.ChunkSizeX *
+            MeshConstants.ChunkSizeZ
         ];
         
         GameObject resultCanvasObj = new GameObject(
@@ -248,6 +248,12 @@ public class HexMeshChunk : MonoBehaviour {
         return resultMono;
     }
 
+    public static HexMeshChunk CreateEmpty(Transform parent) {
+        HexMeshChunk result = CreateEmpty();
+        result.transform.SetParent(parent, false);
+        return result;
+    }
+
 // ~~ private
 
 // ~ Non-Static
@@ -257,24 +263,24 @@ public class HexMeshChunk : MonoBehaviour {
         enabled = true;
     }
 
-    public bool AddHex(int index, Hex cell) {
+    public bool AddHex(int index, Hex hex) {
         try {
-            Cells[index] = cell;
-            cell.chunk = this;
+            Hexes[index] = hex;
+            hex.chunk = this;
 
-    /* Set WorldPositionStays to false for both the cells transform
+    /* Set WorldPositionStays to false for both the hexes transform
     * and ui rect or they will not move initally to be oriented with
     * the chunk.
     */
-            cell.transform.SetParent(transform, false);
-            cell.uiRect.SetParent(_canvas.transform, false);
+            hex.transform.SetParent(transform, false);
+            hex.uiRect.SetParent(_canvas.transform, false);
             return true;
         }
         catch (System.IndexOutOfRangeException) {
             RootLog.Log(
-                "The specified cell " + cell + " could not be added to " +
+                "The specified hex " + hex + " could not be added to " +
                 " the mesh chunk because the specified index " + index +
-                " was outside the bounds of the chunks cell array."
+                " was outside the bounds of the chunks hex array."
             );
             return false;
         }
@@ -282,7 +288,7 @@ public class HexMeshChunk : MonoBehaviour {
 
 /// <summary>
 ///     Switches the UI on and off for this chunk, enabling and disabling
-///     features such as the distance from the currently selected hex cell.
+///     features such as the distance from the currently selected hex hex.
 /// </summary>
 /// <param name="visible">
 ///     The visible state of the hex grid chunk.
@@ -312,10 +318,10 @@ public class HexMeshChunk : MonoBehaviour {
         estuaries.Clear();
         features.Clear();
 
-        for(int i = 0; i < Cells.Length; i++) {
-            if (Cells[i]) {
-                TriangulateCell(
-                    Cells[i],
+        for(int i = 0; i < Hexes.Length; i++) {
+            if (Hexes[i]) {
+                TriangulateHex(
+                    Hexes[i],
                     hexOuterRadius,
                     neighborGraph,
                     riverGraph,
@@ -336,8 +342,8 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
 // ~~ private
-    private void TriangulateCell(
-        Hex cell,
+    private void TriangulateHex(
+        Hex hex,
         float hexOuterRadius,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
@@ -348,33 +354,14 @@ public class HexMeshChunk : MonoBehaviour {
         _hexOuterRadius = hexOuterRadius;
 
         List<HexEdge> edges =
-            neighborGraph.GetVertexEdges(cell);
+            neighborGraph.GetOutEdges(hex);        
 
-// USING GRAPH EDGES INSTEAD OF HEX DIRECTIONS
-//
-//        List<Vector3> result = new List<Vector3>();
-//        for (
-//            HexDirection direction = HexDirection.Northeast;
-//            direction <= HexDirection.Northwest;
-//            direction++
-//        ) {
-            
-// Draw and color the triangles of the cells mesh.
-//            TriangulateDirection(
-//                direction,
-//                cell,
-//                hexOuterRadius,
-//                graph
-//            );
-//        }
-
-        
-
-        foreach(HexEdge neighborEdge in edges) {
+        foreach(HexEdge edge in edges) {
             TriangulateEdge(
-                cell,
+                hex,
+                edge.Target,
+                edge.Direction,
                 hexOuterRadius,
-                neighborEdge,
                 neighborGraph,
                 riverGraph,
                 roadGraph,
@@ -383,24 +370,40 @@ public class HexMeshChunk : MonoBehaviour {
             );
         }
 
-        if (!cell.IsUnderwater) {
-//            if (!cell.HasRiver && !cell.HasRoads) {
+        foreach(
+            HexDirections borderDirection in
+            neighborGraph.GetBorderDirections(hex)
+        ) {
+            TriangulateEdge(
+                hex,
+                null,
+                borderDirection,
+                hexOuterRadius,
+                neighborGraph,
+                riverGraph,
+                roadGraph,
+                elevationGraph,
+                wrapSize
+            );
+        }
+
+        if (!hex.IsUnderwater) {
             if (
-                    !riverGraph.HasRiver(cell) &&
-                    !roadGraph.HasRoad(cell)
+                    !riverGraph.HasRiver(hex) &&
+                    !roadGraph.HasRoad(hex)
             ) {
                 features.AddFeature(
-                    cell,
-                    cell.Position,
+                    hex,
+                    hex.Position,
                     hexOuterRadius,
                     wrapSize
                 );
             }
 
-            if (cell.IsSpecial) {
+            if (hex.IsSpecial) {
                 features.AddSpecialFeature(
-                    cell,
-                    cell.Position,
+                    hex,
+                    hex.Position,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -409,51 +412,52 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateEdge(
-        Hex cell,
+        Hex source,
+        Hex target,
+        HexDirections direction,
         float hexOuterRadius,
-        HexEdge neighborEdge,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
         RoadUndirectedGraph roadGraph,
         ElevationBidirectionalGraph elevationGraph,
         int wrapSize
     ) {
-// Cell center
-        Vector3 center = cell.Position;
+// Hex center
+        Vector3 center = source.Position;
 
 // Triangle edge.
         EdgeVertices edgeVertices = new EdgeVertices(
             center + HexagonPoint.GetFirstSolidCorner(
-                neighborEdge.Direction,
+                direction,
                 hexOuterRadius
             ),
             center +
             HexagonPoint.GetSecondSolidCorner(
-                neighborEdge.Direction,
+                direction,
                 hexOuterRadius
             )
         );
 
-//        if (cell.HasRiver) {
-        if (riverGraph.HasRiver(cell)) {
+//        if (hex.HasRiver) {
+        if (riverGraph.HasRiver(source)) {
 
 // SHOULD ITERATE OVER EACH EDGE FOR THE FOLLOWING ALGORITHM
-//            if (cell.HasRiverThroughEdge(direction)) {
+//            if (hex.HasRiverThroughEdge(direction)) {
             if (
                 riverGraph.HasRiverInDirection(
-                    cell,
-                    neighborEdge.Direction
+                    source,
+                    direction
                 )
             ) {
 /* If the triangle has a river through the edge, lower center edge vertex
 *  to simulate stream bed.
 */
-                edgeVertices.vertex3.y = cell.StreamBedY;
+                edgeVertices.vertex3.y = source.StreamBedY;
 
-//                if (cell.HasRiverBeginOrEnd) {
-                if (riverGraph.HasRiverEnd(cell)) {
+//                if (hex.HasRiverBeginOrEnd) {
+                if (riverGraph.HasRiverEnd(source)) {
                     TriangulateWithRiverBeginOrEnd(
-                        cell,
+                        source,
                         center,
                         edgeVertices,
                         neighborEdge,
@@ -464,7 +468,7 @@ public class HexMeshChunk : MonoBehaviour {
                 }
                 else {
                     TriangulateWithRiver(
-                        cell,
+                        source,
                         center,
                         edgeVertices,
                         neighborEdge,
@@ -476,7 +480,7 @@ public class HexMeshChunk : MonoBehaviour {
             }
             else {
                 TriangulateAdjacentToRiver(
-                    cell,
+                    source,
                     center,
                     edgeVertices,
                     neighborEdge,
@@ -489,10 +493,9 @@ public class HexMeshChunk : MonoBehaviour {
         }
         else {
             TriangulateWithoutRiver(
-                cell,
+                source,
                 neighborEdge,
                 edgeVertices,
-                neighborEdge,
                 riverGraph,
                 roadGraph,
                 center,
@@ -501,13 +504,13 @@ public class HexMeshChunk : MonoBehaviour {
             );
 
             if (
-                !cell.IsUnderwater &&
+                !source.IsUnderwater &&
 // SHOULD ITERATE THOURGH EACH EDGE FOR THIS ALGORITHM
-//                !cell.HasRoadThroughEdge(direction)
-                  !roadGraph.HasRoad(cell)
+//                !hex.HasRoadThroughEdge(direction)
+                  !roadGraph.HasRoad(source)
             ) {
                 features.AddFeature(
-                    cell,
+                    source,
                     (center + edgeVertices.vertex1 + edgeVertices.vertex5) * (1f / 3f),
                     hexOuterRadius,
                     wrapSize
@@ -516,13 +519,13 @@ public class HexMeshChunk : MonoBehaviour {
         }
 
 /* If the direction of triangulation is between NE and SE, triangulate
-*  the connection between cells. Otherwise, do not triangulate the connection.
+*  the connection between hexes. Otherwise, do not triangulate the connection.
 *  Since the connections are triangulated from west to east, south to north,
 *  the connection will already have been triangulated for SW, W, an NW.
 */
         if (neighborEdge.Direction <= HexDirections.Southeast) {
             TriangulateConnection(
-                cell,
+                source,
                 neighborEdge,
                 neighborGraph,
                 riverGraph,
@@ -534,9 +537,9 @@ public class HexMeshChunk : MonoBehaviour {
             );
         }
 
-        if (cell.IsUnderwater) {
+        if (source.IsUnderwater) {
             TriangulateWater(
-                cell,
+                source,
                 neighborEdge,
                 neighborGraph,
                 riverGraph,
@@ -548,10 +551,9 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateWithoutRiver(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         EdgeVertices edgeVertices,
-        HexEdge hexEdge,
         RiverDigraph riverGraph,
         RoadUndirectedGraph roadGraph,
         Vector3 center,
@@ -561,15 +563,15 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeFan(
             center,
             edgeVertices,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
 
-//        if (cell.HasRoads) {
-          if (roadGraph.HasRoad(cell)) {
+//        if (hex.HasRoads) {
+          if (roadGraph.HasRoad(hex)) {
             Vector2 interpolators = GetRoadInterpolators(
-                cell,
+                hex,
                 neighborEdge,
                 roadGraph
             );
@@ -587,9 +589,9 @@ public class HexMeshChunk : MonoBehaviour {
                     interpolators.y
                 ),
                 edgeVertices,
-//                cell.HasRoadThroughEdge(direction),
-                roadGraph.HasRoad(cell),
-                cell.Index,
+//                hex.HasRoadThroughEdge(direction),
+                roadGraph.HasRoad(hex),
+                hex.Index,
                 hexOuterRadius,
                 wrapSize
             );
@@ -598,7 +600,7 @@ public class HexMeshChunk : MonoBehaviour {
     
 
     private void TriangulateWithRiver(
-        Hex cell,
+        Hex hex,
         Vector3 center,
         EdgeVertices edgeVertices,
         HexEdge neighborEdge,
@@ -609,14 +611,14 @@ public class HexMeshChunk : MonoBehaviour {
         Vector3 centerLeft;
         Vector3 centerRight;
 
-//        if (cell.HasRiverThroughEdge(direction.Opposite())) {
+//        if (hex.HasRiverThroughEdge(direction.Opposite())) {
         if (
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.Opposite()
             )
         ) {
-/* Create a vertex 1/4th of the way from the center of the cell 
+/* Create a vertex 1/4th of the way from the center of the hex 
 * to first solid corner of the previous edge, which is pointing
 * straight "down" toward the bottom of the hexagon for a left facing
 * edge.
@@ -627,7 +629,7 @@ public class HexMeshChunk : MonoBehaviour {
                     hexOuterRadius
                 ) * 0.25f;
 
-/* Create a vertex 1/4th of the way from the center of the cell
+/* Create a vertex 1/4th of the way from the center of the hex
 * to the second solid corner of the next edge, which is pointing
 * straight "up" toward the top of the hexagon for a left facing edge.
 */
@@ -644,10 +646,10 @@ public class HexMeshChunk : MonoBehaviour {
 * Interpolate with an increased step to account for the rotation
 * of the center line.
 */
-//        else if (cell.HasRiverThroughEdge(direction.Next())) {
+//        else if (hex.HasRiverThroughEdge(direction.Next())) {
         else if (
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.NextClockwise()
             )
         ) {
@@ -655,10 +657,10 @@ public class HexMeshChunk : MonoBehaviour {
             centerRight = 
                 Vector3.Lerp(center, edgeVertices.vertex5, 2f / 3f);
         }
-//        else if (cell.HasRiverThroughEdge(direction.Previous())) {
+//        else if (hex.HasRiverThroughEdge(direction.Previous())) {
         else if (
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.PreviousClockwise()
             )
         ) {
@@ -667,17 +669,17 @@ public class HexMeshChunk : MonoBehaviour {
             centerRight = center;
         }
 
-/* If the cell has a river two directions next, or two directions
+/* If the hex has a river two directions next, or two directions
 * previous, there is a slight bend in the river. Need to push
 * the center line to the inside of the bend. Using
 * HexMetrics.innerToOuter to adjust for the fact that
 * the midpoint of a solid edge is closer to the center
-* of a cell than a solid edge corner.
+* of a hex than a solid edge corner.
 */
-//        else if (cell.HasRiverThroughEdge(direction.Next2())) {
+//        else if (hex.HasRiverThroughEdge(direction.Next2())) {
         else if (
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.NextClockwise2()
             )
         ) {
@@ -705,9 +707,9 @@ public class HexMeshChunk : MonoBehaviour {
 /* Get the final location of the center by averaging
 * centerLeft and centerRight. For a straight through
 * river this average is the same as the center
-* of the cell. For a bend this moves the center
+* of the hex. For a bend this moves the center
 * appropriately. Otherwise, all points are the same
-* and the center also remains at the center of the cell.
+* and the center also remains at the center of the hex.
 */
         center = Vector3.Lerp(centerLeft, centerRight, 0.5f);
 
@@ -737,10 +739,10 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeStrip(
             middle,
             _weights1,
-            cell.Index,
+            hex.Index,
             edgeVertices,
             _weights1,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
@@ -780,16 +782,16 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
         Vector3 indices;
-        indices.x = indices.y = indices.z = cell.Index;
-        terrain.AddTriangleCellData(indices, _weights1);
-        terrain.AddQuadCellData(indices, _weights1);
-        terrain.AddQuadCellData(indices, _weights1);
-        terrain.AddTriangleCellData(indices, _weights1);
+        indices.x = indices.y = indices.z = hex.Index;
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddQuadHexData(indices, _weights1);
+        terrain.AddQuadHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
 
-        if (!cell.IsUnderwater) {
-//            bool reversed = (cell.IncomingRiver == direction);
+        if (!hex.IsUnderwater) {
+//            bool reversed = (hex.IncomingRiver == direction);
             bool reversed = riverGraph.HasIncomingRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             );
 
@@ -799,7 +801,7 @@ public class HexMeshChunk : MonoBehaviour {
                 middle.
                 vertex2,
                 middle.vertex4,
-                cell.RiverSurfaceY,
+                hex.RiverSurfaceY,
                 0.4f,
                 reversed,
                 indices,
@@ -812,7 +814,7 @@ public class HexMeshChunk : MonoBehaviour {
                 middle.vertex4,
                 edgeVertices.vertex2,
                 edgeVertices.vertex4,
-                cell.RiverSurfaceY,
+                hex.RiverSurfaceY,
                 0.6f,
                 reversed,
                 indices,
@@ -823,7 +825,7 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateWithRiverBeginOrEnd(
-        Hex cell,
+        Hex hex,
         Vector3 center,
         EdgeVertices edgeVertices,
         HexEdge neighborEdge,
@@ -841,10 +843,10 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeStrip(
             middle,
             _weights1,
-            cell.Index,
+            hex.Index,
             edgeVertices,
             _weights1,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
@@ -852,27 +854,27 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeFan(
             center,
             middle,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
 
-        if (!cell.IsUnderwater) {
-//            bool reversed = cell.HasIncomingRiver;
+        if (!hex.IsUnderwater) {
+//            bool reversed = hex.HasIncomingRiver;
             bool reversed = riverGraph.HasIncomingRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             );
 
             Vector3 indices;
-            indices.x = indices.y = indices.z = cell.Index;
+            indices.x = indices.y = indices.z = hex.Index;
             
             TriangulateRiverQuad(
                 middle.vertex2,
                 middle.vertex4,
                 edgeVertices.vertex2,
                 edgeVertices.vertex4,
-                cell.RiverSurfaceY,
+                hex.RiverSurfaceY,
                 0.6f,
                 reversed,
                 indices,
@@ -881,7 +883,7 @@ public class HexMeshChunk : MonoBehaviour {
             );
 
             center.y =
-                middle.vertex2.y = middle.vertex4.y = cell.RiverSurfaceY;
+                middle.vertex2.y = middle.vertex4.y = hex.RiverSurfaceY;
 
             rivers.AddTriangle(
                 center,
@@ -906,12 +908,12 @@ public class HexMeshChunk : MonoBehaviour {
                 );
             }
 
-            rivers.AddTriangleCellData(indices, _weights1);
+            rivers.AddTriangleHexData(indices, _weights1);
         }
     }
 
     private void TriangulateAdjacentToRiver(
-        Hex cell,
+        Hex hex,
         Vector3 center,
         EdgeVertices edgeVertices,
         HexEdge neighborEdge,
@@ -920,10 +922,10 @@ public class HexMeshChunk : MonoBehaviour {
         float hexOuterRadius,
         int wrapSize
     ) {
-//        if (cell.HasRoads) {
-        if (roadGraph.HasRoad(cell)) {
+//        if (hex.HasRoads) {
+        if (roadGraph.HasRoad(hex)) {
             TriangulateRoadAdjacentToRiver(
-                cell,
+                hex,
                 center,
                 neighborEdge,
                 riverGraph,
@@ -934,18 +936,18 @@ public class HexMeshChunk : MonoBehaviour {
             );
         }
 
-//        if (cell.HasRiverThroughEdge(direction.Next())) {
+//        if (hex.HasRiverThroughEdge(direction.Next())) {
         if (riverGraph.HasRiverInDirection(
-            cell,
+            hex,
             neighborEdge.Direction
         )) {
 /* If the direction has a river on either side, it has a slight curve. 
 * The center vertex of river-adjacent triangle needs to be moved toward 
 * the edge so they don't overlap the river.
 */
-//            if (cell.HasRiverThroughEdge(direction.Previous())) {
+//            if (hex.HasRiverThroughEdge(direction.Previous())) {
             if (riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.PreviousClockwise()
             )) {
                 center += HexagonPoint.GetSolidEdgeMiddle(
@@ -954,14 +956,14 @@ public class HexMeshChunk : MonoBehaviour {
                 ) * (HexagonConstants.INNER_TO_OUTER_RATIO * 0.5f);
             }
 
-/* If the cell has a river through the previous previous direction,
-* it has a river flowing through the cell. Move the center vertex
+/* If the hex has a river through the previous previous direction,
+* it has a river flowing through the hex. Move the center vertex
 * of the river-adjacent triangle so that it does not overlap the river.
 */
             else if (
-//                cell.HasRiverThroughEdge(direction.Previous2())
+//                hex.HasRiverThroughEdge(direction.Previous2())
                 riverGraph.HasRiverInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.PreviousClockwise2()
                 )
             ) {
@@ -977,14 +979,14 @@ public class HexMeshChunk : MonoBehaviour {
 * so it doesn't overlap the river.
 */
         else if (
-//            cell.HasRiverThroughEdge(direction.Previous()) &&
+//            hex.HasRiverThroughEdge(direction.Previous()) &&
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.PreviousClockwise()
             ) &&
-//            cell.HasRiverThroughEdge(direction.Next2())
+//            hex.HasRiverThroughEdge(direction.Next2())
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.NextClockwise2()
             )
         ) {
@@ -1002,10 +1004,10 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeStrip(
             middle,
             _weights1,
-            cell.Index,
+            hex.Index,
             edgeVertices,
             _weights1,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
@@ -1013,21 +1015,21 @@ public class HexMeshChunk : MonoBehaviour {
         TriangulateEdgeFan(
             center,
             middle,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
 
         if (
-            !cell.IsUnderwater &&
-//            !cell.HasRoadThroughEdge(direction)
+            !hex.IsUnderwater &&
+//            !hex.HasRoadThroughEdge(direction)
             roadGraph.HasRoadInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             )
         ) {
             features.AddFeature(
-                cell,
+                hex,
                 (center + edgeVertices.vertex1 + edgeVertices.vertex5) * (1f / 3f),
                 hexOuterRadius,
                 wrapSize
@@ -1036,7 +1038,7 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateConnection(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
@@ -1046,13 +1048,13 @@ public class HexMeshChunk : MonoBehaviour {
         float hexOuterRadius,
         int wrapSize
     ) {
-//        hex neighbor = cell.GetNeighbor(direction);
+//        hex neighbor = hex.GetNeighbor(direction);
         Hex neighbor = neighborGraph.TryGetNeighborInDirection(
-            cell,
+            hex,
             neighborEdge.Direction
         );
 
-/* Some cells will not have neighbors. If this is the case, return out
+/* Some hexes will not have neighbors. If this is the case, return out
 * of the method.
 */
         if (neighbor == null) {
@@ -1063,22 +1065,22 @@ public class HexMeshChunk : MonoBehaviour {
             neighborEdge.Direction, hexOuterRadius
         );
 
-        bridge.y = neighbor.Position.y - cell.Position.y;
+        bridge.y = neighbor.Position.y - hex.Position.y;
 
         EdgeVertices edge2 = new EdgeVertices(
             edgeVertices1.vertex1 + bridge,
             edgeVertices1.vertex5 + bridge
         );
 
-//        bool hasRiver = cell.HasRiverThroughEdge(direction);
+//        bool hasRiver = hex.HasRiverThroughEdge(direction);
         bool hasRiver = riverGraph.HasRiverInDirection(
-            cell,
+            hex,
             neighborEdge.Direction
         );
 
-//        bool hasRoad = cell.HasRoadThroughEdge(direction);
+//        bool hasRoad = hex.HasRoadThroughEdge(direction);
         bool hasRoad = roadGraph.HasRoadInDirection(
-            cell,
+            hex,
             neighborEdge.Direction
         );
         
@@ -1089,24 +1091,24 @@ public class HexMeshChunk : MonoBehaviour {
             edge2.vertex3.y = neighbor.StreamBedY;
 
             Vector3 indices;
-            indices.x = indices.z = cell.Index;
+            indices.x = indices.z = hex.Index;
             indices.y = neighbor.Index;
 
-            if (!cell.IsUnderwater) {
+            if (!hex.IsUnderwater) {
                 if (!neighbor.IsUnderwater) {
                     TriangulateRiverQuad(
                         edgeVertices1.vertex2,
                         edgeVertices1.vertex4,
                         edge2.vertex2,
                         edge2.vertex4,
-                        cell.RiverSurfaceY,
+                        hex.RiverSurfaceY,
                         neighbor.RiverSurfaceY,
                         0.8f,
                         (
-//                            cell.HasIncomingRiver &&
-//                            cell.IncomingRiver == direction
+//                            hex.HasIncomingRiver &&
+//                            hex.IncomingRiver == direction
                               riverGraph.HasIncomingRiverInDirection(
-                                  cell,
+                                  hex,
                                   neighborEdge.Direction
                               )
                         ),
@@ -1115,11 +1117,11 @@ public class HexMeshChunk : MonoBehaviour {
                         wrapSize
                     );
                 }
-                else if(cell.Elevation > neighbor.WaterLevel) {
+                else if(hex.Elevation > neighbor.WaterLevel) {
                     TriangulateWaterfallInWater(
                         edgeVertices1.vertex2, edgeVertices1.vertex4, 
                         edge2.vertex2, edge2.vertex4, 
-                        cell.RiverSurfaceY, 
+                        hex.RiverSurfaceY, 
                         neighbor.RiverSurfaceY,
                         neighbor.WaterSurfaceY,
                         indices,
@@ -1130,7 +1132,7 @@ public class HexMeshChunk : MonoBehaviour {
             }
             else if (
                 !neighbor.IsUnderwater &&
-                neighbor.Elevation > cell.WaterLevel
+                neighbor.Elevation > hex.WaterLevel
             ) {
                 TriangulateWaterfallInWater(
                     edge2.vertex4,
@@ -1138,8 +1140,8 @@ public class HexMeshChunk : MonoBehaviour {
                     edgeVertices1.vertex4,
                     edgeVertices1.vertex2,
                     neighbor.RiverSurfaceY,
-                    cell.RiverSurfaceY,
-                    cell.WaterSurfaceY,
+                    hex.RiverSurfaceY,
+                    hex.WaterSurfaceY,
                     indices,
                     hexOuterRadius,
                     wrapSize
@@ -1148,15 +1150,15 @@ public class HexMeshChunk : MonoBehaviour {
         }
 
         if (
-//            cell.GetEdgeType(direction) == ElevationEdgeTypes.Slope
+//            hex.GetEdgeType(direction) == ElevationEdgeTypes.Slope
             elevationGraph.GetEdgeTypeInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             ) == ElevationEdgeTypes.Slope
         ) {
             TriangulateEdgeTerraces(
                 edgeVertices1, 
-                cell, 
+                hex, 
                 edge2, 
                 neighbor,
                 hasRoad,
@@ -1168,7 +1170,7 @@ public class HexMeshChunk : MonoBehaviour {
             TriangulateEdgeStrip(
                 edgeVertices1,
                 _weights1,
-                cell.Index,
+                hex.Index,
                 edge2,
                 _weights2,
                 neighbor.Index,
@@ -1180,7 +1182,7 @@ public class HexMeshChunk : MonoBehaviour {
 
         features.AddWall(
             edgeVertices1,
-            cell,
+            hex,
             edge2,
             neighbor,
             hasRiver,
@@ -1189,12 +1191,12 @@ public class HexMeshChunk : MonoBehaviour {
             wrapSize
         );
 
-/* Drawn and color the triangle between the bridge of the current cell
-* and its current neighbor and the bridge of the next cell and the
+/* Drawn and color the triangle between the bridge of the current hex
+* and its current neighbor and the bridge of the next hex and the
 * current neighbor.*/
-//        hex nextNeighbor = cell.GetNeighbor(direction.Next());
+//        hex nextNeighbor = hex.GetNeighbor(direction.Next());
         Hex nextNeighbor = neighborGraph.TryGetNeighborInDirection(
-            cell,
+            hex,
             neighborEdge.Direction.NextClockwise()
         );
 
@@ -1215,13 +1217,13 @@ public class HexMeshChunk : MonoBehaviour {
 
             vertex5.y = nextNeighbor.Position.y;
 
-            if (cell.Elevation <= neighbor.Elevation) {
-                if (cell.Elevation <= nextNeighbor.Elevation) {
+            if (hex.Elevation <= neighbor.Elevation) {
+                if (hex.Elevation <= nextNeighbor.Elevation) {
 
-//This cell has lowest elevation, no rotation.
+//This hex has lowest elevation, no rotation.
                     TriangulateCorner(
                         edgeVertices1.vertex5,
-                        cell,
+                        hex,
                         edge2.vertex5,
                         neighbor,
                         vertex5,
@@ -1236,7 +1238,7 @@ public class HexMeshChunk : MonoBehaviour {
                         vertex5,
                         nextNeighbor,
                         edgeVertices1.vertex5,
-                        cell,
+                        hex,
                         edge2.vertex5,
                         neighbor,
                         hexOuterRadius,
@@ -1245,14 +1247,14 @@ public class HexMeshChunk : MonoBehaviour {
                 }
             }
             else if (neighbor.Elevation <= nextNeighbor.Elevation) {
-// Neighbor is lowest cell, rotate triangle clockwise.
+// Neighbor is lowest hex, rotate triangle clockwise.
                 TriangulateCorner(
                     edge2.vertex5,
                     neighbor,
                     vertex5,
                     nextNeighbor,
                     edgeVertices1.vertex5,
-                    cell,
+                    hex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1264,7 +1266,7 @@ public class HexMeshChunk : MonoBehaviour {
                     vertex5,
                     nextNeighbor,
                     edgeVertices1.vertex5,
-                    cell,
+                    hex,
                     edge2.vertex5,
                     neighbor,
                     hexOuterRadius,
@@ -1276,17 +1278,17 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void TriangulateEdgeTerraces(
         EdgeVertices begin,
-        Hex beginCell,
+        Hex beginHex,
         EdgeVertices end,
-        Hex endCell,
+        Hex endHex,
         bool hasRoad,
         float hexOuterRadius,
         int wrapSize
     ) {
         EdgeVertices edge2 = EdgeVertices.TerraceLerp(begin, end, 1);
         Color weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, 1);
-        float index1 = beginCell.Index;
-        float index2 = endCell.Index;
+        float index1 = beginHex.Index;
+        float index2 = endHex.Index;
 
         TriangulateEdgeStrip
         (
@@ -1335,16 +1337,16 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void TriangulateCorner(
         Vector3 bottom,
-        Hex bottomCell,
+        Hex bottomHex,
         Vector3 left,
-        Hex leftCell,
+        Hex leftHex,
         Vector3 right,
-        Hex rightCell,
+        Hex rightHex,
         float hexOuterRadius,
         int wrapSize
     ) {
-        ElevationEdgeTypes leftEdgeType = bottomCell.GetEdgeType(leftCell);
-        ElevationEdgeTypes rightEdgeType = bottomCell.GetEdgeType(rightCell);
+        ElevationEdgeTypes leftEdgeType = bottomHex.GetEdgeType(leftHex);
+        ElevationEdgeTypes rightEdgeType = bottomHex.GetEdgeType(rightHex);
 
         if (leftEdgeType == ElevationEdgeTypes.Slope) {
             if (rightEdgeType == ElevationEdgeTypes.Slope) {
@@ -1352,11 +1354,11 @@ public class HexMeshChunk : MonoBehaviour {
 // Corner is also a terrace. Slope-Slope-Flat.
                 TriangulateCornerTerraces(
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     left,
-                    leftCell,
+                    leftHex,
                     right,
-                    rightCell,
+                    rightHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1366,11 +1368,11 @@ public class HexMeshChunk : MonoBehaviour {
             else if (rightEdgeType == ElevationEdgeTypes.Flat) {
                 TriangulateCornerTerraces (
                     left,
-                    leftCell,
+                    leftHex,
                     right,
-                    rightCell,
+                    rightHex,
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1382,11 +1384,11 @@ public class HexMeshChunk : MonoBehaviour {
 */
                 TriangulateCornerTerracesCliff (
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     left,
-                    leftCell,
+                    leftHex,
                     right,
-                    rightCell,
+                    rightHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1400,11 +1402,11 @@ public class HexMeshChunk : MonoBehaviour {
 */
                 TriangulateCornerTerraces (
                     right,
-                    rightCell,
+                    rightHex,
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     left,
-                    leftCell,
+                    leftHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1416,32 +1418,32 @@ public class HexMeshChunk : MonoBehaviour {
 */
                 TriangulateCornerCliffTerraces(
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     left,
-                    leftCell,
+                    leftHex,
                     right,
-                    rightCell,
+                    rightHex,
                     hexOuterRadius,
                     wrapSize
                 );
             }
         }
 
-/* Neither the left or right cell edge type is a slope. If the right cell type of the left cell
+/* Neither the left or right hex edge type is a slope. If the right hex type of the left hex
 * is a slope, then terraces must be calculated for a corner between two cliff edges.
 * Cliff-Cliff-Slope Right, or Cliff-Cliff-Slope Left.
 */
-        else if (leftCell.GetEdgeType(rightCell) == ElevationEdgeTypes.Slope) {
+        else if (leftHex.GetEdgeType(rightHex) == ElevationEdgeTypes.Slope) {
 
 // If Cliff-Cliff-Slope-Left
-            if (leftCell.Elevation < rightCell.Elevation) {
+            if (leftHex.Elevation < rightHex.Elevation) {
                 TriangulateCornerCliffTerraces(
                     right,
-                    rightCell,
+                    rightHex,
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     left,
-                    leftCell,
+                    leftHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1451,11 +1453,11 @@ public class HexMeshChunk : MonoBehaviour {
             else {
                 TriangulateCornerTerracesCliff(
                     left,
-                    leftCell,
+                    leftHex,
                     right,
-                    rightCell,
+                    rightHex,
                     bottom,
-                    bottomCell,
+                    bottomHex,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -1473,11 +1475,11 @@ public class HexMeshChunk : MonoBehaviour {
             );
 
             Vector3 indices;
-            indices.x = bottomCell.Index;
-            indices.y = leftCell.Index;
-            indices.z = rightCell.Index;
+            indices.x = bottomHex.Index;
+            indices.y = leftHex.Index;
+            indices.z = rightHex.Index;
 
-            terrain.AddTriangleCellData(
+            terrain.AddTriangleHexData(
                 indices,
                 _weights1,
                 _weights2,
@@ -1487,11 +1489,11 @@ public class HexMeshChunk : MonoBehaviour {
 
         features.AddWall(
             bottom,
-            bottomCell,
+            bottomHex,
             left,
-            leftCell,
+            leftHex,
             right,
-            rightCell,
+            rightHex,
             hexOuterRadius,
             wrapSize
         );
@@ -1499,11 +1501,11 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void TriangulateCornerTerraces(
         Vector3 begin,
-        Hex beginCell,
+        Hex beginHex,
         Vector3 left,
-        Hex leftCell,
+        Hex leftHex,
         Vector3 right,
-        Hex rightCell,
+        Hex rightHex,
         float hexOuterRadius,
         int wrapSize
     ) {
@@ -1514,9 +1516,9 @@ public class HexMeshChunk : MonoBehaviour {
 
         Vector3 indices;
 
-        indices.x = beginCell.Index;
-        indices.y = leftCell.Index;
-        indices.z = rightCell.Index;
+        indices.x = beginHex.Index;
+        indices.y = leftHex.Index;
+        indices.z = rightHex.Index;
 
         terrain.AddTriangle(
             begin,
@@ -1526,7 +1528,7 @@ public class HexMeshChunk : MonoBehaviour {
             wrapSize
         );
 
-        terrain.AddTriangleCellData(
+        terrain.AddTriangleHexData(
             indices,
             _weights1,
             weight3,
@@ -1553,7 +1555,7 @@ public class HexMeshChunk : MonoBehaviour {
                 wrapSize
             );
             
-            terrain.AddQuadCellData(
+            terrain.AddQuadHexData(
                 indices,
                 weight1,
                 weight2,
@@ -1571,7 +1573,7 @@ public class HexMeshChunk : MonoBehaviour {
             wrapSize
         );
 
-        terrain.AddQuadCellData(
+        terrain.AddQuadHexData(
             indices,
             weight3,
             weight4,
@@ -1582,19 +1584,19 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void TriangulateCornerTerracesCliff(
         Vector3 begin,
-        Hex beginCell,
+        Hex beginHex,
         Vector3 left,
-        Hex leftCell,
+        Hex leftHex,
         Vector3 right,
-        Hex rightCell,
+        Hex rightHex,
         float hexOuterRadius,
         int wrapSize
     ) {
-/* Set boundary distance to 1 elevation level above the bottom-most cell
+/* Set boundary distance to 1 elevation level above the bottom-most hex
 * in the case.
 */
         float boundaryDistance =
-            1f / (rightCell.Elevation - beginCell.Elevation);
+            1f / (rightHex.Elevation - beginHex.Elevation);
 
 /*If boundary distance becomes negative, CCSR and CCSL case will have
 *strange behavior.
@@ -1624,9 +1626,9 @@ public class HexMeshChunk : MonoBehaviour {
 
         Vector3 indices;
 
-        indices.x = beginCell.Index;
-        indices.y = leftCell.Index;
-        indices.z = rightCell.Index;
+        indices.x = beginHex.Index;
+        indices.y = leftHex.Index;
+        indices.z = rightHex.Index;
 
         TriangulateBoundaryTriangle (
             begin,
@@ -1641,7 +1643,7 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
 // Slope-Cliff-Slope. Triangulate a slope.
-        if (leftCell.GetEdgeType(rightCell) == ElevationEdgeTypes.Slope) {
+        if (leftHex.GetEdgeType(rightHex) == ElevationEdgeTypes.Slope) {
             TriangulateBoundaryTriangle (
                 left, 
                 _weights2,
@@ -1676,7 +1678,7 @@ public class HexMeshChunk : MonoBehaviour {
                 boundary
             );
 
-            terrain.AddTriangleCellData(
+            terrain.AddTriangleHexData(
                 indices,
                 _weights2,
                 _weights3,
@@ -1687,19 +1689,19 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void TriangulateCornerCliffTerraces(
         Vector3 begin,
-        Hex beginCell,
+        Hex beginHex,
         Vector3 left,
-        Hex leftCell,
+        Hex leftHex,
         Vector3 right,
-        Hex rightCell,
+        Hex rightHex,
         float hexOuterRadius,
         int wrapSize
     ) {
-/* Set boundary distance to 1 elevation level above the bottom-most cell
+/* Set boundary distance to 1 elevation level above the bottom-most hex
 * in the case.
 */
         float boundaryDistance =
-            1f / (leftCell.Elevation - beginCell.Elevation);
+            1f / (leftHex.Elevation - beginHex.Elevation);
 
 // If boundary distance becomes negative, CCSR and CCSL case will have strange behavior.
         if (boundaryDistance < 0) {
@@ -1731,9 +1733,9 @@ public class HexMeshChunk : MonoBehaviour {
 
         Vector3 indices;
 
-        indices.x = beginCell.Index;
-        indices.y = leftCell.Index;
-        indices.z = rightCell.Index;
+        indices.x = beginHex.Index;
+        indices.y = leftHex.Index;
+        indices.z = rightHex.Index;
 
         TriangulateBoundaryTriangle(
             right, 
@@ -1748,7 +1750,7 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
 // Slope-Cliff-Slope. Triangulate a slope.
-        if (leftCell.GetEdgeType(rightCell) == ElevationEdgeTypes.Slope) {
+        if (leftHex.GetEdgeType(rightHex) == ElevationEdgeTypes.Slope) {
             TriangulateBoundaryTriangle(
                 left, 
                 _weights2,
@@ -1784,7 +1786,7 @@ public class HexMeshChunk : MonoBehaviour {
                 boundary
             );
 
-            terrain.AddTriangleCellData(
+            terrain.AddTriangleHexData(
                 indices, 
                 _weights2, 
                 _weights3, 
@@ -1837,7 +1839,7 @@ public class HexMeshChunk : MonoBehaviour {
             boundary
         );
 
-        terrain.AddTriangleCellData(indices, beginWeights, weight2, boundaryWeights);
+        terrain.AddTriangleHexData(indices, beginWeights, weight2, boundaryWeights);
 
         for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
 
@@ -1861,7 +1863,7 @@ public class HexMeshChunk : MonoBehaviour {
 
             terrain.AddTriangleUnperturbed(vertex1, vertex2, boundary);
 
-            terrain.AddTriangleCellData(
+            terrain.AddTriangleHexData(
                 indices,
                 weight1,
                 weight2,
@@ -1878,7 +1880,7 @@ public class HexMeshChunk : MonoBehaviour {
             ),
             boundary
         );
-        terrain.AddTriangleCellData(indices, weight2, leftWeights, boundaryWeights);
+        terrain.AddTriangleHexData(indices, weight2, leftWeights, boundaryWeights);
     }
 
     private void TriangulateEdgeFan(
@@ -1923,10 +1925,10 @@ public class HexMeshChunk : MonoBehaviour {
         Vector3 indices;
         indices.x = indices.y = indices.z = index;
 
-        terrain.AddTriangleCellData(indices, _weights1);
-        terrain.AddTriangleCellData(indices, _weights1);
-        terrain.AddTriangleCellData(indices, _weights1);
-        terrain.AddTriangleCellData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
     }
 
     private void TriangulateEdgeStrip(
@@ -1980,10 +1982,10 @@ public class HexMeshChunk : MonoBehaviour {
         indices.x = indices.z = index1;
         indices.y = index2;
 
-        terrain.AddQuadCellData(indices, weight1, weight2);
-        terrain.AddQuadCellData(indices, weight1, weight2);
-        terrain.AddQuadCellData(indices, weight1, weight2);
-        terrain.AddQuadCellData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
 
         if (hasRoad) {
             TriangulateRoadSegment(
@@ -2033,7 +2035,7 @@ public class HexMeshChunk : MonoBehaviour {
             rivers.AddQuadUV(0f, 1f, v, v + 0.2f);
         }
 
-        rivers.AddQuadCellData(indices, _weights1, _weights2);
+        rivers.AddQuadHexData(indices, _weights1, _weights2);
     }
 
     private void TriangulateRiverQuad(
@@ -2095,8 +2097,8 @@ public class HexMeshChunk : MonoBehaviour {
         roads.AddQuadUV(0f, 1f, 0f, 0f);
         roads.AddQuadUV(1f, 0f, 0f, 0f);
 
-        roads.AddQuadCellData(indices, weight1, weight2);
-        roads.AddQuadCellData(indices, weight1, weight2);
+        roads.AddQuadHexData(indices, weight1, weight2);
+        roads.AddQuadHexData(indices, weight1, weight2);
     }
 
     private void TriangulateRoadEdge(
@@ -2123,11 +2125,11 @@ public class HexMeshChunk : MonoBehaviour {
 
         Vector3 indices;
         indices.x = indices.y = indices.z = index;
-        roads.AddTriangleCellData(indices, _weights1);
+        roads.AddTriangleHexData(indices, _weights1);
     }
 
     private void TriangulateRoadAdjacentToRiver(
-        Hex cell, 
+        Hex hex, 
         Vector3 center,
         HexEdge neighborEdge,
         RiverDigraph riverGraph,
@@ -2136,58 +2138,58 @@ public class HexMeshChunk : MonoBehaviour {
         float hexOuterRadius,
         int wrapSize
     ) {
-//        bool hasRoadThroughEdge = cell.HasRoadThroughEdge(direction);
+//        bool hasRoadThroughEdge = hex.HasRoadThroughEdge(direction);
         bool hasRoadThroughEdge = roadGraph.HasRoadInDirection(
-            cell,
+            hex,
             neighborEdge.Direction
         );
 
-//          bool previousHasRiver = cell.HasRiverThroughEdge(
+//          bool previousHasRiver = hex.HasRiverThroughEdge(
 //              direction.Previous()
 //          );
         bool previousHasRiver = riverGraph.HasRiverInDirection(
-            cell,
+            hex,
             neighborEdge.Direction.PreviousClockwise()
         );
 
-//        bool nextHasRiver = cell.HasRiverThroughEdge(direction.Next());
+//        bool nextHasRiver = hex.HasRiverThroughEdge(direction.Next());
         bool nextHasRiver = riverGraph.HasIncomingRiverInDirection(
-            cell,
+            hex,
             neighborEdge.Direction.NextClockwise()
         );
 
         Vector2 interpolators = GetRoadInterpolators(
-            cell,
+            hex,
             neighborEdge,
             roadGraph
         );
 
         Vector3 roadCenter = center;
 
-//        if (cell.HasRiverBeginOrEnd) {
-        if (riverGraph.HasRiverStartOrEnd(cell)) {
+//        if (hex.HasRiverBeginOrEnd) {
+        if (riverGraph.HasRiverStartOrEnd(hex)) {
             roadCenter += 
                 HexagonPoint.GetSolidEdgeMiddle(
-//                    cell.RiverBeginOrEndDirection.Opposite(),
-                    riverGraph.RiverStartOrEndDirection(cell).Opposite(),
+//                    hex.RiverBeginOrEndDirection.Opposite(),
+                    riverGraph.RiverStartOrEndDirection(hex).Opposite(),
                     hexOuterRadius
                 ) * 
                 (1f / 3f);
         }
-//        else if(cell.IncomingRiver == cell.OutgoingRiver.Opposite()) {
+//        else if(hex.IncomingRiver == hex.OutgoingRiver.Opposite()) {
         else if (
-            riverGraph.HasStraightRiver(cell)
+            riverGraph.HasStraightRiver(hex)
         ) {
             Vector3 corner;
 
-//  If the previous cell has a river, the corner the center will be moved
+//  If the previous hex has a river, the corner the center will be moved
 //  toward is equal to the current direction + 1.
             if (previousHasRiver) {
                 if (
                     !hasRoadThroughEdge &&
-//                    !cell.HasRoadThroughEdge(direction.Next())
+//                    !hex.HasRoadThroughEdge(direction.Next())
                     !roadGraph.HasRoadInDirection(
-                        cell,
+                        hex,
                         neighborEdge.Direction.NextClockwise()
                     )
                 ) {
@@ -2198,14 +2200,14 @@ public class HexMeshChunk : MonoBehaviour {
                     hexOuterRadius
                 );
             }
-// If the previous cell does not have a river, the corner the center will
+// If the previous hex does not have a river, the corner the center will
 // be moved toward is the same index as the current direction.
             else {
                 if (
                     !hasRoadThroughEdge &&
-//                    !cell.HasRoadThroughEdge(direction.Previous())
+//                    !hex.HasRoadThroughEdge(direction.Previous())
                     !roadGraph.HasRoadInDirection(
-                        cell,
+                        hex,
                         neighborEdge.Direction.PreviousClockwise()
                     )
                 ) {
@@ -2224,17 +2226,17 @@ public class HexMeshChunk : MonoBehaviour {
             roadCenter += corner * 0.5f;
 
             if (
-//                cell.IncomingRiver == direction.Next() && 
-                riverGraph.IncomingRiverDirections(cell)[0] ==
+//                hex.IncomingRiver == direction.Next() && 
+                riverGraph.IncomingRiverDirections(hex)[0] ==
                 neighborEdge.Direction.NextClockwise() &&
-//                cell.HasRoadThroughEdge(direction.Next2()) ||
+//                hex.HasRoadThroughEdge(direction.Next2()) ||
                 roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.NextClockwise2()
                 ) ||
-//                cell.HasRoadThroughEdge(direction.Opposite())
+//                hex.HasRoadThroughEdge(direction.Opposite())
                 roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.Opposite()
                 )
             ) {
@@ -2258,25 +2260,25 @@ public class HexMeshChunk : MonoBehaviour {
 // vector times 0.2f is sufficent to push the road center away from the
 // river.
 
-//        else if (cell.IncomingRiver == cell.OutgoingRiver.Previous()) {
-          else if (riverGraph.HasStraightRiver(cell)) {
+//        else if (hex.IncomingRiver == hex.OutgoingRiver.Previous()) {
+          else if (riverGraph.HasStraightRiver(hex)) {
             roadCenter -= HexagonPoint.GetSecondCorner(
-//                cell.IncomingRiver,
-                riverGraph.IncomingRiverDirections(cell)[0],
+//                hex.IncomingRiver,
+                riverGraph.IncomingRiverDirections(hex)[0],
                 hexOuterRadius
             ) * 0.2f;
         }
-//        else if (cell.IncomingRiver == cell.OutgoingRiver.Next()) {
-        else if (riverGraph.HasClockwiseCornerRiver(cell)) {
+//        else if (hex.IncomingRiver == hex.OutgoingRiver.Next()) {
+        else if (riverGraph.HasClockwiseCornerRiver(hex)) {
             roadCenter -= HexagonPoint.GetFirstCorner(
-//                cell.IncomingRiver,
-                riverGraph.IncomingRiverDirections(cell)[0],
+//                hex.IncomingRiver,
+                riverGraph.IncomingRiverDirections(hex)[0],
                 hexOuterRadius
             ) * 0.2f;
         }
 
 // If there is a river on the previous and next edges, the river has a
-// slight bend. Need to pull the road center toward the current cell edge,
+// slight bend. Need to pull the road center toward the current hex edge,
 // which will shorten the road back away from the river.
 
         else if(previousHasRiver && nextHasRiver) { 
@@ -2298,7 +2300,7 @@ public class HexMeshChunk : MonoBehaviour {
             center += offset * 0.5f;
         }
 
-// The only remaining case is that the cell lies on the outside of a
+// The only remaining case is that the hex lies on the outside of a
 // curving river. In this case, there are three edges pointing away from
 // the river. The middle edge of these three edges must be obtained.
 // Then, the center of the road is pushed toward the middle of this edge.
@@ -2317,23 +2319,23 @@ public class HexMeshChunk : MonoBehaviour {
                 middle = neighborEdge.Direction;
             }
 
-// If there is no road through any of the cells on the outer side of the
+// If there is no road through any of the hexes on the outer side of the
 // river bend, then the road center need not move and should instead be
 // pruned.
             if (
-//                !cell.HasRoadThroughEdge(middle) &&
+//                !hex.HasRoadThroughEdge(middle) &&
                 !roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     middle
                 ) &&   
-//                !cell.HasRoadThroughEdge(middle.Previous()) &&
+//                !hex.HasRoadThroughEdge(middle.Previous()) &&
                 !roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     middle.PreviousClockwise()
                 ) &&
-//                !cell.HasRoadThroughEdge(middle.Next())
+//                !hex.HasRoadThroughEdge(middle.Next())
                 !roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     middle.NextClockwise()
                 )
             ) {
@@ -2345,9 +2347,9 @@ public class HexMeshChunk : MonoBehaviour {
 
             if (
                 neighborEdge.Direction == middle &&
-//                cell.HasRoadThroughEdge(direction.Opposite())
+//                hex.HasRoadThroughEdge(direction.Opposite())
                 roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.Opposite()
                 )
             ) {
@@ -2371,7 +2373,7 @@ public class HexMeshChunk : MonoBehaviour {
             middleRight,
             edgeVertices,
             hasRoadThroughEdge,
-            cell.Index,
+            hex.Index,
             hexOuterRadius,
             wrapSize
         );
@@ -2381,7 +2383,7 @@ public class HexMeshChunk : MonoBehaviour {
                 roadCenter,
                 center,
                 middleLeft,
-                cell.Index,
+                hex.Index,
                 hexOuterRadius,
                 wrapSize
             );
@@ -2392,7 +2394,7 @@ public class HexMeshChunk : MonoBehaviour {
                 roadCenter,
                 middleRight,
                 center,
-                cell.Index,
+                hex.Index,
                 hexOuterRadius,
                 wrapSize
             );
@@ -2404,7 +2406,7 @@ public class HexMeshChunk : MonoBehaviour {
         Vector3 middleLeft, 
         Vector3 middleRight, 
         EdgeVertices edge,
-        bool hasRoadThroughCellEdge,
+        bool hasRoadThroughHexEdge,
         float index,
         float hexOuterRadius,
         int wrapSize
@@ -2412,7 +2414,7 @@ public class HexMeshChunk : MonoBehaviour {
         Vector3 indices;
         indices.x = indices.y = indices.z = index;
 
-        if (hasRoadThroughCellEdge) {
+        if (hasRoadThroughHexEdge) {
             Vector3 middleCenter = Vector3.Lerp(middleLeft, middleRight, 0.5f);
 
             TriangulateRoadSegment(
@@ -2457,8 +2459,8 @@ public class HexMeshChunk : MonoBehaviour {
                 new Vector2(0f, 0f)
             );
 
-            roads.AddTriangleCellData(indices, _weights1);
-            roads.AddTriangleCellData(indices, _weights1);
+            roads.AddTriangleHexData(indices, _weights1);
+            roads.AddTriangleHexData(indices, _weights1);
         }
         else {
             TriangulateRoadEdge(
@@ -2474,16 +2476,16 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private Vector2 GetRoadInterpolators(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         RoadUndirectedGraph roadGraph
     ) {
         Vector2 interpolators;
 
-//        if (cell.HasRoadThroughEdge(direction)) {
+//        if (hex.HasRoadThroughEdge(direction)) {
         if (
             roadGraph.HasRoadInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             )
         ) {
@@ -2491,19 +2493,19 @@ public class HexMeshChunk : MonoBehaviour {
         }
         else {
             interpolators.x =
-//              cell.HasRoadThroughEdge(direction.Previous()) ?
+//              hex.HasRoadThroughEdge(direction.Previous()) ?
 //                  0.5f : 0.25f;
                 roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.PreviousClockwise()
                 ) ?
                 0.5f : 0.25f;
             
             interpolators.y =
-//              cell.HasRoadThroughEdge(direction.Next()) ?
+//              hex.HasRoadThroughEdge(direction.Next()) ?
 //                  0.5f : 0.25f;
                 roadGraph.HasRoadInDirection(
-                    cell,
+                    hex,
                     neighborEdge.Direction.NextClockwise()
                 ) ?
                 0.5f : 0.25f;
@@ -2513,7 +2515,7 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateWater(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
@@ -2521,14 +2523,14 @@ public class HexMeshChunk : MonoBehaviour {
         float hexOuterRadius,
         int wrapSize
     ) {
-        center.y = cell.WaterSurfaceY;
+        center.y = hex.WaterSurfaceY;
 
         if (
             neighborEdge.Target != null &&
             !neighborEdge.Target.IsUnderwater
         ) {
             TriangulateWaterShore(
-                cell,
+                hex,
                 neighborEdge,
                 neighborGraph,
                 riverGraph,
@@ -2539,7 +2541,7 @@ public class HexMeshChunk : MonoBehaviour {
         }
         else {
             TriangulateOpenWater(
-                cell,
+                hex,
                 neighborEdge,
                 neighborGraph,
                 riverGraph,
@@ -2551,7 +2553,7 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateOpenWater(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
@@ -2582,8 +2584,8 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
         Vector3 indices;
-        indices.x = indices.y = indices.z = cell.Index;
-        water.AddTriangleCellData(indices, _weights1);
+        indices.x = indices.y = indices.z = hex.Index;
+        water.AddTriangleHexData(indices, _weights1);
 
         if (
             neighborEdge.Direction <= HexDirections.Southeast && 
@@ -2607,13 +2609,13 @@ public class HexMeshChunk : MonoBehaviour {
             );
             
             indices.y = neighborEdge.Target.Index;
-            water.AddQuadCellData(indices, _weights1, _weights2);
+            water.AddQuadHexData(indices, _weights1, _weights2);
 
             if (neighborEdge.Direction <= HexDirections.East) {
                 Hex nextNeighbor =
-//                    cell.GetNeighbor(direction.NextClockwise());
+//                    hex.GetNeighbor(direction.NextClockwise());
                     neighborGraph.TryGetNeighborInDirection(
-                        cell,
+                        hex,
                         neighborEdge.Direction.NextClockwise()
                     );
 
@@ -2634,7 +2636,7 @@ public class HexMeshChunk : MonoBehaviour {
 
                 indices.z = nextNeighbor.Index;
 
-                water.AddTriangleCellData(
+                water.AddTriangleHexData(
                     indices, _weights1, _weights2, _weights3
                 );
             }
@@ -2642,7 +2644,7 @@ public class HexMeshChunk : MonoBehaviour {
     }
 
     private void TriangulateWaterShore(
-        Hex cell,
+        Hex hex,
         HexEdge neighborEdge,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
@@ -2694,29 +2696,29 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
         Vector3 indices = new Vector3();
-        indices.x = indices.y = cell.Index;
+        indices.x = indices.y = hex.Index;
         indices.y = neighborEdge.Target.Index;
 
-        water.AddTriangleCellData(indices, _weights1);
-        water.AddTriangleCellData(indices, _weights1);
-        water.AddTriangleCellData(indices, _weights1);
-        water.AddTriangleCellData(indices, _weights1);
+        water.AddTriangleHexData(indices, _weights1);
+        water.AddTriangleHexData(indices, _weights1);
+        water.AddTriangleHexData(indices, _weights1);
+        water.AddTriangleHexData(indices, _weights1);
 
 // Work backward from the solid shore to obtain the edge.
         Vector3 center2 = neighborEdge.Target.Position;
 
-        float cellInnerRadius =
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius);
-        float cellInnerDiameter = cellInnerRadius * 2f;
+        float hexInnerRadius =
+            HexagonPoint.OuterToInnerRadius(hexOuterRadius);
+        float hexInnerDiameter = hexInnerRadius * 2f;
 
 // If the neighbor outside the wrap boundaries, adjust accordingly.
-        if (neighborEdge.Target.ColumnIndex < cell.ColumnIndex - 1) {
+        if (neighborEdge.Target.ColumnIndex < hex.ColumnIndex - 1) {
             center2.x += 
-                wrapSize * cellInnerDiameter;
+                wrapSize * hexInnerDiameter;
         }
-        else if (neighborEdge.Target.ColumnIndex > cell.ColumnIndex + 1) {
+        else if (neighborEdge.Target.ColumnIndex > hex.ColumnIndex + 1) {
             center2.x -=
-                wrapSize * cellInnerDiameter;
+                wrapSize * hexInnerDiameter;
         }
 
         center2.y = center.y;
@@ -2733,20 +2735,20 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
         if (
-//          cell.HasRiverThroughEdge(direction)
+//          hex.HasRiverThroughEdge(direction)
             riverGraph.HasRiverInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction
             )
         ) {
             TriangulateEstuary(
                 edge1,
                 edge2,
-//                (cell.HasIncomingRiver &&
-//                cell.IncomingRiver == direction),
+//                (hex.HasIncomingRiver &&
+//                hex.IncomingRiver == direction),
                 (
-                    riverGraph.HasIncomingRiver(cell) &&
-                    riverGraph.IncomingRiverDirections(cell)[0] ==
+                    riverGraph.HasIncomingRiver(hex) &&
+                    riverGraph.IncomingRiverDirections(hex)[0] ==
                     neighborEdge.Direction
                 ),
                 indices,
@@ -2797,27 +2799,27 @@ public class HexMeshChunk : MonoBehaviour {
             waterShore.AddQuadUV(0f, 0f, 0f, 1f);
             waterShore.AddQuadUV(0f, 0f, 0f, 1f);
 
-            waterShore.AddQuadCellData(indices, _weights1, _weights2);
-            waterShore.AddQuadCellData(indices, _weights1, _weights2);
-            waterShore.AddQuadCellData(indices, _weights1, _weights2);
-            waterShore.AddQuadCellData(indices, _weights1, _weights2);
+            waterShore.AddQuadHexData(indices, _weights1, _weights2);
+            waterShore.AddQuadHexData(indices, _weights1, _weights2);
+            waterShore.AddQuadHexData(indices, _weights1, _weights2);
+            waterShore.AddQuadHexData(indices, _weights1, _weights2);
         }
         
         Hex nextNeighbor =
-//            cell.GetNeighbor(direction.NextClockwise());
+//            hex.GetNeighbor(direction.NextClockwise());
             neighborGraph.TryGetNeighborInDirection(
-                cell,
+                hex,
                 neighborEdge.Direction.NextClockwise()
             );
 
         if (nextNeighbor != null) {
             Vector3 center3 = nextNeighbor.Position;
 
-            if (nextNeighbor.ColumnIndex < cell.ColumnIndex - 1) {
-                center3.x += wrapSize * cellInnerDiameter;
+            if (nextNeighbor.ColumnIndex < hex.ColumnIndex - 1) {
+                center3.x += wrapSize * hexInnerDiameter;
             }
-            else if (nextNeighbor.ColumnIndex > cell.ColumnIndex + 1) {
-                center3.x -= wrapSize * cellInnerDiameter;
+            else if (nextNeighbor.ColumnIndex > hex.ColumnIndex + 1) {
+                center3.x -= wrapSize * hexInnerDiameter;
             }
 
 // Work backward from the shore to obtain the triangle if the neighbor is
@@ -2848,7 +2850,7 @@ public class HexMeshChunk : MonoBehaviour {
 
             indices.z = nextNeighbor.Index;
 
-            waterShore.AddTriangleCellData (
+            waterShore.AddTriangleHexData (
                 indices, _weights1, _weights2, _weights3
             );
 
@@ -2898,14 +2900,14 @@ public class HexMeshChunk : MonoBehaviour {
             new Vector2(0f, 0f)
         );
 
-        waterShore.AddTriangleCellData(
+        waterShore.AddTriangleHexData(
             indices, 
             _weights2, 
             _weights1, 
             _weights1
         );
 
-        waterShore.AddTriangleCellData(
+        waterShore.AddTriangleHexData(
             indices,
             _weights2,
             _weights1,
@@ -2946,12 +2948,12 @@ public class HexMeshChunk : MonoBehaviour {
             new Vector2(0f, 0f)
         );
 
-        estuaries.AddQuadCellData(
+        estuaries.AddQuadHexData(
             indices, _weights2, _weights1, _weights2, _weights1
         );
 
-        estuaries.AddTriangleCellData(indices, _weights1, _weights2, _weights2);
-        estuaries.AddQuadCellData(indices, _weights1, _weights2);
+        estuaries.AddTriangleHexData(indices, _weights1, _weights2, _weights2);
+        estuaries.AddQuadHexData(indices, _weights1, _weights2);
 
         estuaries.AddTriangleUV(
             new Vector2(0f, 0f),
@@ -3063,7 +3065,7 @@ public class HexMeshChunk : MonoBehaviour {
         );
 
         rivers.AddQuadUV(0f, 1f, 0.8f, 1f);
-        rivers.AddQuadCellData(indices, _weights1, _weights2);
+        rivers.AddQuadHexData(indices, _weights1, _weights2);
     }
 
 // STRUCTS ~~~~~~~~~~

@@ -261,7 +261,7 @@ public class HexUnit : MonoBehaviour
 // ~~ private
     private IEnumerator TravelPath(float hexOuterRadius, HexMap hexMap) {
         float innerDiameter = 
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
+            HexagonPoint.OuterToInnerRadius(hexOuterRadius) * 2f;
         Vector3 pointA, pointB, pointC = _pathToTravel[0].Position;
         
         yield return LookAt(
@@ -403,7 +403,7 @@ public class HexUnit : MonoBehaviour
         HexMap hexMap
     ) {
         
-        float innerRadius = HexagonPoint.GetOuterToInnerRadius(hexOuterRadius);
+        float innerRadius = HexagonPoint.OuterToInnerRadius(hexOuterRadius);
         float innerDiameter = innerRadius * 2f;
 
         if (hexMap.IsWrapping) {

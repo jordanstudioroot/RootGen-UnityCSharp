@@ -32,9 +32,9 @@
 			void vert(inout appdata_full v, out Input data) {
 				UNITY_INITIALIZE_OUTPUT(Input, data);
 
-				float4 hex0 = GetCellData(v, 0);
-				float4 hex1 = GetCellData(v, 1);
-				float4 hex2 = GetCellData(v, 2);
+				float4 hex0 = GetHexData(v, 0);
+				float4 hex1 = GetHexData(v, 1);
+				float4 hex2 = GetHexData(v, 2);
 
 				data.visibility.x =
 					hex0.x * v.color.x + hex1.x * v.color.y + hex2.x * v.color.z;

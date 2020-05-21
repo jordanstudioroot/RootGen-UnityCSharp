@@ -246,11 +246,11 @@ public class HexGridCamera : MonoBehaviour
 
             resultMono.transform.SetParent(grid.transform, false);
 
-            if (grid.Center) {
+            if (grid.GridCenter) {
                 resultMono.SetPosition(
                     grid,
-                    grid.Center.transform.position.x,
-                    grid.Center.transform.position.z,
+                    grid.GridCenter.transform.position.x,
+                    grid.GridCenter.transform.position.z,
                     hexOuterRadius
                 );
             }
@@ -416,7 +416,7 @@ public class HexGridCamera : MonoBehaviour
     ) {
 // Get inner diameter of a given hex.
         float innerDiameter = 
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
+            HexagonPoint.OuterToInnerRadius(hexOuterRadius) * 2f;
 
         float xMax =
             (grid.HexOffsetColumns - 0.5f) * innerDiameter;
@@ -432,29 +432,29 @@ public class HexGridCamera : MonoBehaviour
     }
 
     private Vector3 WrapPosition(
-        HexMap grid,
+        HexMap hexMap,
         Vector3 position,
         float hexOuterRadius
     ) {
         float innerDiameter = 
-            HexagonPoint.GetOuterToInnerRadius(hexOuterRadius) * 2f;
+            HexagonPoint.InnerDiameterFromOuterRadius(hexOuterRadius);
 
-        float width = grid.HexOffsetRows * innerDiameter;
+        float thresholdWidth = hexMap.HexOffsetColumns * innerDiameter;
 
         while (position.x < 0f) {
-            position.x += width;
+            position.x += thresholdWidth;
         }
 
-        while (position.x > width) {
-            position.x -= width;
+        while (position.x > thresholdWidth) {
+            position.x -= thresholdWidth;
         }
 
-        float zMax =
-            (grid.HexOffsetColumns - 1) * (1.5f * hexOuterRadius);
+        float thresholdHeight =
+            (hexMap.HexOffsetRows) * (1.5f * hexOuterRadius);
 
-        position.z = Mathf.Clamp(position.z, 0f, zMax);
+        position.z = Mathf.Clamp(position.z, 0f, thresholdHeight);
 
-        // grid.CenterMap(position.x, hexOuterRadius);
+        hexMap.CenterMap(position.x, hexOuterRadius);
         return position;
     }
 

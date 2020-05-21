@@ -288,7 +288,7 @@ public struct CubeVector {
         int wrapSize
     ) {
         float innerDiameter =
-            HexagonPoint.GetOuterToInnerRadius(outerRadius) * 2f;
+            HexagonPoint.OuterToInnerRadius(outerRadius) * 2f;
             
         // Divide X by the horizontal width of a hexagon.
         float x = position.x / innerDiameter;

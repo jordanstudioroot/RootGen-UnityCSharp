@@ -41,8 +41,8 @@ public class RootGenExampleApp : MonoBehaviour {
     private void GenerateDefaultMap(RootGen rootGen) {
         rootGen.GenerateEmptyMap(
             new Vector2(
-                MeshConstants.ChunkXMax * 5,
-                MeshConstants.ChunkZMax * 4
+                MeshConstants.ChunkSizeX * 5,
+                MeshConstants.ChunkSizeZ * 4
             ),
             0,
             MeshConstants.DefaulthexOuterRadius,

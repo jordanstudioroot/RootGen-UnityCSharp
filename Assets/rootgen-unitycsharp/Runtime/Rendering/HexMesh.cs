@@ -12,9 +12,9 @@ public class HexMesh : MonoBehaviour {
     public bool useCollider;
 
 /// <summary>
-/// Boolean value representing whether the cellData is used in rendering.
+/// Boolean value representing whether the hexData is used in rendering.
 /// </summary>
-    public bool useCellData;
+    public bool useHexData;
 
 /// <summary>
 /// Boolean value representing whether the UV coordinates are used in rendering.
@@ -43,14 +43,14 @@ public class HexMesh : MonoBehaviour {
     [NonSerialized] private List<int> _triangles;
 
 /// <summary>
-/// A list of Color values used as weights to blend the mesh data between cells. 
+/// A list of Color values used as weights to blend the mesh data between hexes. 
 /// </summary>
-    [NonSerialized] private List<Color> _cellWeights;
+    [NonSerialized] private List<Color> _hexWeights;
     
 /// <summary>
-///     A list of Vector3s used to map the cell positions to the UV map.
+///     A list of Vector3s used to map the hex positions to the UV map.
 /// </summary>
-    [NonSerialized] private List<Vector3> _cellIndices;
+    [NonSerialized] private List<Vector3> _hexIndices;
 
     private UnityEngine.Mesh _hexMesh;
     private MeshCollider meshCollider;
@@ -65,7 +65,7 @@ public class HexMesh : MonoBehaviour {
     public static HexMesh GetMesh(
         Material material,
         bool useCollider, 
-        bool useCellData, 
+        bool useHexData, 
         bool useUVCoordinates, 
         bool useUV2Coordinates
     ) {
@@ -77,7 +77,7 @@ public class HexMesh : MonoBehaviour {
         if (useCollider)
             resultMono.meshCollider = resultObj.AddComponent<MeshCollider>();
 
-        resultMono.useCellData = useCellData;
+        resultMono.useHexData = useHexData;
         resultMono.useUVCoordinates = useUVCoordinates;
         resultMono.useUV2Coordinates = useUV2Coordinates;
 
@@ -209,62 +209,62 @@ public class HexMesh : MonoBehaviour {
     }
 
 /// <summary>
-///     Add cell data to the mesh corresponding to a particular set of cell indicies
+///     Add hex data to the mesh corresponding to a particular set of hex indicies
 ///     represented as a collection by a Vector3.
 /// </summary>
 /// <param name="indices">
-///     A Vector3 representing a collection of cell indices corresponding to the triangle.
+///     A Vector3 representing a collection of hex indices corresponding to the triangle.
 /// </param>
 /// <param name="weights1">
 ///     The weight of the first
 /// </param>
 /// <param name="weights2"></param>
 /// <param name="weights3"></param>
-    public void AddTriangleCellData(
+    public void AddTriangleHexData(
         Vector3 indices, 
         Color weights1, 
         Color weights2, 
         Color weights3
     ) {
-        _cellIndices.Add(indices);
-        _cellIndices.Add(indices);
-        _cellIndices.Add(indices);
-        _cellWeights.Add(weights1);
-        _cellWeights.Add(weights2);
-        _cellWeights.Add(weights3);
+        _hexIndices.Add(indices);
+        _hexIndices.Add(indices);
+        _hexIndices.Add(indices);
+        _hexWeights.Add(weights1);
+        _hexWeights.Add(weights2);
+        _hexWeights.Add(weights3);
     }
 
-    public void AddTriangleCellData(Vector3 indices, Color weights) {
-        AddTriangleCellData(indices, weights, weights, weights);
+    public void AddTriangleHexData(Vector3 indices, Color weights) {
+        AddTriangleHexData(indices, weights, weights, weights);
     }
 
-    public void AddQuadCellData(
+    public void AddQuadHexData(
         Vector3 indices,
         Color weights1, 
         Color weights2, 
         Color weights3, 
         Color weights4
     ) {
-        _cellIndices.Add(indices);
-        _cellIndices.Add(indices);
-        _cellIndices.Add(indices);
-        _cellIndices.Add(indices);
-        _cellWeights.Add(weights1);
-        _cellWeights.Add(weights2);
-        _cellWeights.Add(weights3);
-        _cellWeights.Add(weights4);
+        _hexIndices.Add(indices);
+        _hexIndices.Add(indices);
+        _hexIndices.Add(indices);
+        _hexIndices.Add(indices);
+        _hexWeights.Add(weights1);
+        _hexWeights.Add(weights2);
+        _hexWeights.Add(weights3);
+        _hexWeights.Add(weights4);
     }
 
-    public void AddQuadCellData(
+    public void AddQuadHexData(
         Vector3 indices, 
         Color weights1, 
         Color weights2
     ) {
-        AddQuadCellData(indices, weights1, weights1, weights2, weights2);
+        AddQuadHexData(indices, weights1, weights1, weights2, weights2);
     }
 
-    public void AddQuadCellData(Vector3 indices, Color weights) {
-        AddQuadCellData(indices, weights, weights, weights, weights);
+    public void AddQuadHexData(Vector3 indices, Color weights) {
+        AddQuadHexData(indices, weights, weights, weights, weights);
     }
 
     public void AddTriangleUV(Vector2 uv1, Vector2 uv2, Vector3 uv3) {
@@ -311,9 +311,9 @@ public class HexMesh : MonoBehaviour {
         _hexMesh.Clear();
         _vertices = ListPool<Vector3>.Get();
 
-        if (useCellData) {
-            _cellWeights = ListPool<Color>.Get();
-            _cellIndices = ListPool<Vector3>.Get();
+        if (useHexData) {
+            _hexWeights = ListPool<Color>.Get();
+            _hexIndices = ListPool<Vector3>.Get();
         }
 
         if (useUVCoordinates) {
@@ -331,11 +331,11 @@ public class HexMesh : MonoBehaviour {
         _hexMesh.SetVertices(_vertices);
         ListPool<Vector3>.Add(_vertices);
 
-        if (useCellData) {
-            _hexMesh.SetColors(_cellWeights);
-            ListPool<Color>.Add(_cellWeights);
-            _hexMesh.SetUVs(2, _cellIndices);
-            ListPool<Vector3>.Add(_cellIndices);
+        if (useHexData) {
+            _hexMesh.SetColors(_hexWeights);
+            ListPool<Color>.Add(_hexWeights);
+            _hexMesh.SetUVs(2, _hexIndices);
+            ListPool<Vector3>.Add(_hexIndices);
         }
 
         if (useUVCoordinates) {

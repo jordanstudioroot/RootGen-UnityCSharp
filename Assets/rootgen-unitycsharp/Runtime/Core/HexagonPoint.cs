@@ -185,7 +185,7 @@ public static class HexagonPoint {
         int wrapSize
     ) {
         float innerDiameter =
-            GetOuterToInnerRadius(outerRadius) * 2f;
+            OuterToInnerRadius(outerRadius) * 2f;
 
 // Texture is small, so will need to interpolate extra texels to avoid distortion.
         Vector4 sample = noiseSource.GetPixelBilinear (
@@ -299,11 +299,21 @@ public static class HexagonPoint {
         return offset.normalized * (wallThickness * 0.5f);
     }
 
-    public static float GetOuterToInnerRadius(float outerRadius) {
+    public static float OuterToInnerRadius(float outerRadius) {
         return HexagonConstants.OUTER_TO_INNER_RATIO * outerRadius;
     }
 
-    public static float GetInnerToOuterRadius(float innerRadius) {
+    public static float InnerToOuterRadius(float innerRadius) {
         return HexagonConstants.INNER_TO_OUTER_RATIO * innerRadius;
+    }
+
+    public static float InnerDiameterFromOuterRadius(
+        float outerRadius
+    ) {
+        return OuterToInnerRadius(outerRadius) * 2f;
+    }
+
+    public static float OuterDiameterFromInnerRadius(float innerRadius) {
+        return InnerToOuterRadius(innerRadius) * 2f;
     }
 }
