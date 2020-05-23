@@ -4,6 +4,10 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class Hex : MonoBehaviour, IHexPoint {
+    
+    [SerializeField]
+    public TerrainTypes terrainType;
+
     private static int MaxFeatureLevel {
         get {
             return 3;
@@ -68,34 +72,34 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
 
-    public CubeVector Coordinates { get; set; }
+    public CubeVector Coordinates { get; private set; }
 
     private Mesh GetInteractionMesh(float radius) {
         Mesh result = new Mesh();
-        List<Vector3> verts = new List<Vector3>();
-        List<int> tris = new List<int>();
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
         Vector3 center = this.transform.position;
         Vector3 offset = (Vector3.up * .2f);
 
         for (int i = 0; i < 6; i++) {
             int index = i * 3;
-            verts.Add(center + offset);
-            verts.Add(HexagonPoint.GetCorner(i, radius) + offset);
-            verts.Add(HexagonPoint.GetCorner(i + 1, radius) + offset);
+            vertices.Add(center + offset);
+            vertices.Add(HexagonPoint.GetCorner(i, radius) + offset);
+            vertices.Add(HexagonPoint.GetCorner(i + 1, radius) + offset);
 
-            tris.Add(index);
-            tris.Add(index + 1);
-            tris.Add(index + 2);
+            triangles.Add(index);
+            triangles.Add(index + 1);
+            triangles.Add(index + 2);
         }
         
         result.Clear();
-        result.vertices = verts.ToArray();
-        result.triangles = tris.ToArray();
+        result.vertices = vertices.ToArray();
+        result.triangles = triangles.ToArray();
 
         return result;
     }
 
-    public void SetEnabledInteractionMesh(bool enabled, float outerRadius) {
+    public void InteractionMeshEnabled(bool enabled, float outerRadius) {
         MeshCollider colldier;
         if (colldier = this.GetComponent<MeshCollider>()) {
             if (enabled) {
@@ -115,7 +119,7 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
 
-    public int Elevation { get; set; }
+    public int Elevation { get; private set; }
 
     public void SetElevation(
         int elevation,
@@ -140,7 +144,6 @@ public class Hex : MonoBehaviour, IHexPoint {
         );
     }
 
-    public int TerrainTypeIndex { get; set; }
     public bool HasWalls { get; set; }
     public int WaterLevel { get; set; }
     public int UrbanLevel { get; set; }
@@ -176,9 +179,20 @@ public class Hex : MonoBehaviour, IHexPoint {
 // ~ Static
 
 // ~~ public
-    public static Hex Instantiate() {
+    public static Hex Instantiate(
+        int offsetX,
+        int offsetZ,
+        int wrapSize
+    ) {
         GameObject resultObj = new GameObject("Hex");
         Hex resultMono = resultObj.AddComponent<Hex>();
+
+        resultMono.Coordinates = CubeVector.FromOffsetCoordinates(
+            offsetX,
+            offsetZ,
+            wrapSize
+        );
+
         return resultMono;
     }
 

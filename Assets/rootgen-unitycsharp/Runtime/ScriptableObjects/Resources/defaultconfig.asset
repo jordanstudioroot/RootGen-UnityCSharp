@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce2e8e7003601f44faf50f5baf0608df, type: 3}
   m_Name: defaultconfig
   m_EditorClassIdentifier: 
-  width: 5
-  height: 5
+  width: 30
+  height: 25
   wrapping: 1
   useFixedSeed: 1
   seed: 1469630778
-  cellSize: 10
+  hexSize: 10
   jitterProbability: 0.25
   minimumRegionDensity: 30
   maximumRegionDensity: 100
@@ -30,7 +30,7 @@ MonoBehaviour:
   mapBorderX: 5
   mapBorderZ: 5
   regionBorder: 5
-  numRegions: 20
+  numRegions: 1
   erosionPercentage: 50
   evaporationFactor: 0.5
   precipitationFactor: 0.25

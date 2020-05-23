@@ -54,7 +54,7 @@ public class HexShaderData : MonoBehaviour
 
     public void RefreshTerrain(Hex hex)
     {
-        _hexTextureData[hex.Index].a = (byte)hex.TerrainTypeIndex;
+        _hexTextureData[hex.Index].a = (byte)hex.terrainType;
         enabled = true;
     }
 

@@ -201,11 +201,6 @@ public class HexUnit : MonoBehaviour
         Destroy(gameObject);
     }
 
-    public void Save(BinaryWriter writer) {
-        _location.Coordinates.Save(writer);
-        writer.Write(_orientation);
-    }
-
     public bool IsValidDestination(Hex hex) {
         return hex.IsExplored && !hex.IsUnderwater && !hex.Unit;
     }

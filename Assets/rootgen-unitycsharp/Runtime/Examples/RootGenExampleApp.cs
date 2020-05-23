@@ -7,6 +7,8 @@ public class RootGenExampleApp : MonoBehaviour {
     public RootGenConfig config;
     private RootGen _rootGen;
 
+    private HexMap _hexMap;
+
     void Awake() {
         _rootGen = new RootGen();
     }
@@ -18,10 +20,12 @@ public class RootGenExampleApp : MonoBehaviour {
     // Start is called before the first frame update
     void Start() {
         if (config) {
-            _rootGen.GenerateMap(config, true);
+            _hexMap = _rootGen.GenerateMap(config, true);
+            _hexMap.Draw(config.hexSize);
         }
         else {
-            GenerateDefaultMap(_rootGen);
+            _hexMap = GenerateDefaultMap(_rootGen);
+            _hexMap.Draw(HexMeshConstants.DEFAULT_HEX_OUTER_RADIUS);
         }
     }
 
@@ -30,22 +34,26 @@ public class RootGenExampleApp : MonoBehaviour {
     {
         if (Input.GetKeyUp(KeyCode.R)) {
             if (config) {
-                _rootGen.GenerateMap(config, true);
+                _hexMap = _rootGen.GenerateMap(config, true);
+                _hexMap.Draw(config.hexSize);
             }
             else {
-                GenerateDefaultMap(_rootGen);
+                _hexMap = GenerateDefaultMap(_rootGen);
+                _hexMap.Draw(
+                    HexMeshConstants.DEFAULT_HEX_OUTER_RADIUS
+                );
             }
         }
     }
 
-    private void GenerateDefaultMap(RootGen rootGen) {
-        rootGen.GenerateEmptyMap(
+    private HexMap GenerateDefaultMap(RootGen rootGen) {
+        return rootGen.GenerateEmptyMap(
             new Vector2(
-                MeshConstants.ChunkSizeX * 5,
-                MeshConstants.ChunkSizeZ * 4
+                HexMeshConstants.CHUNK_SIZE_X * 5,
+                HexMeshConstants.CHUNK_SIZE_Z * 4
             ),
             0,
-            MeshConstants.DefaulthexOuterRadius,
+            HexMeshConstants.DEFAULT_HEX_OUTER_RADIUS,
             true,
             true
         );

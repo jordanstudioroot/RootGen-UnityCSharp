@@ -1,16 +1,18 @@
 using UnityEngine;
 
-public static class Vector2Extensions {
-
 /// <summary>
-///     Returns a boolean value representing whether this Vector2 is a factor
-///     of the provided Vector2. 
+/// Extensions for the Unity Vector2 class.
+/// </summary>
+public static class Vector2Extensions {
+/// <summary>
+/// Returns a boolean value representing whether this Vector2 is a
+/// factor of the provided Vector2. 
 /// </summary>
 /// <param name="subject">
-///     This Vector2.    
+/// This Vector2.    
 /// </param>
 /// <param name="target">
-///     The Vector2 providing the dimensions representing the factor.
+/// The Vector2 providing the dimensions representing the factor.
 /// </param>
 /// <returns></returns>
     public static bool IsFactorOf(
@@ -30,13 +32,14 @@ public static class Vector2Extensions {
     }
 
 /// <summary>
-///     Returns a new Vector2 clamped to a factor of the provided Vector2.
+/// Returns a new Vector2 clamped to a factor of the provided
+/// Vector2.
 /// </summary>
 /// <param name="subject">
-///     This Vector2.
+/// This Vector2.
 /// </param>
 /// <param name="target">
-///     The Vector2 providing the dimensions representing the factor.
+/// The Vector2 providing the dimensions representing the factor.
 /// </param>
 /// <returns></returns>
     public static Vector2 ClampToFactorOf(

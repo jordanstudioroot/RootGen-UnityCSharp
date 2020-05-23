@@ -24,13 +24,13 @@ public class FeatureContainer : MonoBehaviour
 
     public Transform[] special;
 
-    public HexMesh walls;
+    public HexMeshFacade walls;
     public Transform wallTower;
     public Transform bridge;    
 
     private Transform _container;
 
-    public static FeatureContainer GetFeatureContainer(HexMesh walls) {
+    public static FeatureContainer GetFeatureContainer(HexMeshFacade walls) {
         GameObject resultObj = new GameObject("Feature Container");
         FeatureContainer resultMono = resultObj.AddComponent<FeatureContainer>();
         resultMono.urbanCollections = new FeatureCollection[3];
@@ -122,7 +122,7 @@ public class FeatureContainer : MonoBehaviour
     }
 
     public void Apply() {
-        walls.Apply();
+        walls.Draw();
     }
 
     public void AddFeature(

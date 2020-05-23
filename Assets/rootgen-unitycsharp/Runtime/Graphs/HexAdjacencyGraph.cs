@@ -1,9 +1,6 @@
-#region Using
-
 using System.Collections.Generic;
 using QuikGraph;
-
-#endregion
+using UnityEngine;
 
 public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     #region ConstantFields
@@ -267,7 +264,7 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
                 HexEdge newEdge = new HexEdge(
                     current,
                     neighbor,
-                    CubeVector.HexDirection(
+                    CubeVector.HexDirectionWrapping(
                         current.Coordinates,
                         neighbor.Coordinates,
                         hexGrid.WrapSize
@@ -305,12 +302,12 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
             System.Enum.GetValues(typeof(HexDirections)).Length;
 
         for (
-            HexDirections i = 0; (int)i < numDirections; i = i.NextClockwise()
+            int i = 0; i < numDirections; i++
         ) {
             HexEdge found;
-
-            if (!TryGetEdgeInDirection(hex, i, out found)) {
-                result.Add(i);
+            HexDirections current = (HexDirections)i;
+            if (!TryGetEdgeInDirection(hex, current, out found)) {
+                result.Add(current);
             }
         }
 

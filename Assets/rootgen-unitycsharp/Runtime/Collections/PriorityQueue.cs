@@ -5,14 +5,14 @@
 *   with the same priority and put it in this class.
 */
 public class PriorityQueue<T> {
-    private List<T> _list = new List<T>();
     private int _highestPriority = int.MaxValue;
     private int _clearThreshold;
-    private Dictionary<int, Queue<T>> _priorityQueue = new Dictionary<int, Queue<T>>();
-    public int Count { get { return _priorityQueue.Count; } }
-
-    public PriorityQueue(int clearThreshold = 10) {
-        _clearThreshold = 10;
+    private Dictionary<int, Queue<T>> _priorityQueue =
+        new Dictionary<int, Queue<T>>();
+    public int Count { 
+        get { 
+            return _priorityQueue.Count; 
+        } 
     }
 
 /// <summary>
@@ -35,8 +35,7 @@ public class PriorityQueue<T> {
             _priorityQueue.Add(priority, queue);
         }
 
-        if (priority > _highestPriority)
-        {
+        if (priority < _highestPriority) {
             _highestPriority = priority;
         }
     }
@@ -48,9 +47,16 @@ public class PriorityQueue<T> {
             );
         }
 
-        RefreshHighestPriority();
-
         T result = _priorityQueue[_highestPriority].Dequeue();
+
+        if (_priorityQueue[_highestPriority].Count == 0) {
+            _priorityQueue.Remove(_highestPriority);
+            foreach(KeyValuePair <int, Queue<T>> pair in _priorityQueue) {
+                if (pair.Key < _highestPriority) {
+                    _highestPriority = pair.Key;
+                }
+            }
+        }
 
         return result;
     }
@@ -58,28 +64,5 @@ public class PriorityQueue<T> {
     public void Clear() {
         _priorityQueue.Clear();
         _highestPriority = int.MaxValue;
-    }
-
-    private void ClearEmptyQueues() {
-        foreach (int key in _priorityQueue.Keys) {
-            if (_priorityQueue[key].Count == 0) {
-                _priorityQueue.Remove(key);
-            }
-        }
-    }
-    
-    private void RefreshHighestPriority() {
-        ClearEmptyQueues();
-
-        if (Count == 0)
-            return;
-
-        while(
-            !_priorityQueue.ContainsKey(_highestPriority) ||
-            _priorityQueue[_highestPriority] == null ||
-            _priorityQueue[_highestPriority].Peek() == null
-        ) {
-            --_highestPriority;
-        }
     }
 }

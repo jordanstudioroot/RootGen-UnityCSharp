@@ -56,9 +56,10 @@ public class HexGrid<T> where T : IHexPoint {
         _indicies = new Dictionary<T, int>();
         IsWrapping = wrapping;
 
-        for (int index = 0, row = 0; row < rows; row++) {
+        for (int row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
-                index = ConvertOffsetToIndex(row, column);
+                int index = ConvertOffsetToIndex(column, row);
+
                 T element = default(T);
 
                 _elements.Add(
@@ -340,14 +341,13 @@ public class HexGrid<T> where T : IHexPoint {
     /// <returns>
     /// The index of the specified element, or -1 if it is not present.
     /// </returns>
-    private int TryGetRowMajorIndex(T element) {
-        int index;
+    private bool TryGetRowMajorIndex(T element, out int index) {
 
         if (_indicies.TryGetValue(element, out index)) {
-            return index;
+            return true;
         }
 
-        return -1;
+        return false;
     }
 
     /// <summary>
@@ -422,7 +422,7 @@ public class HexGrid<T> where T : IHexPoint {
                             this[neighborIndex];
 
                         if (
-                            CubeVector.HexTileDistance(
+                            CubeVector.WrappedHexTileDistance(
                                 origin.Coordinates,
                                 neighborCandidate.Coordinates,
                                 WrapSize
@@ -437,12 +437,12 @@ public class HexGrid<T> where T : IHexPoint {
                         }
                     }
                     catch(OutOfGridBoundsException) {
-                        RootLog.Log(
+                        /*RootLog.Log(
                             "Row: " + neighborRow + ", Column: " + neighborColumn + " is " + 
                             "outside of the grid bounds.",
                             Severity.Warning,
                             "HexGrid.Neighbors"
-                        );
+                        );*/
                     }
                 }
             }
@@ -453,9 +453,9 @@ public class HexGrid<T> where T : IHexPoint {
 
     public bool TryGetNeighbors(T element, out List<T> neighbors) {
         
-        int index = TryGetRowMajorIndex(element);
-
-        if (index > -1) {
+        int index; 
+        
+        if (TryGetRowMajorIndex(element, out index)) {
             neighbors = GetNeighbors(index);
             return true;
         }
@@ -596,7 +596,7 @@ public class HexGrid<T> where T : IHexPoint {
     /// An index converted from the specified cube coordinates.
     /// </returns>
     private int ConvertCubeToIndex(int x, int y, int z) {
-        Vector2 offsetIndex = CubeVector.CubeToOffset(x, y, z);
+        Vector2 offsetIndex = CubeVector.CubeToOffset(x, z);
 
         return ConvertOffsetToIndex(
             (int)offsetIndex.x,
@@ -617,7 +617,7 @@ public class HexGrid<T> where T : IHexPoint {
     /// An index converted from the specified offset coordinates.
     /// </returns>
     private int ConvertOffsetToIndex(int x, int z) {
-        if (x > Columns - 1)
+        if (x >= Columns)
             x -= WrapSize;
         else if (x < 0) {
             x += WrapSize;

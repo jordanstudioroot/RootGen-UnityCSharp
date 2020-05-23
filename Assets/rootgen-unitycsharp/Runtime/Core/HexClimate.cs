@@ -173,7 +173,7 @@ public class HexClimate {
                     hexBiome.plant += 1;
                 }
 
-                hex.TerrainTypeIndex = (int)hexBiome.terrain;
+                hex.terrainType = (TerrainTypes)hexBiome.terrain;
                 hex.PlantLevel = hexBiome.plant;
             }
             else {
@@ -235,7 +235,7 @@ public class HexClimate {
                     terrain = Terrains.Mud;
                 }
 
-                hex.TerrainTypeIndex = (int)terrain;
+                hex.terrainType = (TerrainTypes)terrain;
             }
         }
     }

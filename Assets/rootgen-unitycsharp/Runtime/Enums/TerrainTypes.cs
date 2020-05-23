@@ -1,7 +1,7 @@
 public enum TerrainTypes {
-    Sand,
-    Grass,
-    Mud,
-    Stone,
-    Snow
+    Sand = 0,
+    Grass = 1,
+    Mud = 2,
+    Stone = 3,
+    Snow = 4
 }

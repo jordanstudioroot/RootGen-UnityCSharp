@@ -5,7 +5,6 @@ using RootUtils.UnityLifecycle;
 public class RootGen {
 // FIELDS ~~~~~~~~~~
     private MapGenerator _mapGenerator;
-    private RandomHashGrid _randomHashGrid;
 
 // CONSTRUCTORS ~~~~~~~~~~
     public RootGen() {

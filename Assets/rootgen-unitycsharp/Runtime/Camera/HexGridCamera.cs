@@ -28,7 +28,6 @@ public class HexGridCamera : MonoBehaviour
     public float rotationSpeed = 180;
 
 // ~~ private
-    private HexMap _grid;
     private Transform _swivel;
     private Transform _stick;
     private float _zoom = 1f;
@@ -150,9 +149,7 @@ public class HexGridCamera : MonoBehaviour
     }
 
     public HexMap TargetGrid {
-        set {
-            _grid = value;
-        }
+        get; set;
     }
 
     public bool SuspendInput {
@@ -270,7 +267,7 @@ public class HexGridCamera : MonoBehaviour
         StopSteadyPan();
         _steadyPan =
             SteadyPanCoroutine(
-                _grid,
+                TargetGrid,
                 direction,
                 seconds,speed,
                 hexOuterRadius
@@ -286,7 +283,7 @@ public class HexGridCamera : MonoBehaviour
     ) {
         StopSteadyPan();
         _steadyPan = SteadyPanCoroutine(
-            _grid,
+            TargetGrid,
             direction,
             -1,
             speed,
@@ -320,8 +317,8 @@ public class HexGridCamera : MonoBehaviour
     private void Awake() { }
 
     private void Update() {
-        if (_grid)
-            ValidatePosition(_grid, _hexOuterRadius);
+        if (TargetGrid)
+            ValidatePosition(TargetGrid, _hexOuterRadius);
         else
             return;           
 
@@ -349,7 +346,7 @@ public class HexGridCamera : MonoBehaviour
 
         if (xDelta != 0f || zDelta != 0f) {
             AdjustPosition(
-                _grid,
+                TargetGrid,
                 xDelta,
                 zDelta,
                 hexOuterRadius

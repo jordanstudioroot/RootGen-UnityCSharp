@@ -1,10 +1,6 @@
-﻿using QuikGraph;
-using RootLogging;
+using QuikGraph;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-
-
 
 public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
 
@@ -22,7 +18,10 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     public bool HasRiver(Hex hex) {
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetOutEdges(hex, out edges)) {
+        if (
+            TryGetOutEdges(hex, out edges) ||
+            TryGetInEdges(hex, out edges)
+        ) {
             return true;
         }
 
@@ -33,7 +32,7 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         IEnumerable<RiverEdge> edges;
         List<HexDirections> result = null;
 
-        if (!TryGetInEdges(hex, out edges)) {
+        if (TryGetInEdges(hex, out edges)) {
             result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
@@ -48,7 +47,7 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         IEnumerable<RiverEdge> edges;
         List<HexDirections> result = null;
 
-        if (!TryGetOutEdges(hex, out edges)) {
+        if (TryGetOutEdges(hex, out edges)) {
             result = new List<HexDirections>();
 
             foreach(RiverEdge currentEdge in edges) {
@@ -119,30 +118,7 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     public bool HasRiverStartOrEnd(
         Hex hex
     ) {
-        IEnumerable<RiverEdge> edges;
-        int count = 0;
-
-        if (TryGetInEdges(hex, out edges)) {
-            foreach(RiverEdge edge in edges) {
-                count++;
-                
-                if (count > 1) {
-                    return false;
-                }
-            }
-        }
-
-        if (TryGetOutEdges(hex, out edges)) {
-            foreach(RiverEdge edge in edges) {
-                count++;
-                
-                if (count > 1) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return HasRiverStart(hex) || HasRiverEnd(hex);
     }
 
     public bool HasIncomingRiver(
@@ -158,8 +134,8 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     }
 
     /// <summary>
-    /// Returns a boolean value indicating whether the specified hex has a
-    /// river flowing in to it opposite the specified direction.
+    /// Returns a boolean value indicating whether the specified hex
+    /// has a river flowing in to it opposite the specified direction.
     /// </summary>
     /// <param name="hex">
     /// The specified hex.
@@ -218,23 +194,25 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         Hex hex,
         HexDirections direction
     ) {
-        if (HasIncomingRiverInDirection(hex, direction))
-            return true;
-
-        if (HasOutgoingRiverInDirection(hex, direction))
-            return true;
-
-        return false;
+        return
+            HasIncomingRiverInDirection(hex, direction) ||
+            HasOutgoingRiverInDirection(hex, direction);
     }
 
     public bool HasStraightRiver(
         Hex hex
     ) {
-        if (
-            IncomingRiverDirections(hex)[0] ==
-            OutgoingRiverDirections(hex)[0].Opposite()
-        ) {
-            return true;
+        List<HexDirections> incomingDirections =
+            IncomingRiverDirections(hex);
+
+        List<HexDirections> outgoingDirections =
+            OutgoingRiverDirections(hex);
+        
+        foreach (HexDirections incoming in incomingDirections) {
+            foreach (HexDirections outgoing in outgoingDirections) {
+                if (incoming == outgoing.Opposite())
+                    return true;
+            }
         }
 
         return false;
@@ -315,115 +293,5 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         throw new ArgumentException(
             "The hex has no incoming or outgoing rivers."
         );
-    }
-// TODO: STUB
-    public static RiverDigraph FromHexGrid(HexGrid<Hex> hexGrid) {
-        return new RiverDigraph();
-    }
-}
-
-public class RoadUndirectedGraph : UndirectedGraph<Hex, RoadEdge> {
-/// <summary>
-///     Returns true if the given hex in the graph has a road.
-/// </summary>
-/// <param name="hex">
-///     The hex which is the subject of the query.
-/// </param>
-/// <returns>
-///     A boolean value representing whether the query hex has a road.
-/// </returns>
-    public bool HasRoad(Hex hex) {
-        if (!ContainsVertex(hex))
-            return false;
-
-        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(hex);
-
-        if (edges != null && edges.Count > 0) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public bool HasRoadInDirection(
-        Hex hex,
-        HexDirections direction
-    ) {
-        if (!ContainsVertex(hex))
-            return false;
-            
-        List<RoadEdge> edges = (List<RoadEdge>)AdjacentEdges(hex);
-
-        if (edges != null && edges.Count > 0) {
-            foreach (RoadEdge edge in edges) {
-                if (edge.Direction == direction)
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-// TODO: STUB
-    public static RoadUndirectedGraph FromHexGrid(HexGrid<Hex> array) {
-        return new RoadUndirectedGraph();
-    }
-}
-
-public class ElevationBidirectionalGraph : BidirectionalGraph<Hex, ElevationEdge> {
-    public ElevationEdgeTypes GetEdgeTypeInDirection(
-        Hex hex,
-        HexDirections direction
-    ) {
-        IEnumerable<ElevationEdge> edges;
-
-        if (TryGetOutEdges(hex, out edges)) {
-            foreach(ElevationEdge edge in edges) {
-                if (edge.Direction == direction) {
-                    return edge.EdgeType;
-                }
-            }
-        }
-
-        return ElevationEdgeTypes.Flat;
-    }
-
-    public bool AnyDirectionVisible(
-        Hex hex
-    ) {
-        IEnumerable<ElevationEdge> edges;
-
-        if (TryGetOutEdges(hex, out edges)) {
-            foreach(ElevationEdge edge in edges) {
-                if (edge.Delta <= 0)
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    public List<HexEdge> GetVisibleEdges(
-        Hex hex
-    ) {
-
-        IEnumerable<ElevationEdge> edges;
-        List<HexEdge> result = new List<HexEdge>();
-
-        if (TryGetOutEdges(hex, out edges)) {
-            foreach(ElevationEdge edge in edges) {
-                if (edge.Delta <= 0)
-                    result.Add(edge);
-            }
-        }
-
-        return result;
-    }
-
-    public static ElevationBidirectionalGraph FromHexGrid(
-        HexGrid<Hex> denseArray
-    ) {
-        ElevationBidirectionalGraph result = new ElevationBidirectionalGraph();
-        return result;
     }
 }

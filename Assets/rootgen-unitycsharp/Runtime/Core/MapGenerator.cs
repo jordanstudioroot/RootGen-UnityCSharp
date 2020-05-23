@@ -1,13 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Collections;
-using UnityEngine;
+﻿using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
-using RootLogging;
 using RootCollections;
+using RootLogging;
 using RootUtils.Randomization;
-using QuikGraph.Algorithms.Search;
-using QuikGraph.Algorithms.Observers;
-
+using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEngine;
 
 /// <summary>
 /// Class encapsulating the RootGen map generation algorithms.
@@ -145,15 +143,17 @@ public class MapGenerator {
 /// Generate a HexMap using the standard RootGen algorithm.
 /// </summary>
 /// <param name="config">
-///     The configuration data for the map to be generated.
+/// The configuration data for the map to be generated.
 /// </param>
 /// <returns>
-///     A randomly generated HexMap object.
+///A randomly generated HexMap object.
 /// </returns>
     public HexMap GenerateMap(
         RootGenConfig config,
         bool editMode
-    ) {        
+    ) {
+        string diagnostics = "Generate Map Performance Diagnostics\n\n";
+
         HexMap result = HexMap.CreateHexMapGameObject();
         int seed;
 
@@ -187,6 +187,9 @@ public class MapGenerator {
             hex.WaterLevel = config.waterLevel;
         }
 
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+        
         _regions = GenerateRegions(
             result,
             config.regionBorder,
@@ -194,7 +197,13 @@ public class MapGenerator {
             config.mapBorderZ,
             config.numRegions
         );
+
+        stopwatch.Stop();
+        diagnostics += "Generate Regions: " + stopwatch.Elapsed + "\n";
         
+        
+        stopwatch.Start();
+
         int numLandHexes = GetNumLandHexes(
             config.landPercentage,
             result.HexOffsetColumns * result.HexOffsetRows,
@@ -211,11 +220,22 @@ public class MapGenerator {
             result.WrapSize
         );
 
+        stopwatch.Stop();
+        diagnostics += "GetNumLandHexes: " + stopwatch.Elapsed + "\n";
+
+        stopwatch.Start();
+
         GenerateErosion(
             result,
             config.erosionPercentage,
             config.hexSize
         );
+
+        stopwatch.Stop();
+        diagnostics += "GenerateErosion: " + stopwatch.Elapsed + "\n";
+
+
+        stopwatch.Start();
 
         GenerateClimate(
             result,
@@ -229,6 +249,11 @@ public class MapGenerator {
             config.runoffFactor,
             config.seepageFactor
         );
+        
+        stopwatch.Stop();
+        diagnostics += "Generate Climate: " + stopwatch.Elapsed + "\n";
+
+        stopwatch.Start();
 
         GenerateRivers(
             result,
@@ -239,6 +264,11 @@ public class MapGenerator {
             config.extraLakeProbability,
             config.hexSize
         );
+
+        stopwatch.Stop();
+        diagnostics += "GenerateRivers: " + stopwatch.Elapsed + "\n";
+
+        stopwatch.Start();
 
         SetTerrainTypes(
             config.elevationMax,
@@ -252,10 +282,18 @@ public class MapGenerator {
             config.hexSize
         );
 
+        stopwatch.Stop();
+        diagnostics += "SetTerrainTypes: " + stopwatch.Elapsed + "\n";
+
+        RootLog.Log(
+            diagnostics,
+            Severity.Information,
+            "Diagonstics"
+        );
+
 // Restore the snapshot of the random state taken before consuming the
 // random sequence.
         Random.state = snapshot;
-
         return result;
     }
 
@@ -318,10 +356,14 @@ public class MapGenerator {
         while (result.Count < numRegions) {
             foreach (MapRegionRect mapRect in result) {
                 if (i % 2 == 0) {
-                    temp.AddRange(mapRect.SubdivideVertical(regionBorder));
+                    temp.AddRange(
+                        mapRect.SubdivideVertical(regionBorder)
+                    );
                 }
                 else {
-                    temp.AddRange(mapRect.SubdivideHorizontal(regionBorder));
+                    temp.AddRange(
+                        mapRect.SubdivideHorizontal(regionBorder)
+                    );
                 }
             }
 
@@ -556,7 +598,7 @@ public class MapGenerator {
     //                    searchFrontier.Enqueue(neighbor);
 
                         int priority =
-                            CubeVector.HexTileDistance(
+                            CubeVector.WrappedHexTileDistance(
                                 neighbor.Coordinates,
                                 center,
                                 hexMap.WrapSize
@@ -688,7 +730,7 @@ public class MapGenerator {
 
 //                    _searchFrontier.Enqueue(neighbor);
                     int priority =
-                        CubeVector.HexTileDistance(
+                        CubeVector.WrappedHexTileDistance(
                             neighbor.Coordinates,
                             center,
                             hexMap.WrapSize
@@ -758,7 +800,8 @@ public class MapGenerator {
                 hexMap.TryGetNeighbors(
                     hex,
                     out hexNeighbors
-                )
+                ) &&
+                IsErodible(hex, hexNeighbors)
             ) {
                 Hex targetHex =
                     GetErosionRunoffTarget(
@@ -851,7 +894,7 @@ public class MapGenerator {
     }
 
     private void GenerateClimate(
-        HexMap HexMap,
+        HexMap hexMap,
         float startingMoisture,
         int numHexes,
         float evaporationFactor,
@@ -874,11 +917,17 @@ public class MapGenerator {
             _climate.Add(initialData);
             _nextClimate.Add(clearData);
         }
+        HexAdjacencyGraph adjacencyGraph =
+            hexMap.AdjacencyGraph;
 
         for (int cycle = 0; cycle < 40; cycle++) {
             for (int i = 0; i < numHexes; i++) {
+                Hex source = hexMap.GetHex(i);
+                List<HexEdge> edges =
+                    adjacencyGraph.GetOutEdges(source);
                 StepClimate(
-                    HexMap,
+                    hexMap.GetHex(i),
+                    edges,
                     i,
                     evaporationFactor,
                     precipitationFactor,
@@ -906,7 +955,8 @@ public class MapGenerator {
     }
 
     private void StepClimate(
-        HexMap hexMap,
+        Hex source,
+        List<HexEdge> outEdges,
         int hexIndex,
         float evaporationFactor,
         float precipitationFactor,
@@ -916,10 +966,9 @@ public class MapGenerator {
         float runoffFactor,
         float seepageFactor
     ) {
-        Hex hex = hexMap.GetHex(hexIndex);
         ClimateData hexClimate = _climate[hexIndex];
 
-        if (hex.IsUnderwater) {
+        if (source.IsUnderwater) {
             hexClimate.moisture = 1f;
             hexClimate.clouds += evaporationFactor;
         }
@@ -934,7 +983,7 @@ public class MapGenerator {
         hexClimate.moisture += precipitation;
 
         // Cloud maximum has an inverse relationship with elevation maximum.
-        float cloudMaximum = 1f - hex.ViewElevation / (elevationMax + 1f);
+        float cloudMaximum = 1f - source.ViewElevation / (elevationMax + 1f);
 
         if (hexClimate.clouds > cloudMaximum) {
             hexClimate.moisture += hexClimate.clouds - cloudMaximum;
@@ -953,7 +1002,7 @@ public class MapGenerator {
 //            direction++
 //        ) {
 
-        foreach (HexEdge edge in hexMap.AdjacencyGraph.GetOutEdges(hex)) {
+        foreach (HexEdge edge in outEdges) {
 //            hex neighbor = hex.GetNeighbor(direction);
 
 //            if (!neighbor) {
@@ -969,7 +1018,7 @@ public class MapGenerator {
                 neighborClimate.clouds += cloudDispersal;
             }
 
-            int elevationDelta = edge.Target.ViewElevation - hex.ViewElevation;
+            int elevationDelta = edge.Target.ViewElevation - source.ViewElevation;
 
             if (elevationDelta < 0) {
                 hexClimate.moisture -= runoff;
@@ -1013,7 +1062,9 @@ public class MapGenerator {
         float hexOuterRadius
     ) {
 
-        RiverDigraph riverGraph = hexMap.RiverDigraph;
+        RiverDigraph riverGraph =
+            hexMap.RiverDigraph = 
+            new RiverDigraph();
 
         List<Hex> riverOrigins = ListPool<Hex>.Get();
 
@@ -1043,7 +1094,11 @@ public class MapGenerator {
             }
         }
 
-        int riverBudget = Mathf.RoundToInt(numLandHexes * riverPercentage * 0.01f);
+        int riverBudget = Mathf.RoundToInt(
+            numLandHexes *
+            riverPercentage *
+            0.01f
+        );
 
         while (riverBudget > 0 && riverOrigins.Count > 0) {
             int index = Random.Range(0, riverOrigins.Count);
@@ -1053,11 +1108,13 @@ public class MapGenerator {
             riverOrigins.RemoveAt(lastIndex);
 
 //            if (!origin.HasRiver) {
-            if (riverGraph.HasRiver(origin)) {
+            if (!riverGraph.HasRiver(origin)) {
                 bool isValidOrigin = true;
                 
                 List<Hex> neighbors;
-                if (hexMap.TryGetNeighbors(origin, out neighbors)) {
+                if (
+                    hexMap.TryGetNeighbors(origin, out neighbors)
+                ) {
                     foreach(Hex neighbor in neighbors) {
 //                      hex neighbor =
 //                      origin.GetNeighbor(direction);
@@ -1081,7 +1138,8 @@ public class MapGenerator {
                         hexMap,
                         origin,
                         extraLakeProbability,
-                        hexOuterRadius
+                        hexOuterRadius,
+                        ref riverGraph
                     );
                 }
             }
@@ -1098,10 +1156,10 @@ public class MapGenerator {
         HexMap hexMap,
         Hex origin,
         float extraLakeProbability,
-        float hexOuterRadius
+        float hexOuterRadius,
+        ref RiverDigraph riverGraph
     ) {
         HexAdjacencyGraph neighborGraph = hexMap.AdjacencyGraph;
-        RiverDigraph riverGraph = hexMap.RiverDigraph;
 
         int localRiverLength = 1;
         Hex currentHex = origin;
@@ -1163,7 +1221,8 @@ public class MapGenerator {
                         directionCandidate
                     );
 
-                    riverGraph.AddEdge(mergeEdge);
+                    riverGraph.AddVerticesAndEdge(mergeEdge);
+                    Debug.Log(mergeEdge);
                     return localRiverLength;
                 }
 
@@ -1243,7 +1302,8 @@ public class MapGenerator {
                 direction
             );
 
-            riverGraph.AddEdge(randomEdge);
+            riverGraph.AddVerticesAndEdge(randomEdge);
+            Debug.Log(randomEdge);
 
             localRiverLength += 1;
 
@@ -1315,7 +1375,8 @@ public class MapGenerator {
         List<Hex> neighbors
     ) {
         List<Hex> candidates = ListPool<Hex>.Get();
-        int erodibleElevation = hex.Elevation - 2;
+        int erodibleElevation =
+            hex.Elevation - DELTA_ERODIBLE_THRESHOLD;
 
 //        for (
 //            HexDirection direction = HexDirection.Northeast;
@@ -1329,7 +1390,14 @@ public class MapGenerator {
             }
         }
 
-        Hex target = candidates[Random.Range(0, candidates.Count)];
+        Hex target = null;
+
+        if (candidates.Count != 0) {
+            target = candidates[
+                Random.Range(0, candidates.Count)
+            ];
+        }
+            
         ListPool<Hex>.Add(candidates);
         return target;
     }
@@ -1405,7 +1473,7 @@ public class MapGenerator {
                     hexBiome.plant += 1;
                 }
 
-                hex.TerrainTypeIndex = hexBiome.terrain;
+                hex.terrainType = (TerrainTypes)hexBiome.terrain;
                 hex.PlantLevel = hexBiome.plant;
             }
             else {
@@ -1468,7 +1536,7 @@ public class MapGenerator {
                     terrain = 2;
                 }
 
-                hex.TerrainTypeIndex = terrain;
+                hex.terrainType = (TerrainTypes)terrain;
             }
         }
     }
@@ -1484,7 +1552,8 @@ public class MapGenerator {
         float highTemperature,
         float hexOuterRadius
     ) {
-        float latitude = (float)hex.Coordinates.Z / hexMap.HexOffsetColumns;
+        float latitude =
+            (float)hex.Coordinates.Z / hexMap.HexOffsetRows;
 
         if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -1781,8 +1850,8 @@ public class MapGenerator {
         public List<MapRegionRect> SubdivideVertical(int border = 0) {
             if (this.OffsetSizeZ - border < 3) {
                 RootLog.Log(
-                    "Border cannot reduce z dimension below 3 or divison will" +
-                    " be impossible. Setting border to 0.",
+                    "Border cannot reduce z dimension below 3 or divison " +
+                    "will be impossible. Setting border to 0.",
                     Severity.Debug,
                     "MapGenerator"
                 );

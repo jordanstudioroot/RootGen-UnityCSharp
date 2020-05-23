@@ -3,6 +3,7 @@ using RootLogging;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Diagnostics;
 
 public class HexMap : MonoBehaviour {
 
@@ -85,7 +86,7 @@ public class HexMap : MonoBehaviour {
     /// </summary>
     public int HexMeshChunkRows {
         get {
-            return HexOffsetRows / MeshConstants.ChunkSizeX;
+            return HexOffsetRows / HexMeshConstants.CHUNK_SIZE_X;
         }
     }
 
@@ -94,7 +95,7 @@ public class HexMap : MonoBehaviour {
     /// </summary>
     public int HexMeshChunkColumns {
         get {
-            return HexOffsetColumns / MeshConstants.ChunkSizeZ;
+            return HexOffsetColumns / HexMeshConstants.CHUNK_SIZE_Z;
         }
     }
 
@@ -119,15 +120,11 @@ public class HexMap : MonoBehaviour {
     }
 
     /// <summary>
-    /// The river graph for the hex map. Contains unidirectional flow data
-    /// for all rivers in the hex map.
+    /// The river graph for the hex map. Contains bidirectional flow
+    /// data for all rivers in the hex map.
     /// </summary>
     public RiverDigraph RiverDigraph {
-        get {
-            if (HexGrid == null)
-                throw new NullHexGridException();
-            return RiverDigraph.FromHexGrid(HexGrid);
-        }
+        get; set;
     }
 
     /// <summary>
@@ -146,11 +143,11 @@ public class HexMap : MonoBehaviour {
     /// The elevation graph for the hex map. Contains bidirectional flow
     /// data for all changes in elevation on the hex map.
     /// </summary>
-    public ElevationBidirectionalGraph ElevationBidirectionalGraph {
+    public ElevationDigraph ElevationDigraph {
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
-            return ElevationBidirectionalGraph.FromHexGrid(HexGrid);
+            return ElevationDigraph.FromHexGrid(HexGrid);
         }
     }
 
@@ -302,7 +299,7 @@ public class HexMap : MonoBehaviour {
 
         if (
             bounds.x < 0 || bounds.y < 0 ||
-            !bounds.size.IsFactorOf(MeshConstants.ChunkSize)
+            !bounds.size.IsFactorOf(HexMeshConstants.ChunkSize)
         ) {
             RootLog.Log(
                 "Unsupported map size. Clamping dimensions to chunk size.",
@@ -311,7 +308,7 @@ public class HexMap : MonoBehaviour {
             );
 
             Vector2 clamped =
-                bounds.size.ClampToFactorOf(MeshConstants.ChunkSize);
+                bounds.size.ClampToFactorOf(HexMeshConstants.ChunkSize);
 
             bounds = new Rect(
                 0,
@@ -329,11 +326,6 @@ public class HexMap : MonoBehaviour {
 
         HexagonPoint.InitializeHashGrid(seed);
 
-        _hexShaderData.Initialize(
-            columns,
-            rows
-        );
-
         if (!_terrainMaterial)
             _terrainMaterial = Resources.Load<Material>("Terrain");
 
@@ -343,11 +335,19 @@ public class HexMap : MonoBehaviour {
             wrapping
         );
         
-        for (int i = 0, x = 0; x < HexOffsetColumns; x++) {
-            for (int z = 0; z < HexOffsetRows; z++) {
-                HexGrid[x, z] =
+        for (
+            int index = 0, column = 0;
+            column < HexOffsetColumns;
+            column++
+        ) {
+            for (
+                int row = 0;
+                row < HexOffsetRows;
+                row++
+            ) {
+                HexGrid[column, row] =
                     CreateHexFromOffsetCoordinates(
-                        x, z, i++,
+                        column, row, index++,
                         hexOuterRadius,
                         HexGrid
                     );
@@ -361,18 +361,6 @@ public class HexMap : MonoBehaviour {
 
         HexMeshColumnTransforms =
             GetHexMeshChunkColumns(HexMeshChunks);
-
-
-        foreach(HexMeshChunk chunk in HexMeshChunks) {
-            chunk.Triangulate(
-                this,
-                hexOuterRadius,
-                AdjacencyGraph,
-                RiverDigraph,
-                RoadUndirectedGraph,
-                ElevationBidirectionalGraph            
-            );
-        }
 
         EditMode = editMode;
 
@@ -441,7 +429,7 @@ public class HexMap : MonoBehaviour {
         position = transform.InverseTransformPoint(position);
         
         CubeVector coordinates =
-            CubeVector.FromPosition(
+            CubeVector.FromVector3(
                 position,
                 hexOuterRadius,
                 HexGrid.WrapSize
@@ -552,7 +540,7 @@ public class HexMap : MonoBehaviour {
     public void DecreaseVisibility(
         Hex fromHex,
         int range,
-        ElevationBidirectionalGraph elevationGraph
+        ElevationDigraph elevationGraph
     ) {
         List<Hex> hexes =
             GetVisibleHexes(
@@ -593,7 +581,7 @@ public class HexMap : MonoBehaviour {
             HexagonPoint.InnerDiameterFromOuterRadius(hexOuterRadius);
         // Get the column index which the x axis coordinate is over.
         int centerColumnIndex =
-            (int) (xPosition / (innerDiameter * MeshConstants.ChunkSizeX));
+            (int) (xPosition / (innerDiameter * HexMeshConstants.CHUNK_SIZE_X));
 
         if (centerColumnIndex == CenterHexMeshColumnIndex) {
             return;
@@ -613,7 +601,7 @@ public class HexMap : MonoBehaviour {
             float posX =
                 HexagonPoint.InnerDiameterFromOuterRadius(
                     hexOuterRadius
-                ) * MeshConstants.ChunkSizeX;
+                ) * HexMeshConstants.CHUNK_SIZE_X;
             
             if (i < minColumnIndex) {
                 position.x = HexMeshChunkColumns * posX;
@@ -651,14 +639,81 @@ public class HexMap : MonoBehaviour {
 
     #region Private Methods
 
-    private void Render(
-        RoadUndirectedGraph roadGraph,
-        RiverDigraph riverGraph,
-        HexAdjacencyGraph neighborGraph,
-        float hexOuterRadius,
-        ElevationBidirectionalGraph elevationGraph
+    public void Draw(
+        float hexOuterRadius
     ) {
-        
+        if (HexGrid == null)
+            throw new NullHexGridException();
+
+        _hexShaderData.Initialize(
+            HexOffsetColumns,
+            HexOffsetRows
+        );
+
+        foreach(Hex hex in HexGrid.Hexes) {
+            _hexShaderData.RefreshTerrain(hex);
+        }
+
+        string diagnostic = "Mesh Triangulation Diagnostics\n\n";
+        Stopwatch stopwatch = new Stopwatch();
+        Stopwatch currentStopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        foreach(HexMeshChunk chunk in HexMeshChunks) {
+            currentStopwatch.Restart();
+
+            chunk.Triangulate(
+                this,
+                hexOuterRadius,
+                AdjacencyGraph,
+                RiverDigraph,
+                RoadUndirectedGraph,
+                ElevationDigraph            
+            );
+
+            currentStopwatch.Stop();
+            diagnostic +=
+                "Mesh chunk triangulated in: " +
+                currentStopwatch.Elapsed + "\n";
+        }
+
+        stopwatch.Stop();
+        diagnostic +=
+            "All mesh chunks triangulated in: " + stopwatch.Elapsed;
+
+        foreach(string toLog in SplitByChar(diagnostic, 30000)) {
+            RootLog.Log(
+                toLog,
+                Severity.Information,
+                "Diagnostic"
+            );
+        }
+    }
+
+    // TODO: Put this in a utility class or move it directly ito
+    //       RootLogging.
+    private List<string> SplitByChar(string toSplit, int charThreshold) {
+        List<string> result = new List<string>();
+
+        for (
+            int i = 0, currLen = 1;
+            i < toSplit.Length;
+            i++, currLen++
+        ) {
+            if (currLen == charThreshold)
+                result.Add(
+                    toSplit.Substring(i, charThreshold)
+                );
+            else if (i == toSplit.Length - 1)
+                result.Add(
+                    toSplit.Substring(
+                        i - (currLen - 1),
+                        toSplit.Length - 1
+                    )
+                );
+        }
+
+        return result;
     }
 
     private HexMeshChunk[] GetHexMeshChunks(
@@ -679,23 +734,25 @@ public class HexMap : MonoBehaviour {
                 Hex hex = grid.GetElement(hexColumn, hexRow);
 
                 int hexChunkColumn =
-                    hexColumn / MeshConstants.ChunkSizeZ;
+                    hexColumn / HexMeshConstants.CHUNK_SIZE_Z;
                 
                 int hexChunkRow =
-                    hexRow / MeshConstants.ChunkSizeX;
+                    hexRow / HexMeshConstants.CHUNK_SIZE_X;
 
                 int hexLocalColumn =
-                    hexColumn % MeshConstants.ChunkSizeX;
+                    hexColumn % HexMeshConstants.CHUNK_SIZE_X;
 
                 int hexLocalRow =
-                    hexRow % MeshConstants.ChunkSizeZ;
+                    hexRow % HexMeshConstants.CHUNK_SIZE_Z;
 
-                result[(hexChunkRow * HexMeshChunkColumns) + hexChunkColumn]
-                    .AddHex(
-                        (hexLocalRow * MeshConstants.ChunkSizeZ) +
-                            hexLocalColumn,
-                        hex
-                    );    
+                result[
+                    (hexChunkRow * HexMeshChunkColumns) +
+                    hexChunkColumn
+                ].AddHex(
+                    (hexLocalRow * HexMeshConstants.CHUNK_SIZE_Z) +
+                    hexLocalColumn,
+                    hex
+                );    
             }
         }
 
@@ -718,9 +775,9 @@ public class HexMap : MonoBehaviour {
         for (int row = 0; row < HexOffsetRows; row++) {
             for (int column = 0; column < HexOffsetColumns; column++) {
                 int hexChunkRow =
-                    row / MeshConstants.ChunkSizeX;
+                    row / HexMeshConstants.CHUNK_SIZE_X;
                 int hexChunkColumn =
-                    column / MeshConstants.ChunkSizeZ;
+                    column / HexMeshConstants.CHUNK_SIZE_Z;
 
                 chunks[(hexChunkRow * HexMeshChunkColumns) + hexChunkColumn]
                     .transform.SetParent(
@@ -888,7 +945,7 @@ public class HexMap : MonoBehaviour {
         Hex fromHex
 //        int sightRange
     ) {
-        ElevationBidirectionalGraph elevationGraph = ElevationBidirectionalGraph.FromHexGrid(
+        ElevationDigraph elevationGraph = ElevationDigraph.FromHexGrid(
             HexGrid
         );
 
@@ -1083,7 +1140,7 @@ public class HexMap : MonoBehaviour {
             HexagonPoint.OuterToInnerRadius(hexOuterRadius) * 2f;
 
 // Create the Hexes object and monobehaviour.
-        Hex result = Hex.Instantiate();
+        Hex result = Hex.Instantiate(offsetX, offsetZ, WrapSize);
 
 // Set the Hexes transform.
         result.transform.localPosition = CoordinateToLocalPosition(
@@ -1093,15 +1150,10 @@ public class HexMap : MonoBehaviour {
             hexOuterRadius
         );
 
-// Set the Hexes monobehaviour properties.
-        result.Coordinates = CubeVector.FromOffsetCoordinates(
-            offsetX,
-            offsetZ,
-            hexGrid.WrapSize
-        );
+        result.name = "Hex " + result.Coordinates;
 
         result.Index = rowMajorIndex;
-        result.ColumnIndex = offsetX / MeshConstants.ChunkSizeX;
+        result.ColumnIndex = offsetX / HexMeshConstants.CHUNK_SIZE_X;
         result.ShaderData = _hexShaderData;
 
 // If wrapping is enabled, hex is not explorable if the hex is on the
