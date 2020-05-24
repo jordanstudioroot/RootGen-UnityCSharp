@@ -3,8 +3,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A monobehaviour facade for a mesh layer of a mesh chunk, providing
+/// interfaces for adding and updating triangle vertices and uv coordinates
+/// assocaited with a given layer of a mesh chunk.
+/// </summary>
+
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class HexMeshFacade : MonoBehaviour {
+public class MapMeshChunkLayer : MonoBehaviour {
 
 /// <summary>
 /// Boolean value representing whether the mesh collider is used.
@@ -52,24 +58,24 @@ public class HexMeshFacade : MonoBehaviour {
 /// </summary>
     [NonSerialized] private List<Vector3> _terrainTypes;
 
-    private UnityEngine.Mesh _hexMesh;
+    private Mesh _mesh;
     private MeshCollider _meshCollider;
     
 
     protected void Awake() {
-        GetComponent<MeshFilter>().mesh = _hexMesh = new Mesh();
-        _hexMesh.name = "Mesh";
+        GetComponent<MeshFilter>().mesh = _mesh = new Mesh();
+        _mesh.name = "Mesh";
     }
 
-    public static HexMeshFacade CreateEmpty(
+    public static MapMeshChunkLayer CreateEmpty(
         Material material,
         bool useCollider, 
         bool useHexData, 
         bool useUVCoordinates, 
         bool useUV2Coordinates
     ) {
-        GameObject resultObj = new GameObject("Hex Mesh");
-        HexMeshFacade resultMono = resultObj.AddComponent<HexMeshFacade>();
+        GameObject resultObj = new GameObject("Map Mesh Chunk Layer");
+        MapMeshChunkLayer resultMono = resultObj.AddComponent<MapMeshChunkLayer>();
         resultMono.GetComponent<MeshRenderer>().material = material;
         resultMono._useCollider = useCollider;
 
@@ -195,33 +201,33 @@ public class HexMeshFacade : MonoBehaviour {
         _vertices.Add(vertex3);
         _vertices.Add(vertex4);
 
-        // 3rd -- 4th
+        // 3rd -- 4th  1: 1st -> 3rd -> 2nd
         //  |\     |
-        //  | \  2 |
+        //  | \  2 |   2: 2nd -> 3rd -> 4th
         //  |  \   |
         //  | 1 \  |
         //  |    \ |
         // 1st -- 2nd
 
-        // First corner
+        // Triangle 1
+        // Vertex 1
         _triangles.Add(vertexIndex);
         
-        // First corner
-        _triangles.Add(vertexIndex);
+        // Vertex 3
+        _triangles.Add(vertexIndex + 2);
 
-        // Third corner
-        _triangles.Add(vertexIndex + 2);
-        
-        // Second corner
+        // Vertex 2
         _triangles.Add(vertexIndex + 1);
         
-        // Second corner
+        // Triangle2
+
+        // Vertex 2
         _triangles.Add(vertexIndex + 1);
         
-        // Third corner
+        // Vertex 3
         _triangles.Add(vertexIndex + 2);
         
-        // Fourth corner
+        // Vertex 4
         _triangles.Add(vertexIndex + 3);
     }
 
@@ -409,7 +415,7 @@ public class HexMeshFacade : MonoBehaviour {
     /// filling them with empty vertices.
     /// </summary>
     public void Clear() {
-        _hexMesh.Clear();
+        _mesh.Clear();
         _vertices = ListPool<Vector3>.Get();
 
         if (_useHexData) {
@@ -433,32 +439,35 @@ public class HexMeshFacade : MonoBehaviour {
     /// colors.
     /// </summary>
     public void Draw() {
-        _hexMesh.SetVertices(_vertices);
+        _mesh.SetVertices(_vertices);
         ListPool<Vector3>.Add(_vertices);
 
         if (_useHexData) {
-            _hexMesh.SetColors(_textureWeights);
+            // Set the mesh color data to represent texture weights.
+            _mesh.SetColors(_textureWeights);
             ListPool<Color>.Add(_textureWeights);
-            _hexMesh.SetUVs(2, _terrainTypes);
+
+            // Set the uv3 coordinates to represent terrain types.
+            _mesh.SetUVs(2, _terrainTypes);
             ListPool<Vector3>.Add(_terrainTypes);
         }
 
         if (_useUVCoordinates) {
-            _hexMesh.SetUVs(0, _uvs);
+            _mesh.SetUVs(0, _uvs);
             ListPool<Vector2>.Add(_uvs);
         }
 
         if (_useUV2Coordinates) {
-            _hexMesh.SetUVs(1, _uv2s);
+            _mesh.SetUVs(1, _uv2s);
             ListPool<Vector2>.Add(_uv2s);
         }
 
-        _hexMesh.SetTriangles(_triangles, 0);
+        _mesh.SetTriangles(_triangles, 0);
         ListPool<int>.Add(_triangles);
-        _hexMesh.RecalculateNormals();
+        _mesh.RecalculateNormals();
 
         if (_useCollider) {
-            _meshCollider.sharedMesh = _hexMesh;
+            _meshCollider.sharedMesh = _mesh;
         }
     }
 }

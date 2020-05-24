@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce2e8e7003601f44faf50f5baf0608df, type: 3}
   m_Name: defaultconfig
   m_EditorClassIdentifier: 
-  width: 30
-  height: 25
+  width: 40
+  height: 30
   wrapping: 1
-  useFixedSeed: 1
-  seed: 1469630778
+  useFixedSeed: 0
+  seed: 567174542
   hexSize: 10
   jitterProbability: 0.25
   minimumRegionDensity: 30

@@ -133,10 +133,29 @@ public class MapGenerator {
 ///     Extract with other climate modeling data and algoritms into a
 ///     separate class.
     private static Biome[] biomes = {
-        new Biome(0, 0), new Biome(4, 0), new Biome(4, 0), new Biome(4, 0),
-        new Biome(0, 0), new Biome(2, 0), new Biome(2, 1), new Biome(2, 2),
-        new Biome(0, 0), new Biome(1, 0), new Biome(1, 1), new Biome(1, 2),
-        new Biome(0, 0), new Biome(1, 1), new Biome(1, 2), new Biome(1, 3)
+        // Temperature <= .1 Freezing
+        new Biome(Terrains.Desert, 0), // Moisture <= .12 Freezing Dry
+        new Biome(Terrains.Snow, 0),   //          <= .28 Freezing Moist
+        new Biome(Terrains.Snow, 0),   //          <= .85 Freezing Wet
+        new Biome(Terrains.Snow, 0),   //           > .85 Freezing Drenched 
+        
+        // Temperature <= .3 Cold
+        new Biome(Terrains.Desert, 0), // Moisture <= .12 Cold Dry
+        new Biome(Terrains.Mud, 0),    //          <= .28 Cold Moist
+        new Biome(Terrains.Mud, 1),    //          <= .85 Cold Wet
+        new Biome(Terrains.Mud, 2),    //           > .85 Cold Drenched
+
+        // Temperature <= .6 Warm
+        new Biome(Terrains.Desert, 0), // Moisture <= .12 Warm Dry
+        new Biome(Terrains.Grassland, 0),  // Moisture <= .28 Warm Moist
+        new Biome(Terrains.Grassland, 1),  // Moisture <= .85 Warm Wet
+        new Biome(Terrains.Grassland, 2),  // Moisture  > .85 Warm Drenched
+
+        // Temperature > .6 Hot
+        new Biome(Terrains.Desert, 0), // Moisture <= .12 Hot Dry
+        new Biome(Terrains.Grassland, 1),  // Moisture <= .28 Hot Moist
+        new Biome(Terrains.Grassland, 2),  // Moisture <= .85 Hot Wet
+        new Biome(Terrains.Grassland, 3)   // Moisture  > .85 Hot Drenched
     };
 
 /// <summary>
@@ -918,7 +937,7 @@ public class MapGenerator {
             _nextClimate.Add(clearData);
         }
         HexAdjacencyGraph adjacencyGraph =
-            hexMap.AdjacencyGraph;
+            hexMap.CreateAdjacencyGraph;
 
         for (int cycle = 0; cycle < 40; cycle++) {
             for (int i = 0; i < numHexes; i++) {
@@ -1066,6 +1085,9 @@ public class MapGenerator {
             hexMap.RiverDigraph = 
             new RiverDigraph();
 
+        HexAdjacencyGraph adjacencyGraph =
+            hexMap.CreateAdjacencyGraph;
+
         List<Hex> riverOrigins = ListPool<Hex>.Get();
 
         for (int i = 0; i < numLandHexes; i++) {
@@ -1139,7 +1161,8 @@ public class MapGenerator {
                         origin,
                         extraLakeProbability,
                         hexOuterRadius,
-                        ref riverGraph
+                        ref riverGraph,
+                        adjacencyGraph
                     );
                 }
             }
@@ -1157,10 +1180,9 @@ public class MapGenerator {
         Hex origin,
         float extraLakeProbability,
         float hexOuterRadius,
-        ref RiverDigraph riverGraph
+        ref RiverDigraph riverGraph,
+        HexAdjacencyGraph adjacencyGraph
     ) {
-        HexAdjacencyGraph neighborGraph = hexMap.AdjacencyGraph;
-
         int localRiverLength = 1;
         Hex currentHex = origin;
         HexDirections direction = HexDirections.Northeast;
@@ -1178,7 +1200,7 @@ public class MapGenerator {
 //            foreach(hex neighbor in neighborGraph.Neighbors(hex)) {
                 Hex neighbor =
 //                    hex.GetNeighbor(directionCandidate);
-                      neighborGraph.TryGetNeighborInDirection(
+                      adjacencyGraph.TryGetNeighborInDirection(
                           currentHex,
                           directionCandidate
                       );
@@ -1295,7 +1317,7 @@ public class MapGenerator {
 //            hex.SetOutgoingRiver(direction);
             RiverEdge randomEdge = new RiverEdge(
                 currentHex,
-                neighborGraph.TryGetNeighborInDirection(
+                adjacencyGraph.TryGetNeighborInDirection(
                     currentHex,
                     direction
                 ),
@@ -1303,8 +1325,6 @@ public class MapGenerator {
             );
 
             riverGraph.AddVerticesAndEdge(randomEdge);
-            Debug.Log(randomEdge);
-
             localRiverLength += 1;
 
 // If the hex is lower than the minimum elevation of its neighbors
@@ -1323,7 +1343,7 @@ public class MapGenerator {
 // Make the new current hex the hex which the river has branched
 // into.
 //            currentHex = currentHex.GetNeighbor(direction);
-            currentHex = neighborGraph.TryGetNeighborInDirection(
+            currentHex = adjacencyGraph.TryGetNeighborInDirection(
                 currentHex,
                 direction
             );
@@ -1455,16 +1475,16 @@ public class MapGenerator {
 
                 Biome hexBiome = biomes[temperatureBand * 4 + moistureBand];
 
-                if (hexBiome.terrain == 0) {
+                if (hexBiome.terrain == Terrains.Desert) {
                     if (hex.Elevation >= rockDesertElevation) {
-                        hexBiome.terrain = 3;
+                        hexBiome.terrain = Terrains.Stone;
                     }
                 }
                 else if (hex.Elevation == elevationMax) {
-                    hexBiome.terrain = 4;
+                    hexBiome.terrain = Terrains.Snow;
                 }
 
-                if (hexBiome.terrain == 4) {
+                if (hexBiome.terrain == Terrains.Snow) {
                     hexBiome.plant = 0;
                 }
 
@@ -1473,7 +1493,7 @@ public class MapGenerator {
                     hexBiome.plant += 1;
                 }
 
-                hex.terrainType = (TerrainTypes)hexBiome.terrain;
+                hex.terrainType = hexBiome.terrain;
                 hex.PlantLevel = hexBiome.plant;
             }
             else {
@@ -1536,7 +1556,7 @@ public class MapGenerator {
                     terrain = 2;
                 }
 
-                hex.terrainType = (TerrainTypes)terrain;
+                hex.terrainType = (Terrains)terrain;
             }
         }
     }
@@ -1889,10 +1909,10 @@ public class MapGenerator {
         }
 
         private struct Biome {
-            public int terrain;
+            public Terrains terrain;
             public int plant;
 
-            public Biome(int terrain, int plant) {
+            public Biome(Terrains terrain, int plant) {
                 this.terrain = terrain;
                 this.plant = plant;
             }

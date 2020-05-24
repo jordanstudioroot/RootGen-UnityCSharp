@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class Hex : MonoBehaviour, IHexPoint {
     
     [SerializeField]
-    public TerrainTypes terrainType;
+    public Terrains terrainType;
 
     private static int MaxFeatureLevel {
         get {
@@ -14,7 +14,7 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
     public RectTransform uiRect;
-    public HexMeshChunk chunk;
+    public MapMeshChunk chunk;
     private int _visibility;
 
     public Vector3 Position {

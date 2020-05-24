@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using RootLogging;
 
-public class HexMeshChunk : MonoBehaviour {
-    private HexMeshFacade terrain;
-    private HexMeshFacade rivers;
-    private HexMeshFacade roads;
-    private HexMeshFacade water;
-    private HexMeshFacade waterShore;
-    private HexMeshFacade estuaries;
+public class MapMeshChunk : MonoBehaviour {
+    private MapMeshChunkLayer terrain;
+    private MapMeshChunkLayer rivers;
+    private MapMeshChunkLayer roads;
+    private MapMeshChunkLayer water;
+    private MapMeshChunkLayer waterShore;
+    private MapMeshChunkLayer estuaries;
     private FeatureContainer features;
 
 /// <summary>
@@ -38,9 +38,9 @@ public class HexMeshChunk : MonoBehaviour {
 
     private void LateUpdate() { }
 
-    public static HexMeshChunk CreateEmpty() {
-        GameObject resultObj = new GameObject("Hex Mesh Chunk");
-        HexMeshChunk resultMono = resultObj.AddComponent<HexMeshChunk>();
+    public static MapMeshChunk CreateEmpty() {
+        GameObject resultObj = new GameObject("Map Mesh Chunk");
+        MapMeshChunk resultMono = resultObj.AddComponent<MapMeshChunk>();
         
         resultMono.Hexes = new Hex[
             HexMeshConstants.CHUNK_SIZE_X *
@@ -62,57 +62,57 @@ public class HexMeshChunk : MonoBehaviour {
         resultCanvasObj.transform.rotation = Quaternion.Euler(90, 0, 0);
         resultCanvasObj.transform.position += Vector3.up * .005f;
 
-        resultMono.terrain = HexMeshFacade.CreateEmpty(
+        resultMono.terrain = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("Terrain"), true, true, false, false
         );
-        resultMono.terrain.name = "Terrain";
+        resultMono.terrain.name = "Terrain Layer";
         resultMono.terrain.transform.SetParent(resultObj.transform, false);
         
-        resultMono.rivers = HexMeshFacade.CreateEmpty(
+        resultMono.rivers = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("River"), false, true, true, false
         );
-        resultMono.rivers.name = "Rivers";
+        resultMono.rivers.name = "Rivers Layer";
         resultMono.rivers.transform.SetParent(resultObj.transform, false);
 
-        resultMono.roads = HexMeshFacade.CreateEmpty(
+        resultMono.roads = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("Road"), false, true, true, false
         );
-        resultMono.roads.name = "Roads";
+        resultMono.roads.name = "Roads Layer";
         resultMono.roads.transform.SetParent(resultObj.transform, false);
 
-        resultMono.water = HexMeshFacade.CreateEmpty(
+        resultMono.water = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("Water"), false, true, false, false
         );
-        resultMono.water.name = "Water";
+        resultMono.water.name = "Water Layer";
         resultMono.water.transform.SetParent(resultObj.transform, false);
 
-        resultMono.waterShore = HexMeshFacade.CreateEmpty(
+        resultMono.waterShore = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("WaterShore"), false, true, true, false
         );
-        resultMono.waterShore.name = "Water Shore";
+        resultMono.waterShore.name = "Water Shore Layer";
         resultMono.waterShore.transform.SetParent(resultObj.transform, false);
 
-        resultMono.estuaries = HexMeshFacade.CreateEmpty(
+        resultMono.estuaries = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("Estuary"), false, true, true, true
         );
-        resultMono.estuaries.name = "Estuaries";
+        resultMono.estuaries.name = "Estuaries Layer";
         resultMono.estuaries.transform.SetParent(resultObj.transform, false);
 
-        HexMeshFacade walls = HexMeshFacade.CreateEmpty(
+        MapMeshChunkLayer walls = MapMeshChunkLayer.CreateEmpty(
             Resources.Load<Material>("Urban"), false, false, false, false
         );
         walls.transform.SetParent(resultObj.transform, false);
-        walls.name = "Walls";
+        walls.name = "Walls Layer";
 
         resultMono.features = FeatureContainer.GetFeatureContainer(walls);
         resultMono.features.transform.SetParent(resultObj.transform, false);
-        resultMono.features.name = "Features";
+        resultMono.features.name = "Features Layer";
 
         return resultMono;
     }
 
-    public static HexMeshChunk CreateEmpty(Transform parent) {
-        HexMeshChunk result = CreateEmpty();
+    public static MapMeshChunk CreateEmpty(Transform parent) {
+        MapMeshChunk result = CreateEmpty();
         result.transform.SetParent(parent, false);
         return result;
     }
@@ -266,10 +266,10 @@ public class HexMeshChunk : MonoBehaviour {
         Hex target,
         HexDirections direction,
         float hexOuterRadius,
-        HexAdjacencyGraph neighborGraph,
-        RiverDigraph riverGraph,
-        RoadUndirectedGraph roadGraph,
-        ElevationDigraph elevationGraph,
+        HexAdjacencyGraph hexAdjacencyGraph,
+        RiverDigraph riverDigraph,
+        RoadUndirectedGraph roadUndirectedGraph,
+        ElevationDigraph elevationDigraph,
         int wrapSize
     ) {
 // Hex center
@@ -288,9 +288,9 @@ public class HexMeshChunk : MonoBehaviour {
             )
         );
 
-        if (riverGraph.HasRiver(source)) {
+        if (riverDigraph.HasRiver(source)) {
             if (
-                riverGraph.HasRiverInDirection(
+                riverDigraph.HasRiverInDirection(
                     source,
                     direction
                 )
@@ -300,14 +300,14 @@ public class HexMeshChunk : MonoBehaviour {
 */
                 edgeVertices.vertex3.y = source.StreamBedY;
 
-                if (riverGraph.HasRiverStartOrEnd(source)) {
+                if (riverDigraph.HasRiverStartOrEnd(source)) {
                     TriangulateWithRiverBeginOrEnd(
                         source,
                         target,
                         direction,
                         center,
                         edgeVertices,
-                        riverGraph,
+                        riverDigraph,
                         hexOuterRadius,
                         wrapSize
                     );
@@ -319,7 +319,7 @@ public class HexMeshChunk : MonoBehaviour {
                         direction,
                         center,
                         edgeVertices,
-                        riverGraph,
+                        riverDigraph,
                         hexOuterRadius,
                         wrapSize
                     );
@@ -332,8 +332,8 @@ public class HexMeshChunk : MonoBehaviour {
                     direction,
                     center,
                     edgeVertices,
-                    roadGraph,
-                    riverGraph,
+                    roadUndirectedGraph,
+                    riverDigraph,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -345,8 +345,8 @@ public class HexMeshChunk : MonoBehaviour {
                 target,
                 direction,
                 edgeVertices,
-                riverGraph,
-                roadGraph,
+                riverDigraph,
+                roadUndirectedGraph,
                 center,
                 hexOuterRadius,
                 wrapSize
@@ -354,7 +354,7 @@ public class HexMeshChunk : MonoBehaviour {
 
             if (
                 !source.IsUnderwater &&
-                !roadGraph.HasRoadInDirection(source, direction)
+                !roadUndirectedGraph.HasRoadInDirection(source, direction)
             ) {
                 features.AddFeature(
                     source,
@@ -378,10 +378,10 @@ public class HexMeshChunk : MonoBehaviour {
                 source,
                 target,
                 direction,
-                neighborGraph,
-                riverGraph,
-                roadGraph,
-                elevationGraph,
+                hexAdjacencyGraph,
+                riverDigraph,
+                roadUndirectedGraph,
+                elevationDigraph,
                 edgeVertices,
                 hexOuterRadius,
                 wrapSize
@@ -393,8 +393,8 @@ public class HexMeshChunk : MonoBehaviour {
                 source,
                 target,
                 direction,
-                neighborGraph,
-                riverGraph,
+                hexAdjacencyGraph,
+                riverDigraph,
                 center,
                 hexOuterRadius,
                 wrapSize
@@ -796,7 +796,7 @@ public class HexMeshChunk : MonoBehaviour {
 //        if (hex.HasRiverThroughEdge(direction.Next())) {
         if (riverGraph.HasRiverInDirection(
             source,
-            direction
+            direction.NextClockwise()
         )) {
 /* If the direction has a river on either side, it has a slight curve. 
 * The center vertex of river-adjacent triangle needs to be moved toward 
@@ -1999,7 +1999,7 @@ public class HexMeshChunk : MonoBehaviour {
 //          );
         bool previousHasRiver = riverGraph.HasRiverInDirection(
             source,
-            direction
+            direction.PreviousClockwise()
         );
 
 //        bool nextHasRiver = hex.HasRiverThroughEdge(direction.Next());

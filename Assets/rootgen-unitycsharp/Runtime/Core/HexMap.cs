@@ -77,7 +77,7 @@ public class HexMap : MonoBehaviour {
     /// The hex mesh chunks contained in the hex map.
     /// </summary>
     /// <value></value>
-    public HexMeshChunk[] HexMeshChunks {
+    public MapMeshChunk[] HexMeshChunks {
         get; private set;
     }
 
@@ -111,7 +111,7 @@ public class HexMap : MonoBehaviour {
     /// The adjacency graph for the hex map. Contains all edges between
     /// adjacent hexes.
     /// </summary>
-    public HexAdjacencyGraph AdjacencyGraph {
+    public HexAdjacencyGraph CreateAdjacencyGraph {
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
@@ -143,7 +143,7 @@ public class HexMap : MonoBehaviour {
     /// The elevation graph for the hex map. Contains bidirectional flow
     /// data for all changes in elevation on the hex map.
     /// </summary>
-    public ElevationDigraph ElevationDigraph {
+    public ElevationDigraph CreateElevationDigraph {
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
@@ -659,16 +659,16 @@ public class HexMap : MonoBehaviour {
         Stopwatch currentStopwatch = new Stopwatch();
         stopwatch.Start();
 
-        foreach(HexMeshChunk chunk in HexMeshChunks) {
+        foreach(MapMeshChunk chunk in HexMeshChunks) {
             currentStopwatch.Restart();
 
             chunk.Triangulate(
                 this,
                 hexOuterRadius,
-                AdjacencyGraph,
+                CreateAdjacencyGraph,
                 RiverDigraph,
                 RoadUndirectedGraph,
-                ElevationDigraph            
+                CreateElevationDigraph            
             );
 
             currentStopwatch.Stop();
@@ -716,16 +716,16 @@ public class HexMap : MonoBehaviour {
         return result;
     }
 
-    private HexMeshChunk[] GetHexMeshChunks(
+    private MapMeshChunk[] GetHexMeshChunks(
         HexGrid<Hex> grid,
         float hexOuterRadius
     ) {
-        HexMeshChunk[] result = new HexMeshChunk[
+        MapMeshChunk[] result = new MapMeshChunk[
             HexMeshChunkRows * HexMeshChunkColumns
         ];
 
         for (int i = 0; i < result.Length; i++) {
-            result[i] = HexMeshChunk.CreateEmpty(this.transform);
+            result[i] = MapMeshChunk.CreateEmpty(this.transform);
         }
 
         for (int hexRow = 0; hexRow < HexOffsetRows; hexRow++) {
@@ -760,13 +760,13 @@ public class HexMap : MonoBehaviour {
     }
 
     private Transform[] GetHexMeshChunkColumns(
-        HexMeshChunk[] chunks
+        MapMeshChunk[] chunks
     ) {
         Transform[] result = new Transform[HexMeshChunkColumns];
 
         for (int i = 0; i < result.Length; i++) {
             result[i] = new GameObject(
-                "Hex Mesh Chunk Column"
+                "Map Mesh Chunk Column"
             ).transform;
 
             result[i].transform.SetParent(transform, false);
