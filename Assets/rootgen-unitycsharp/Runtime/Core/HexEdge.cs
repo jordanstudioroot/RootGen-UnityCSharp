@@ -47,7 +47,7 @@ public class ElevationEdge : HexEdge {
 /// </value>
     public float Delta {
         get {
-            return Target.Elevation - Source.Elevation;
+            return Target.elevation - Source.elevation;
         }
     }
 

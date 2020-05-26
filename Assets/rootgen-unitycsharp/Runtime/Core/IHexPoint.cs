@@ -1,3 +1,3 @@
 public interface IHexPoint {
-    CubeVector Coordinates { get; }
+    CubeVector CubeCoordinates { get; }
 }

@@ -73,8 +73,8 @@ public class ElevationDigraph :
                     current,
                     neighbor,
                     CubeVector.HexDirectionWrapping(
-                        current.Coordinates,
-                        neighbor.Coordinates,
+                        current.CubeCoordinates,
+                        neighbor.CubeCoordinates,
                         hexGrid.WrapSize
                     )
                 );
@@ -85,8 +85,8 @@ public class ElevationDigraph :
                     neighbor,
                     current,
                     CubeVector.HexDirectionWrapping(
-                        neighbor.Coordinates,
-                        current.Coordinates,
+                        neighbor.CubeCoordinates,
+                        current.CubeCoordinates,
                         hexGrid.WrapSize
                     )
                 );

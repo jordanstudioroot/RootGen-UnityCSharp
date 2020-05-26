@@ -716,9 +716,8 @@ public class MapMeshChunk : MonoBehaviour {
 
         if (!source.IsUnderwater) {
 //            bool reversed = hex.HasIncomingRiver;
-            bool reversed = riverGraph.HasIncomingRiverInDirection(
-                source,
-                direction
+            bool reversed = riverGraph.HasIncomingRiver(
+                source
             );
 
             Vector3 indices;
@@ -794,7 +793,8 @@ public class MapMeshChunk : MonoBehaviour {
         }
 
 //        if (hex.HasRiverThroughEdge(direction.Next())) {
-        if (riverGraph.HasRiverInDirection(
+        if (
+            riverGraph.HasRiverInDirection(
             source,
             direction.NextClockwise()
         )) {
@@ -803,10 +803,12 @@ public class MapMeshChunk : MonoBehaviour {
 * the edge so they don't overlap the river.
 */
 //            if (hex.HasRiverThroughEdge(direction.Previous())) {
-            if (riverGraph.HasRiverInDirection(
-                source,
-                direction.PreviousClockwise()
-            )) {
+            if (
+                riverGraph.HasRiverInDirection(
+                    source,
+                    direction.PreviousClockwise()
+                )
+            ) {
                 center += HexagonPoint.GetSolidEdgeMiddle(
                     direction,
                     hexOuterRadius
@@ -969,7 +971,7 @@ public class MapMeshChunk : MonoBehaviour {
                         wrapSize
                     );
                 }
-                else if(source.Elevation > target.WaterLevel) {
+                else if(source.elevation > target.WaterLevel) {
                     TriangulateWaterfallInWater(
                         edgeVertices1.vertex2, edgeVertices1.vertex4, 
                         edge2.vertex2, edge2.vertex4, 
@@ -984,7 +986,7 @@ public class MapMeshChunk : MonoBehaviour {
             }
             else if (
                 !target.IsUnderwater &&
-                target.Elevation > source.WaterLevel
+                target.elevation > source.WaterLevel
             ) {
                 TriangulateWaterfallInWater(
                     edge2.vertex4,
@@ -1066,8 +1068,8 @@ public class MapMeshChunk : MonoBehaviour {
 
             vertex5.y = nextNeighbor.Position.y;
 
-            if (source.Elevation <= target.Elevation) {
-                if (source.Elevation <= nextNeighbor.Elevation) {
+            if (source.elevation <= target.elevation) {
+                if (source.elevation <= nextNeighbor.elevation) {
 
 //This hex has lowest elevation, no rotation.
                     TriangulateCorner(
@@ -1095,7 +1097,7 @@ public class MapMeshChunk : MonoBehaviour {
                     );
                 }
             }
-            else if (target.Elevation <= nextNeighbor.Elevation) {
+            else if (target.elevation <= nextNeighbor.elevation) {
 // Neighbor is lowest hex, rotate triangle clockwise.
                 TriangulateCorner(
                     edge2.vertex5,
@@ -1285,7 +1287,7 @@ public class MapMeshChunk : MonoBehaviour {
         else if (leftHex.GetEdgeType(rightHex) == ElevationEdgeTypes.Slope) {
 
 // If Cliff-Cliff-Slope-Left
-            if (leftHex.Elevation < rightHex.Elevation) {
+            if (leftHex.elevation < rightHex.elevation) {
                 TriangulateCornerCliffTerraces(
                     right,
                     rightHex,
@@ -1445,7 +1447,7 @@ public class MapMeshChunk : MonoBehaviour {
 * in the case.
 */
         float boundaryDistance =
-            1f / (rightHex.Elevation - beginHex.Elevation);
+            1f / (rightHex.elevation - beginHex.elevation);
 
 /*If boundary distance becomes negative, CCSR and CCSL case will have
 *strange behavior.
@@ -1550,7 +1552,7 @@ public class MapMeshChunk : MonoBehaviour {
 * in the case.
 */
         float boundaryDistance =
-            1f / (leftHex.Elevation - beginHex.Elevation);
+            1f / (leftHex.elevation - beginHex.elevation);
 
 // If boundary distance becomes negative, CCSR and CCSL case will have strange behavior.
         if (boundaryDistance < 0) {

@@ -16,6 +16,9 @@ public class RootGenConfig : ScriptableObject
 
     public int seed;
 
+    [Range(1, 300)]
+    public int initialClimateSteps = 40;
+
     [Range(10f, 9999f)]
     public int hexSize = 10;
 

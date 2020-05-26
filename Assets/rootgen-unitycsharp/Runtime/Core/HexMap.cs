@@ -111,7 +111,7 @@ public class HexMap : MonoBehaviour {
     /// The adjacency graph for the hex map. Contains all edges between
     /// adjacent hexes.
     /// </summary>
-    public HexAdjacencyGraph CreateAdjacencyGraph {
+    public HexAdjacencyGraph AdjacencyGraph {
         get {
             if (HexGrid == null)
                 throw new NullHexGridException();
@@ -665,7 +665,7 @@ public class HexMap : MonoBehaviour {
             chunk.Triangulate(
                 this,
                 hexOuterRadius,
-                CreateAdjacencyGraph,
+                AdjacencyGraph,
                 RiverDigraph,
                 RoadUndirectedGraph,
                 CreateElevationDigraph            
@@ -1150,7 +1150,7 @@ public class HexMap : MonoBehaviour {
             hexOuterRadius
         );
 
-        result.name = "Hex " + result.Coordinates;
+        result.name = "Hex " + result.CubeCoordinates;
 
         result.Index = rowMajorIndex;
         result.ColumnIndex = offsetX / HexMeshConstants.CHUNK_SIZE_X;

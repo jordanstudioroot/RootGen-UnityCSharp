@@ -11,162 +11,83 @@ using UnityEngine;
 /// Class encapsulating the RootGen map generation algorithms.
 /// </summary>
 public class MapGenerator {
+    #region Constant Fields
 
-/// <summary>
-/// A constant representing the required difference in distance
-/// between a hex and one, some, or all of its neighbors in order
-/// for that hex to be considered erodible.
-/// <summary>
+    /// <summary>
+    /// A constant representing the required difference in distance
+    /// between a hex and one, some, or all of its neighbors in order
+    /// for that hex to be considered erodible.
+    /// <summary>
     private const int DELTA_ERODIBLE_THRESHOLD = 2;
-/// <summary>
-/// A queue containing all the hexes on the A* search frontier.
-/// </summary>
-//    private PriorityQueue _searchFrontier;
+    
+    #endregion
 
-/// <summary>
-/// The current A* search phase.
-/// </summary>
-/// TODO:
-///     This variable is reassigned unnecessarily.
-//    private int _searchFrontierPhase;
+    #region Fields
 
-/// <summary>
-/// A collection of all the map regions.
-/// </summary>
-    private List<MapRegionRect> _regions;
+    #region Constructors
+    #endregion;
 
-/// <summary>
-/// A collection of structs defining the current climate data.
-/// </summary>
-/// TODO: 
-///     Indirect coupling between _climate and HexMap in GenerateClimate() and
-///     StepClimate() requiring both the list of hexs in HexMap and _climate
-///     to maintain the same order.
-/// 
-///     Need to either make this dependency explicit or elimnate the coupling.
-/// 
-///     This list is cleared and reused.
-/// 
-///     Might be possible to somehow elimate this list entirely by using functional
-///     programming principles instead of reusing the same list.
-    private List<ClimateData> _climate = new List<ClimateData>();
-
-/// <summary>
-/// A collection of structs defining the next climate data.
-/// </summary>
-/// TODO: 
-///     Indirect coupling between _nextClimate and HexMap in GenerateClimate() and
-///     StepClimate() requiring both the list of hexs in HexMap and _nextClimate
-///     to maintain the same order.
-/// 
-///     Need to either make this dependency explicit or elimnate the coupling.
-///     
-///     This list is cleared and reused.
-/// 
-///     Might be possible to somehow elimate this list entirely by using functional
-///     programming principles instead of reusing the same list.
-    private List<ClimateData> _nextClimate = new List<ClimateData>();
-
-/// <summary>
-/// A collection of HexDirections representing possible flow directions for
-///     a given river at a particular growth step.
-/// </summary>
-/// TODO:
-///     This list is cleared and reused.
-///     
-///     Might be possible to somehow eliminate this list entirely by using functional
-///     programming principles instead of reusing the same list.
-    private List<HexDirections> _flowDirections = new List<HexDirections>();
-
-/// <summary>
-/// An integer value representing the selected noise channel to use when
-///     determining temperature jitter.
-/// </summary>
-/// TODO:
-///     This variable creates an indirect dependency between SetTerrainTypes()
-///     and GenerateTemperature. Need to either make this dependency explicit
-///     or eliminate the coupling.
-/// 
-///     This variable is reassigned.
-/// 
-///     Might be possible to somehow eliminate this variable entirely by
-///     using functional programming principles instead of reassigning
-///     the variable.
-/// 
-///     Extract with other climate modeling data and algorithms into a separate
-///     class.
-    private int _temperatureJitterChannel;
-
-/// <summary>
-///     An array of floats representing thresholds for different temperature bands.
-///     Used along with moisture bands to determine the index of biomes to be used
-///     for the biome of a specific hex.
-/// </summary>
-/// TODO:
-///     Extract with other climate modeling data and algorithms into a separate
-///     class.
+    #region Private Fields
+    /// <summary>
+    ///     An array of floats representing thresholds for different temperature bands.
+    ///     Used along with moisture bands to determine the index of biomes to be used
+    ///     for the biome of a specific hex.
+    /// </summary>
     private static float[] temperatureBands = { 0.1f, 0.3f, 0.6f };
 
-/// <summary>
-///     An array of floats representing thresholds for different moisture bands.
-///     Used along with moisture bands to determine the index of biomes to be
-///     used for the biome of a specific hex.
-/// </summary>
-/// TODO:
-///     Extract with other climate modeling data and algorithms into a separate
-///     class.
+    /// <summary>
+    ///     An array of floats representing thresholds for different moisture bands.
+    ///     Used along with moisture bands to determine the index of biomes to be
+    ///     used for the biome of a specific hex.
+    /// </summary>
     private static float[] moistureBands = { 0.12f, 0.28f, 0.85f };
 
-    /* Array representing a matrix of biomes along the temperature bands:
-        *
-        *  0.1 [desert][snow][snow][snow]
-        *  0.3 [desert][mud][mud, sparse flora][mud, average flora]
-        *  0.6 [desert][grass][grass, sparse flora ][grass, average flora]
-        *      [desert][grass, sparse flora][grass, average flora][grass, dense flora]
-        *  Temperature/Moisture | 0.12 | 0.28 | 0.85
-        * */
-/// <summary>
-///     An array of Biome structs representing a matrix of possible biomes
-///     for a particular hex, indexed by its temperature and moisture.
-/// </summary>
-/// TODO:
-///     Extract with other climate modeling data and algoritms into a
-///     separate class.
+    /// <summary>
+    ///     An array of Biome structs representing a matrix of possible biomes
+    ///     for a particular hex, indexed by its temperature and moisture.
+    /// </summary>
     private static Biome[] biomes = {
         // Temperature <= .1 Freezing
-        new Biome(Terrains.Desert, 0), // Moisture <= .12 Freezing Dry
-        new Biome(Terrains.Snow, 0),   //          <= .28 Freezing Moist
-        new Biome(Terrains.Snow, 0),   //          <= .85 Freezing Wet
-        new Biome(Terrains.Snow, 0),   //           > .85 Freezing Drenched 
+        new Biome(Terrains.Desert, 0),   // Moisture <= .12 Freez. Dry
+        new Biome(Terrains.Snow, 0),     //          <= .28 Freez. Moist
+        new Biome(Terrains.Snow, 0),     //          <= .85 Freez. Wet
+        new Biome(Terrains.Snow, 0),     //           > .85 Freez. Drenched 
         
         // Temperature <= .3 Cold
-        new Biome(Terrains.Desert, 0), // Moisture <= .12 Cold Dry
-        new Biome(Terrains.Mud, 0),    //          <= .28 Cold Moist
-        new Biome(Terrains.Mud, 1),    //          <= .85 Cold Wet
-        new Biome(Terrains.Mud, 2),    //           > .85 Cold Drenched
+        new Biome(Terrains.Desert, 0),   // Moisture <= .12 Cold Dry
+        new Biome(Terrains.Mud, 0),      //          <= .28 Cold Moist
+        new Biome(Terrains.Mud, 1),      //          <= .85 Cold Wet
+        new Biome(Terrains.Mud, 2),      //           > .85 Cold Drenched
 
         // Temperature <= .6 Warm
-        new Biome(Terrains.Desert, 0), // Moisture <= .12 Warm Dry
-        new Biome(Terrains.Grassland, 0),  // Moisture <= .28 Warm Moist
-        new Biome(Terrains.Grassland, 1),  // Moisture <= .85 Warm Wet
-        new Biome(Terrains.Grassland, 2),  // Moisture  > .85 Warm Drenched
+        new Biome(Terrains.Desert, 0),   // Moisture <= .12 Warm Dry
+        new Biome(Terrains.Grassland, 0),// Moisture <= .28 Warm Moist
+        new Biome(Terrains.Grassland, 1),// Moisture <= .85 Warm Wet
+        new Biome(Terrains.Grassland, 2),// Moisture  > .85 Warm Drenched
 
         // Temperature > .6 Hot
-        new Biome(Terrains.Desert, 0), // Moisture <= .12 Hot Dry
-        new Biome(Terrains.Grassland, 1),  // Moisture <= .28 Hot Moist
-        new Biome(Terrains.Grassland, 2),  // Moisture <= .85 Hot Wet
-        new Biome(Terrains.Grassland, 3)   // Moisture  > .85 Hot Drenched
+        new Biome(Terrains.Desert, 0),   // Moisture <= .12 Hot Dry
+        new Biome(Terrains.Grassland, 1),// Moisture <= .28 Hot Moist
+        new Biome(Terrains.Grassland, 2),// Moisture <= .85 Hot Wet
+        new Biome(Terrains.Grassland, 3) // Moisture  > .85 Hot Drenched
     };
+    #endregion
 
-/// <summary>
-/// Generate a HexMap using the standard RootGen algorithm.
-/// </summary>
-/// <param name="config">
-/// The configuration data for the map to be generated.
-/// </param>
-/// <returns>
-///A randomly generated HexMap object.
-/// </returns>
+    #endregion
+
+    #region Methods
+
+    #region Public Methods
+
+    /// <summary>
+    /// Generate a HexMap using the standard RootGen algorithm.
+    /// </summary>
+    /// <param name="config">
+    /// The configuration data for the map to be generated.
+    /// </param>
+    /// <returns>
+    ///A randomly generated HexMap object.
+    /// </returns>
     public HexMap GenerateMap(
         RootGenConfig config,
         bool editMode
@@ -187,7 +108,8 @@ public class MapGenerator {
             seed = config.seed;
         }
 
-// Snapshot the initial random state before consuming the random sequence.
+        // Snapshot the initial random state before consuming the random
+        // sequence.
         Random.State snapshot = RandomState.Snapshot(seed);
 
         result.Initialize(
@@ -198,10 +120,6 @@ public class MapGenerator {
             editMode
         );
 
-//        if (_searchFrontier == null) {
-//            _searchFrontier = new PriorityQueue();
-//        }
-
         foreach (Hex hex in result.Hexes) {
             hex.WaterLevel = config.waterLevel;
         }
@@ -209,7 +127,7 @@ public class MapGenerator {
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
         
-        _regions = GenerateRegions(
+        List<MapRegionRect> regions = GenerateRegions(
             result,
             config.regionBorder,
             config.mapBorderX,
@@ -236,7 +154,8 @@ public class MapGenerator {
             config.waterLevel,
             config.jitterProbability,
             config.hexSize,
-            result.WrapSize
+            result.WrapSize,
+            regions
         );
 
         stopwatch.Stop();
@@ -256,18 +175,33 @@ public class MapGenerator {
 
         stopwatch.Start();
 
-        GenerateClimate(
+        HexMapClimate hexMapClimate = new HexMapClimate(
             result,
-            config.startingMoisture,
-            result.SizeSquared,
-            config.evaporationFactor,
-            config.precipitationFactor,
-            config.elevationMax,
-            config.windDirection,
-            config.windStrength,
-            config.runoffFactor,
-            config.seepageFactor
+            config.startingMoisture
         );
+
+        
+        ClimateParameters climateParameters = new ClimateParameters(
+            config.hemisphere,
+            config.windDirection,
+            config.evaporationFactor,
+            config.highTemperature,
+            config.lowTemperature,
+            config.precipitationFactor,
+            config.runoffFactor,
+            config.seepageFactor,
+            config.temperatureJitter,
+            config.windStrength,
+            config.hexSize,
+            config.elevationMax,
+            config.waterLevel
+        );
+
+        for (int i = 0; i < config.initialClimateSteps; i++) {
+            hexMapClimate.Step(climateParameters);
+        }
+
+        List<ClimateData> climate = hexMapClimate.List;
         
         stopwatch.Stop();
         diagnostics += "Generate Climate: " + stopwatch.Elapsed + "\n";
@@ -281,7 +215,8 @@ public class MapGenerator {
             config.elevationMax,
             config.riverPercentage,
             config.extraLakeProbability,
-            config.hexSize
+            config.hexSize,
+            climate
         );
 
         stopwatch.Stop();
@@ -292,13 +227,13 @@ public class MapGenerator {
         SetTerrainTypes(
             config.elevationMax,
             config.waterLevel,
-            result.SizeSquared,
             config.hemisphere,
             config.temperatureJitter,
             config.lowTemperature,
             config.highTemperature,
             result,
-            config.hexSize
+            config.hexSize,
+            climate
         );
 
         stopwatch.Stop();
@@ -310,11 +245,15 @@ public class MapGenerator {
             "Diagonstics"
         );
 
-// Restore the snapshot of the random state taken before consuming the
-// random sequence.
+        // Restore the snapshot of the random state taken before consuming
+        // the random sequence.
         Random.state = snapshot;
         return result;
     }
+
+    #endregion
+
+    #region Private Methods
 
     private List<MapRegionRect> GenerateRegions(
         HexMap hexMap,
@@ -408,40 +347,41 @@ public class MapGenerator {
         int waterLevel,
         float jitterProbability,
         float hexOuterRadius,
-        int wrapSize
+        int wrapSize,
+        List<MapRegionRect> regions
     ) {
-// Set the land budget to the fraction of the overall hexes
-// as specified by the percentLand arguement.
+        // Set the land budget to the fraction of the overall hexes as
+        // specified by the percentLand arguement.
         int landBudget = Mathf.RoundToInt(
             numHexes * landPercentage * 0.01f
         );
 
-// Initialize the result;
+        // Initialize the result;
         int result = landBudget;
 
-// Guard against permutations that result in an impossible map
-// and by extension an infinite loop by including a guard clause
-// that aborts the loop at 10,000 attempts to sink or raise the
-// terrain.
+        // Guard against permutations that result in an impossible map and
+        // by extension an infinite loop by including a guard clause that
+        // aborts the loop at 10,000 attempts to sink or raise the terrain.
         for (int guard = 0; guard < 10000; guard++) {
             
-// Determine whether this hex should be sunk            
+            // Determine whether this hex should be sunk            
             bool sink = Random.value < sinkProbability;
 
-// For each region . . . 
-            for (int i = 0; i < _regions.Count; i++) {
+            // For each region . . . 
+            for (int i = 0; i < regions.Count; i++) {
                 
-                MapRegionRect region = _regions[i];
+                MapRegionRect region = regions[i];
 
-// Get a chunk size to use within the bounds of the region based
-// of the minimum and maximum chunk sizes.
+                // Get a chunk size to use within the bounds of the region based
+                // of the minimum and maximum chunk sizes.
                 int maximumRegionDensity = Random.Range(
                     chunkSizeMin,
                     chunkSizeMax + 1
                 );
                 
-// If hex is to be sunk, sink hex and decrement decrement land
-// budget if sinking results in a hex below water level.
+                // If hex is to be sunk, sink hex and decrement decrement
+                // land budget if sinking results in a hex below water
+                // level.
                 if (sink) {
                     landBudget = SinkTerrain(
                         hexMap,
@@ -456,8 +396,8 @@ public class MapGenerator {
                     );
                 }
 
-// Else, raise hex and increment land budget if raising results in
-// a hex above the water level.
+                // Else, raise hex and increment land budget if raising
+                // results in a hex above the water level.
                 else {
                     landBudget = RaiseTerrain(
                         hexMap,
@@ -472,8 +412,9 @@ public class MapGenerator {
                         wrapSize
                     );
 
-// If land budget is 0, return initial land budget value because all
-// land hexes specified to be allocated were allocated successfully. 
+                    // If land budget is 0, return initial land budget
+                    // value because all land hexes specified to be
+                    // allocated were allocated successfully. 
                     if (landBudget == 0) {
                         return result;
                     }
@@ -481,10 +422,10 @@ public class MapGenerator {
             }
         }
 
-// If land budget is greater than 0, all land hexes specified to be
-// allocated were not allocated successfully. Log a warning, decrement
-// the remaining land budget from the result, and return the result
-// as the number of land hexes allocated.
+        // If land budget is greater than 0, all land hexes specified to
+        // be allocated were not allocated successfully. Log a warning,
+        // decrement the remaining land budget from the result, and return
+        // the result as the number of land hexes allocated.
         if (landBudget > 0) {
             RootLog.Log(
                 "Failed to use up " + landBudget + " land budget.",
@@ -506,138 +447,71 @@ public class MapGenerator {
         int elevationMin,
         int waterLevel,
         float jitterProbability,
-//        int searchFrontierPhase,
         float hexOuterRadius
     ) {
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
         List<Hex> closed = new List<Hex>();
-// Increment the search frontier phase to indicate a new search phase.
-//        searchFrontierPhase += 1;
-        
-// Region dimensions are used to calcualte valid bounds for randomly
-// selecting first hex to apply the sink algorithm to. This results
-// in continent like formations loosely constrained by the size of
-// a given region.
-// TODO:
-//  This algorithm could probably be improved by finding a real-world
-//  model to implement for sinking terrain based on tectonic shift.
-
-// Get a random hex within the region bounds to be the first hex
-// searched.
+        // Get a random hex within the region bounds to be the first hex
+        // searched.
         Hex firstHex = GetRandomHex(hexMap, region);
-
-// Set the search phase of the first hex to the current search phase.
-//        firstHex.SearchPhase = _searchFrontierPhase;
-
-// Initialize the distance of the selected hex to 0, since it is
-// 0 hexes away from the start of the search.
-//        firstHex.Distance = 0;
-
-// Search heuristic for first hex is 0 as it has a high search
-// priority. Although, it doesnt really matter because it is the
-// first to be dequeued.
-//        firstHex.SearchHeuristic = 0;
-
-//        searchFrontier.Enqueue(firstHex);
-
         open.Enqueue(firstHex, 0);
-
-        CubeVector center = firstHex.Coordinates;
-
+        CubeVector center = firstHex.CubeCoordinates;
         int sink = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
 
-//        while (size < chunkSize && searchFrontier > 0) {
-            while (
-              regionDensity < maximumRegionDensity &&
-              open.Count > 0
+        while (
+            regionDensity < maximumRegionDensity &&
+            open.Count > 0
+        ) {
+            Hex current = open.Dequeue();
+            closed.Add(current);
+            
+            int originalElevation = current.elevation;
+
+            int newElevation = current.elevation - sink;
+
+            if (newElevation < elevationMin) {
+                continue;
+            }
+
+            current.SetElevation(
+                newElevation,
+                hexOuterRadius,
+                hexMap.WrapSize
+            );
+
+            if (
+                originalElevation >= waterLevel &&
+                newElevation < waterLevel
             ) {
-              
-//            hex current = searchFrontier.Dequeue();
-                Hex current = open.Dequeue();
-                closed.Add(current);
-                
-                int originalElevation = current.Elevation;
+                landBudget += 1;
+            }
 
-                int newElevation = current.Elevation - sink;
+            regionDensity += 1;
 
-                if (newElevation < elevationMin) {
+            List<Hex> neighbors;
+
+            if (hexMap.TryGetNeighbors(current, out neighbors)) {
+                foreach(Hex neighbor in neighbors) {
+                    if (closed.Contains(neighbor))
                     continue;
-                }
 
-                current.SetElevation(
-                    newElevation,
-                    hexOuterRadius,
-                    hexMap.WrapSize
-                );
+                int priority =
+                    CubeVector.WrappedHexTileDistance(
+                        neighbor.CubeCoordinates,
+                        center,
+                        hexMap.WrapSize
+                    ) +
+                    Random.value < jitterProbability ? 1 : 0;
 
-                if (
-                    originalElevation >= waterLevel &&
-                    newElevation < waterLevel
-                ) {
-                    landBudget += 1;
-                }
-
-                regionDensity += 1;
-
-    //            for (
-    //                HexDirection direction = HexDirection.Northeast;
-    //                direction <= HexDirection.Northwest;
-    //                direction++
-    //            ) {
-                List<Hex> neighbors;
-
-                if (hexMap.TryGetNeighbors(current, out neighbors)) {
-                    foreach(Hex neighbor in neighbors) {
-                        if (closed.Contains(neighbor))
-                        continue;
-    //                hex neighbor = current.GetNeighbor(direction);
-                    
-    //                if (
-    //                    neighbor && neighbor.SearchPhase <
-    //                    _searchFrontierPhase
-    //                ) {
-    //                    neighbor.SearchPhase = _searchFrontierPhase;
-
-    /* Set the distance to be the distance from the center of the
-    * raised terrain chunk, so that hexes closer to the center are
-    * prioritized when raising terrain.
-    */
-    //                    neighbor.Distance =
-    //                        neighbor.Coordinates.DistanceTo(center);
-
-    /* Set the search heuristic to 1 or 0 based on a configurable
-    * jitter probability, to cause perturbation in the hexes which
-    * are selected to be raised. This will make the chunks generated
-    * less uniform.
-    */
-    //                    neighbor.SearchHeuristic =
-    //                        Random.value < jitterProbability ? 1 : 0;
-                        
-    //                    searchFrontier.Enqueue(neighbor);
-
-                        int priority =
-                            CubeVector.WrappedHexTileDistance(
-                                neighbor.Coordinates,
-                                center,
-                                hexMap.WrapSize
-                            ) +
-    //                        neighbor.CubeCoordinates.DistanceTo(
-    //                            center,
-    //                            hexMap.WrapSize
-    //                        ) +
-                            Random.value < jitterProbability ? 1 : 0;
-
-                        open.Enqueue(
-                            neighbor,
-                            priority
-                        );
-                    }
+                    open.Enqueue(
+                        neighbor,
+                        priority
+                    );
                 }
             }
-//        }
+        }
 
-//        searchFrontier.Clear();
         return landBudget;
     }
 
@@ -653,15 +527,6 @@ public class MapGenerator {
         float hexOuterRadius,
         int wrapSize
     ) {
-//        _searchFrontierPhase += 1;
-
-// Region dimensions are used to calcualte valid bounds for randomly
-// selecting first hex to apply the raise algorithm to. This results
-// in continent like formations loosely constrained by the size of
-// a given region.
-// TODO:
-//  This algorithm could probably be improved by finding a real-world
-//  model to implement for raising terrain based on tectonic shift.
         Hex firstHex = GetRandomHex(hexMap, region);
 
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
@@ -669,17 +534,11 @@ public class MapGenerator {
 
         open.Enqueue(firstHex, 0);
 
-//        firstHex.SearchPhase = _searchFrontierPhase;
-//        firstHex.Distance = 0;
-//        firstHex.SearchHeuristic = 0;
-//        _searchFrontier.Enqueue(firstHex);
-
-        CubeVector center = firstHex.Coordinates;
+        CubeVector center = firstHex.CubeCoordinates;
 
         int rise = Random.value < highRiseProbability ? 2 : 1;
         int regionDensity = 0;
 
-//        while (size < chunkSize && _searchFrontier.Count > 0) {
         while (
             regionDensity < maximumRegionDensity &&
             open.Count > 0
@@ -688,7 +547,7 @@ public class MapGenerator {
             Hex current = open.Dequeue();
             closed.Add(current);
             
-            int originalElevation = current.Elevation;
+            int originalElevation = current.elevation;
             int newElevation = originalElevation + rise;
 
             if (newElevation > elevationMax) {
@@ -717,55 +576,25 @@ public class MapGenerator {
 
             regionDensity += 1;
 
-//            for (
-//                HexDirection direction = HexDirection.Northeast;
-//                direction <= HexDirection.Northwest;
-//                direction++
-//            ) {
             List<Hex> neighbors;
 
             if (hexMap.TryGetNeighbors(current, out neighbors)) {
                 foreach(Hex neighbor in neighbors) {
                     if (closed.Contains(neighbor))
                     continue;
-//                hex neighbor = current.GetNeighbor(direction);
 
-//                if (neighbor && neighbor.SearchPhase < _searchFrontierPhase) {
-//                    neighbor.SearchPhase = _searchFrontierPhase;
-
-                    /* Set the distance to be the distance from the center of the
-                        * raised terrain chunk, so that hexes closer to the center are
-                        * prioritized when raising terrain.
-                        */
-//                    neighbor.Distance = neighbor.Coordinates.DistanceTo(center);
-
-                    /* Set the search heuristic to 1 or 0 based on a configurable
-                        * jitter probability, to cause perturbation in the hexes which
-                        * are selected to be raised. This will make the chunks generated
-                        * less uniform.
-                        */
-//                    neighbor.SearchHeuristic = 
-//                        Random.value < jitterProbability ? 1 : 0;
-
-//                    _searchFrontier.Enqueue(neighbor);
                     int priority =
                         CubeVector.WrappedHexTileDistance(
-                            neighbor.Coordinates,
+                            neighbor.CubeCoordinates,
                             center,
                             hexMap.WrapSize
                         ) +
-//                        neighbor.CubeCoordinates.DistanceTo(
-//                            center,
-//                            hexMap.WrapSize
-//                        ) +
                         Random.value < jitterProbability ? 1 : 0;
 
                     open.Enqueue(neighbor, priority);
                 }
             }
         }
-
-//        _searchFrontier.Clear();
 
         return budget;
     }
@@ -777,8 +606,8 @@ public class MapGenerator {
     ) {
         List<Hex> erodibleHexes = ListPool<Hex>.Get();
 
-// For each hex in the hex map, check if the hex is erodible. If it is
-// add it to the list of erodible hexes.
+        // For each hex in the hex map, check if the hex is erodible.
+        // If it is add it to the list of erodible hexes.
         foreach (Hex erosionCandidate in hexMap.Hexes) {
             List<Hex> erosionCandidateNeighbors;
 
@@ -797,57 +626,57 @@ public class MapGenerator {
             }
         }
 
-// Calculate the target number of hexes to be eroded.
-        int targetErodibleCount =
+        // Calculate the target number of uneroded hexes.
+        int targetUnerodedHexes =
             (int)(
                 erodibleHexes.Count *
                 (100 - erosionPercentage) *
                 0.01f
             );
 
-// While the number of hexes erorded is less than the target number...
-        while (erodibleHexes.Count > targetErodibleCount) {
+        // While the number of erodible hexes is greater than the target
+        // number of uneroded hexes...
+        while (erodibleHexes.Count > targetUnerodedHexes) {
 
-// Select a random hex from the erodible hexes.
+            // Select a random hex from the erodible hexes.
             int index = Random.Range(0, erodibleHexes.Count);
-            Hex hex = erodibleHexes[index];
+            Hex originHex = erodibleHexes[index];
 
-// Get the candidates for erosion runoff for the selected hex.
-            List<Hex> hexNeighbors;
+            // Get the candidates for erosion runoff for the selected hex.
+            List<Hex> originNeighborHexes;
 
             if(
                 hexMap.TryGetNeighbors(
-                    hex,
-                    out hexNeighbors
-                ) &&
-                IsErodible(hex, hexNeighbors)
+                    originHex,
+                    out originNeighborHexes
+                )
             ) {
-                Hex targetHex =
+                Hex runoffHex =
                     GetErosionRunoffTarget(
-                        hex,
-                        hexNeighbors
+                        originHex,
+                        originNeighborHexes
                     );
 
-//  Lower the elevation of the hex being eroded.
-                hex.SetElevation(
-                    hex.Elevation - 1,
+                // Lower the elevation of the hex being eroded.
+                originHex.SetElevation(
+                    originHex.elevation - 1,
                     hexOuterRadius,
                     hexMap.WrapSize
                 );
 
-// Raise the elevation of the hex selected for runoff.
-                targetHex.SetElevation(
-                    targetHex.Elevation + 1,
+                // Raise the elevation of the hex selected for runoff.
+                runoffHex.SetElevation(
+                    runoffHex.elevation + 1,
                     hexOuterRadius,
                     hexMap.WrapSize
                 );
 
-// If the hex is not erodible after this erosion step, remove
-// it from the list of erodible hexes.
+                // If the hex is not erodible after this erosion step,
+                // remove it from the list of erodible hexes.
                 if (
                     !IsErodible(
-                        hex,
-                        hexNeighbors
+                        originHex,
+                        originNeighborHexes
                     )
                 ) {
                     erodibleHexes[index] =
@@ -856,219 +685,75 @@ public class MapGenerator {
                     erodibleHexes.RemoveAt(erodibleHexes.Count - 1);
                 }
                 
-// For each neighbor of the current hex...
-                foreach(Hex neighbor in hexNeighbors) {
-// If the elevation of the hexes neighbor is is exactly 2 steps
-// higher than the current hex, and is not an erodible hex...
+                // For each neighbor of the current hex...
+                foreach(Hex originNeighbor in originNeighborHexes) {
+                    // If the elevation of the hexes neighbor is is exactly
+                    // 2 steps higher than the current hex, and is not an
+                    // erodible hex...
                     if (
-                        neighbor.Elevation == hex.Elevation + 2 &&
-                        !erodibleHexes.Contains(neighbor)
+                        (
+                            originNeighbor.elevation ==
+                            originHex.elevation + DELTA_ERODIBLE_THRESHOLD
+                        ) &&
+                        !erodibleHexes.Contains(originNeighbor)
                     ) {
-// ...this erosion step has modified the map so that the hex is now
-// erodible, so add it to the list of erodible hexes.
-                        erodibleHexes.Add(neighbor);
+                        // ...this erosion step has modified the map so
+                        // that the hex is now erodible, so add it to the
+                        // list of erodible hexes.
+                        erodibleHexes.Add(originNeighbor);
                     }
                 }
 
-                List<Hex> targetHexNeighbors;
+                List<Hex> runoffNeighborHexes;
 
-// If the target of the runoff is now erodible due to the change in
-// elevation, add it to the list of erodible hexes.
+                // If the target of the runoff is now erodible due to the
+                // change in elevation, add it to the list of erodible
+                // hexes.
                 if (
                     hexMap.TryGetNeighbors(
-                        targetHex,
-                        out targetHexNeighbors
-                    ) &&
-                    IsErodible(targetHex, targetHexNeighbors) &&
-                    !erodibleHexes.Contains(targetHex)
+                        runoffHex,
+                        out runoffNeighborHexes
+                    )
                 ) {
-                    erodibleHexes.Add(targetHex);
-
-// If the neighbors of the targer hex are now not erodible due to the
-// change in elevation, remove them from the list of erodible hexes.
-                    foreach (
-                        Hex targetHexNeighbor in
-                        targetHexNeighbors
+                    if (
+                        IsErodible(
+                            runoffHex,
+                            runoffNeighborHexes
+                        ) && 
+                        !erodibleHexes.Contains(runoffHex)
                     ) {
-                        List<Hex> targetHexNeighborNeighbors;
+                        erodibleHexes.Add(runoffHex);
+                    }
+
+                    foreach (
+                        Hex runoffNeighbor in
+                        runoffNeighborHexes
+                    ) {
+                        List<Hex> runoffNeighborNeighborHexes;
 
                         if (
                             hexMap.TryGetNeighbors(
-                                targetHexNeighbor,
-                                out targetHexNeighborNeighbors
+                                runoffNeighbor,
+                                out runoffNeighborNeighborHexes
+                            ) &&
+                            runoffNeighbor != originHex &&
+                            (
+                                runoffNeighbor.elevation ==
+                                runoffHex.elevation + 1 
                             ) &&
                             !IsErodible(
-                                targetHexNeighbor,
-                                targetHexNeighborNeighbors
+                                runoffNeighbor,
+                                runoffNeighborNeighborHexes
                             )
                         ) {
-                            erodibleHexes.Remove(targetHexNeighbor);
-                        }
+                            erodibleHexes.Remove(runoffNeighbor);
+                        }   
                     }
                 }
             }
         }
 
         ListPool<Hex>.Add(erodibleHexes);
-    }
-
-    private void GenerateClimate(
-        HexMap hexMap,
-        float startingMoisture,
-        int numHexes,
-        float evaporationFactor,
-        float precipitationFactor,
-        int elevationMax,    
-        HexDirections windDirection,
-        float windStrength,
-        float runoffFactor,
-        float seepageFactor
-    ) {
-        _climate.Clear();
-        _nextClimate.Clear();
-
-        ClimateData initialData = new ClimateData();
-        initialData.moisture = startingMoisture;
-
-        ClimateData clearData = new ClimateData();
-
-        for (int i = 0; i < numHexes; i++) {
-            _climate.Add(initialData);
-            _nextClimate.Add(clearData);
-        }
-        HexAdjacencyGraph adjacencyGraph =
-            hexMap.CreateAdjacencyGraph;
-
-        for (int cycle = 0; cycle < 40; cycle++) {
-            for (int i = 0; i < numHexes; i++) {
-                Hex source = hexMap.GetHex(i);
-                List<HexEdge> edges =
-                    adjacencyGraph.GetOutEdges(source);
-                StepClimate(
-                    hexMap.GetHex(i),
-                    edges,
-                    i,
-                    evaporationFactor,
-                    precipitationFactor,
-                    elevationMax,
-                    windDirection,
-                    windStrength,
-                    runoffFactor,
-                    seepageFactor
-                );
-            }
-
-            /* Make sure that the climate data being calculated in the current
-                * cycle is always from the current climate and not the next climate.
-                */
-
-            // Store the modified climate data in swap.
-            List<ClimateData> swap = _climate;
-
-            // Store the cleared climate data in the current climate.
-            _climate = _nextClimate;
-
-            // Store the modified climate data in next climate
-            _nextClimate = swap;
-        }
-    }
-
-    private void StepClimate(
-        Hex source,
-        List<HexEdge> outEdges,
-        int hexIndex,
-        float evaporationFactor,
-        float precipitationFactor,
-        int elevationMax,
-        HexDirections windDirection,
-        float windStrength,
-        float runoffFactor,
-        float seepageFactor
-    ) {
-        ClimateData hexClimate = _climate[hexIndex];
-
-        if (source.IsUnderwater) {
-            hexClimate.moisture = 1f;
-            hexClimate.clouds += evaporationFactor;
-        }
-        else {
-            float evaporation = hexClimate.moisture * evaporationFactor;
-            hexClimate.moisture -= evaporation;
-            hexClimate.clouds += evaporation;
-        }
-
-        float precipitation = hexClimate.clouds * precipitationFactor;
-        hexClimate.clouds -= precipitation;
-        hexClimate.moisture += precipitation;
-
-        // Cloud maximum has an inverse relationship with elevation maximum.
-        float cloudMaximum = 1f - source.ViewElevation / (elevationMax + 1f);
-
-        if (hexClimate.clouds > cloudMaximum) {
-            hexClimate.moisture += hexClimate.clouds - cloudMaximum;
-            hexClimate.clouds = cloudMaximum;
-        }
-
-        HexDirections mainDispersalDirection = windDirection.Opposite();
-
-        float cloudDispersal = hexClimate.clouds * (1f / (5f + windStrength));
-        float runoff = hexClimate.moisture * runoffFactor * (1f / 6f);
-        float seepage = hexClimate.moisture * seepageFactor * (1f / 6f);
-
-//        for (
-//            HexDirection direction = HexDirection.Northeast;
-//            direction <= HexDirection.Northwest;
-//            direction++
-//        ) {
-
-        foreach (HexEdge edge in outEdges) {
-//            hex neighbor = hex.GetNeighbor(direction);
-
-//            if (!neighbor) {
-//                continue;
-//            }
-
-            ClimateData neighborClimate = _climate[edge.Target.Index];
-
-            if (edge.Direction == mainDispersalDirection) {
-                neighborClimate.clouds += cloudDispersal * windStrength;
-            }
-            else {
-                neighborClimate.clouds += cloudDispersal;
-            }
-
-            int elevationDelta = edge.Target.ViewElevation - source.ViewElevation;
-
-            if (elevationDelta < 0) {
-                hexClimate.moisture -= runoff;
-                neighborClimate.moisture += runoff;
-            }
-            else if (elevationDelta == 0) {
-                hexClimate.moisture -= seepage;
-                neighborClimate.moisture += seepage;
-            }
-
-            _climate[edge.Target.Index] = neighborClimate;
-        }
-
-        // Create a hex for the next climate.
-        ClimateData nextHexClimate = _nextClimate[hexIndex];
-
-        // Modify the data for the next climate.
-        nextHexClimate.moisture += hexClimate.moisture;
-
-        /* Ensure that no hex can have more moisture than
-            *a hex that is underwater.
-            */
-        if (nextHexClimate.moisture > 1f) {
-            nextHexClimate.moisture = 1f;
-        }
-
-        //Store the data for the next climate.
-        _nextClimate[hexIndex] = nextHexClimate;
-
-        //Clear the current climate data.
-        _climate[hexIndex] = new ClimateData();
     }
 
     private void GenerateRivers(
@@ -1078,7 +763,8 @@ public class MapGenerator {
         int elevationMax,
         int riverPercentage,
         float extraLakeProbability,
-        float hexOuterRadius
+        float hexOuterRadius,
+        List<ClimateData> climate
     ) {
 
         RiverDigraph riverGraph =
@@ -1086,7 +772,7 @@ public class MapGenerator {
             new RiverDigraph();
 
         HexAdjacencyGraph adjacencyGraph =
-            hexMap.CreateAdjacencyGraph;
+            hexMap.AdjacencyGraph;
 
         List<Hex> riverOrigins = ListPool<Hex>.Get();
 
@@ -1097,9 +783,9 @@ public class MapGenerator {
                 continue;
             }
 
-            ClimateData data = _climate[i];
+            ClimateData data = climate[i];
             float weight =
-                data.moisture * (hex.Elevation - waterLevel) /
+                data.moisture * (hex.elevation - waterLevel) /
                 (elevationMax - waterLevel);
 
             if (weight > 0.75) {
@@ -1129,7 +815,6 @@ public class MapGenerator {
             riverOrigins[index] = riverOrigins[lastIndex];
             riverOrigins.RemoveAt(lastIndex);
 
-//            if (!origin.HasRiver) {
             if (!riverGraph.HasRiver(origin)) {
                 bool isValidOrigin = true;
                 
@@ -1138,13 +823,9 @@ public class MapGenerator {
                     hexMap.TryGetNeighbors(origin, out neighbors)
                 ) {
                     foreach(Hex neighbor in neighbors) {
-//                      hex neighbor =
-//                      origin.GetNeighbor(direction);
-
                         if (
                             neighbor &&
                             (   
-//                              neighbor.HasRiver ||
                                 riverGraph.HasRiver(neighbor) ||
                                 neighbor.IsUnderwater
                             )
@@ -1190,16 +871,15 @@ public class MapGenerator {
         while (!currentHex.IsUnderwater) {
             int minNeighborElevation = int.MaxValue;
 
-            _flowDirections.Clear();
+            List<HexDirections> flowDirections =
+                new List<HexDirections>();
 
             for (
                 HexDirections directionCandidate = HexDirections.Northeast;
                 directionCandidate <= HexDirections.Northwest;
                 directionCandidate++
             ) {
-//            foreach(hex neighbor in neighborGraph.Neighbors(hex)) {
                 Hex neighbor =
-//                    hex.GetNeighbor(directionCandidate);
                       adjacencyGraph.TryGetNeighborInDirection(
                           currentHex,
                           directionCandidate
@@ -1209,34 +889,33 @@ public class MapGenerator {
                     continue;
                 }
 
-                if (neighbor.Elevation < minNeighborElevation) {
-                    minNeighborElevation = neighbor.Elevation;
+                if (neighbor.elevation < minNeighborElevation) {
+                    minNeighborElevation = neighbor.elevation;
                 }
 
-// If the direction points to the river origin, or to a neighbor
-// which already has an incoming river, continue.
+                // If the direction points to the river origin, or to a
+                // neighbor which already has an incoming river, continue.
                 if (
                     neighbor == origin ||
-//                    neighbor.HasIncomingRiver
                     riverGraph.HasIncomingRiver(neighbor)
                 ) {
                     continue;
                 }
 
-                int delta = neighbor.Elevation - currentHex.Elevation;
+                int delta = neighbor.elevation - currentHex.elevation;
 
-// If the elevation in the given direction is positive, continue.
+                // If the elevation in the given direction is positive,
+                // continue.
                 if (delta > 0) {
                     continue;
                 }
 
-// If the direction points away from the river origin and any
-// neighbors which already have an incoming river, and the elevation
-// in the given direction is negative or zero, and the neighbor
-// has an outgoing river, branch river in this direction.
-//                if (neighbor.HasOutgoingRiver) {
+                // If the direction points away from the river origin and
+                // any neighbors which already have an incoming river, and
+                // the elevation in the given direction is negative or
+                // zero, and the neighbor has an outgoing river, branch
+                // river in this direction.
                 if (riverGraph.HasOutgoingRiver(neighbor)) {
-//                    hex.SetOutgoingRiver(directionCandidate);
                     RiverEdge mergeEdge = new RiverEdge(
                         currentHex,
                         neighbor,
@@ -1244,58 +923,60 @@ public class MapGenerator {
                     );
 
                     riverGraph.AddVerticesAndEdge(mergeEdge);
-                    Debug.Log(mergeEdge);
                     return localRiverLength;
                 }
 
-// If the direction points away from the river origin and any
-// neighbors which already have an incoming river, and the elevation
-// in the given direction is not positive, and the neighbor does
-// not have an outgoing river in the given direction...
+                // If the direction points away from the river origin and
+                // any neighbors which already have an incoming river, and
+                // the elevation in the given direction is not positive,
+                // and the neighbor does not have an outgoing river in the
+                // given direction...
 
-// If the direction is a decline, make the probability for the branch
-// 4 / 5.
+                // If the direction is a decline, make the probability for
+                // the branch 4 / 5.
                 if (delta < 0) {
-                    _flowDirections.Add(directionCandidate);
-                    _flowDirections.Add(directionCandidate);
-                    _flowDirections.Add(directionCandidate);
+                    flowDirections.Add(directionCandidate);
+                    flowDirections.Add(directionCandidate);
+                    flowDirections.Add(directionCandidate);
                 }
 
-// If the rivers local length is 1, and the direction does not result
-// in a slight river bend, but rather a straight river or a corner
-// river, make the probability of the branch 2 / 5
+                // If the rivers local length is 1, and the direction does
+                // not result in a slight river bend, but rather a straight
+                // river or a corner river, make the probability of the
+                // branch 2 / 5
                 if (
                     localRiverLength == 1 ||
                     (directionCandidate != direction.NextClockwise2() &&
                     directionCandidate != direction.PreviousClockwise2())
                 ) {
-                    _flowDirections.Add(directionCandidate);
+                    flowDirections.Add(directionCandidate);
                 }
 
-                _flowDirections.Add(directionCandidate);
+                flowDirections.Add(directionCandidate);
             }
 
-// If there are no candidates for branching the river...
-            if (_flowDirections.Count == 0) {
-// If the river contains only the river origin...
+            // If there are no candidates for branching the river...
+            if (flowDirections.Count == 0) {
+                // If the river contains only the river origin...
                 if (localRiverLength == 1) {
-// Do nothing and return 0.
+                    // Do nothing and return 0.
                     return 0;
                 }
 
-// If the hex is surrounded by hexes at a higher elevation,
-// set the water level of the hex to the minium elevation of
-// all neighbors.
-                if (minNeighborElevation >= currentHex.Elevation) {
+                // If the hex is surrounded by hexes at a higher elevation,
+                // set the water level of the hex to the minium elevation
+                // of all neighbors.
+                if (minNeighborElevation >= currentHex.elevation) {
                     currentHex.WaterLevel = minNeighborElevation;
 
-// If the hex is of equal elevation to a neighbor with a minimum
-// elevation, lower the current hexes elevation to one below
-// the minimum elevation of all of its neighbors so that it becomes
-// a small lake that the river feeds into, and then break out of the
-// while statement terminating the river in a lake rather than into
-// the ocean.
-                    if (minNeighborElevation == currentHex.Elevation) {
+                    // If the hex is of equal elevation to a neighbor with
+                    // a minimum elevation, lower the current hexes
+                    // elevation to one below the minimum elevation of all
+                    // of its neighbors so that it becomes a small lake
+                    // that the river feeds into, and then break out of the
+                    // while statement terminating the river in a lake
+                    // rather than into the ocean.
+                    if (minNeighborElevation == currentHex.elevation) {
                         currentHex.SetElevation(
                             minNeighborElevation - 1,
                             hexOuterRadius,
@@ -1307,14 +988,13 @@ public class MapGenerator {
                 break;
             }
 
-// If there are flow direction candidates, choose one at random
-// based on the assigned probabilities and set an outgoing river
-// in that direction.
-            direction = _flowDirections[
-                Random.Range(0, _flowDirections.Count)
+            // If there are flow direction candidates, choose one at
+            // random based on the assigned probabilities and set an\
+            // outgoing river in that direction.
+            direction = flowDirections[
+                Random.Range(0, flowDirections.Count)
             ];
 
-//            hex.SetOutgoingRiver(direction);
             RiverEdge randomEdge = new RiverEdge(
                 currentHex,
                 adjacencyGraph.TryGetNeighborInDirection(
@@ -1327,22 +1007,21 @@ public class MapGenerator {
             riverGraph.AddVerticesAndEdge(randomEdge);
             localRiverLength += 1;
 
-// If the hex is lower than the minimum elevation of its neighbors
-// assign a lakes based on a specified probability.
+            // If the hex is lower than the minimum elevation of its
+            // neighbors assign a lakes based on a specified probability.
             if (
-                minNeighborElevation >= currentHex.Elevation &&
+                minNeighborElevation >= currentHex.elevation &&
                 Random.value < extraLakeProbability
             ) {
-                currentHex.WaterLevel = currentHex.Elevation;
+                currentHex.WaterLevel = currentHex.elevation;
                 currentHex.SetElevation(
-                    currentHex.Elevation - 1,
+                    currentHex.elevation - 1,
                     hexOuterRadius,
                     hexMap.WrapSize
                 );
             }
-// Make the new current hex the hex which the river has branched
-// into.
-//            currentHex = currentHex.GetNeighbor(direction);
+            // Make the new current hex the hex which the river has
+            // branched into.
             currentHex = adjacencyGraph.TryGetNeighborInDirection(
                 currentHex,
                 direction
@@ -1352,35 +1031,35 @@ public class MapGenerator {
         return localRiverLength;
     }
 
-/// <summary>
-/// Gets a boolean value representing whether the specified hex is
-/// erodible based on the state of its neighbors.
-/// </summary>
-/// <param name="candidate">
-/// The provided hex.
-/// </param>
-/// <param name="candidateNeighbors">
-/// The provided hexes neighbors.
-/// </param>
-/// <returns>
-/// A boolean value representing whether the specified hex is erodible
-/// based on the state of its neighbors.
-/// </returns>
+    /// <summary>
+    /// Gets a boolean value representing whether the specified hex is
+    /// erodible based on the state of its neighbors.
+    /// </summary>
+    /// <param name="candidate">
+    /// The provided hex.
+    /// </param>
+    /// <param name="candidateNeighbors">
+    /// The provided hexes neighbors.
+    /// </param>
+    /// <returns>
+    /// A boolean value representing whether the specified hex is erodible
+    /// based on the state of its neighbors.
+    /// </returns>
     private bool IsErodible(
         Hex candidate,
         List<Hex> candidateNeighbors
     ) {
-// For each neighbor of this hex...
+        // For each neighbor of this hex...
         foreach (Hex neighbor in candidateNeighbors) {
 
             if (
                 neighbor &&
                 (
 
-// If the neighbors elevation is less than or equal to the erosion
-// threshold value...
-                    neighbor.Elevation <=
-                    candidate.Elevation - DELTA_ERODIBLE_THRESHOLD
+                    // If the neighbors elevation is less than or equal to
+                    // the erosion threshold value...
+                    neighbor.elevation <=
+                    candidate.elevation - DELTA_ERODIBLE_THRESHOLD
                 )
             ) {
                 return true;
@@ -1391,32 +1070,20 @@ public class MapGenerator {
     }
 
     private Hex GetErosionRunoffTarget(
-        Hex hex,
+        Hex origin,
         List<Hex> neighbors
     ) {
         List<Hex> candidates = ListPool<Hex>.Get();
         int erodibleElevation =
-            hex.Elevation - DELTA_ERODIBLE_THRESHOLD;
+            origin.elevation - DELTA_ERODIBLE_THRESHOLD;
 
-//        for (
-//            HexDirection direction = HexDirection.Northeast;
-//            direction <= HexDirection.Northwest;
-//            direction++
-//        ) {
         foreach (Hex neighbor in neighbors) {
-//            hex neighbor = hex.GetNeighbor(direction);
-            if (neighbor && neighbor.Elevation <= erodibleElevation) {
+            if (neighbor && neighbor.elevation <= erodibleElevation) {
                 candidates.Add(neighbor);
             }
         }
 
-        Hex target = null;
-
-        if (candidates.Count != 0) {
-            target = candidates[
-                Random.Range(0, candidates.Count)
-            ];
-        }
+        Hex target = candidates[Random.Range(0, candidates.Count)];
             
         ListPool<Hex>.Add(candidates);
         return target;
@@ -1425,41 +1092,34 @@ public class MapGenerator {
     private void SetTerrainTypes(
         int elevationMax,
         int waterLevel,
-        int numHexes,
         HemisphereMode hemisphereMode,
         float temperatureJitter,
         float lowTemperature,
         float highTemperature,
         HexMap hexMap,
-        float hexOuterRadius
+        float hexOuterRadius,
+        List<ClimateData> climates
     ) {
         RiverDigraph riverGraph = hexMap.RiverDigraph;
 
-        _temperatureJitterChannel = Random.Range(0, 4);
+        int temperatureJitterChannel = Random.Range(0, 4);
+
         int rockDesertElevation =
             elevationMax - (elevationMax - waterLevel) / 2;
 
-        for (int i = 0; i < numHexes; i++) {
-            Hex hex = hexMap.GetHex(i);
+        foreach (Hex hex in hexMap.Hexes) {
+            float temperature = climates[hex.Index].temperature;
 
-            float temperature = GenerateTemperature(
-                hexMap,
-                hex,
-                hemisphereMode,
-                waterLevel,
-                elevationMax,
-                temperatureJitter,
-                lowTemperature,
-                highTemperature,
-                hexOuterRadius
-            );
-
-            float moisture = _climate[i].moisture;
+            float moisture = climates[hex.Index].moisture;
 
             if (!hex.IsUnderwater) {
                 int temperatureBand = 0;
 
-                for (; temperatureBand < temperatureBands.Length; temperatureBand++) {
+                for (
+                    ;
+                    temperatureBand < temperatureBands.Length;
+                    temperatureBand++
+                ) {
                     if (temperature < temperatureBands[temperatureBand]) {
                         break;
                     }
@@ -1476,11 +1136,11 @@ public class MapGenerator {
                 Biome hexBiome = biomes[temperatureBand * 4 + moistureBand];
 
                 if (hexBiome.terrain == Terrains.Desert) {
-                    if (hex.Elevation >= rockDesertElevation) {
+                    if (hex.elevation >= rockDesertElevation) {
                         hexBiome.terrain = Terrains.Stone;
                     }
                 }
-                else if (hex.Elevation == elevationMax) {
+                else if (hex.elevation == elevationMax) {
                     hexBiome.terrain = Terrains.Snow;
                 }
 
@@ -1488,18 +1148,17 @@ public class MapGenerator {
                     hexBiome.plant = 0;
                 }
 
-//                if (hexBiome.plant < 3 && hex.HasRiver) {
                 if (hexBiome.plant < 3 && riverGraph.HasRiver(hex)) {
                     hexBiome.plant += 1;
                 }
 
-                hex.terrainType = hexBiome.terrain;
-                hex.PlantLevel = hexBiome.plant;
+                hex.Biome = hexBiome;
+                hex.ClimateData = climates[hex.Index];
             }
             else {
-                int terrain;
+                Terrains terrain;
 
-                if (hex.Elevation == waterLevel - 1) {
+                if (hex.elevation == waterLevel - 1) {
                     int cliffs = 0;
                     int slopes = 0;
                     List<Hex> neighbors;
@@ -1507,7 +1166,7 @@ public class MapGenerator {
                     if (hexMap.TryGetNeighbors(hex, out neighbors)) {
                         foreach (Hex neighbor in neighbors) {
                             int delta =
-                                neighbor.Elevation - hex.WaterLevel;
+                                neighbor.elevation - hex.WaterLevel;
 
                             if (delta == 0) {
                                 slopes += 1;
@@ -1518,116 +1177,62 @@ public class MapGenerator {
                         }
                     }
 
-// More than half neighbors at same level.
-// Inlet or lake, therefore terrain is grass.
+                    // More than half neighbors at same level. Inlet or
+                    // lake, therefore terrain is grass.
                     if (cliffs + slopes > 3) {
-                        terrain = 1;
+                        terrain = Terrains.Grassland;
                     }
 
-// More than half cliffs, terrain is stone.
+                    // More than half cliffs, terrain is stone.
                     else if (cliffs > 0) {
-                        terrain = 3;
+                        terrain = Terrains.Stone;
                     }
 
-// More than half slopes, terrain is beach.
+                    // More than half slopes, terrain is beach.
                     else if (slopes > 0) {
-                        terrain = 0;
+                        terrain = Terrains.Desert;
                     }
 
-// Shallow non-coast, terrain is grass.
+                    // Shallow non-coast, terrain is grass.
                     else {
-                        terrain = 1;
+                        terrain = Terrains.Grassland;
                     }
                 }
-                else if (hex.Elevation >= waterLevel) {
-                    terrain = 1;
+                else if (hex.elevation >= waterLevel) {
+                    terrain = Terrains.Grassland;
                 }
-                else if (hex.Elevation < 0) {
-                    terrain = 3;
+                else if (hex.elevation < 0) {
+                    terrain = Terrains.Desert;
                 }
                 else {
-                    terrain = 2;
+                    terrain = Terrains.Mud;
                 }
 
-// Coldest temperature band produces mud instead of
-// grass.
-//
-                if (terrain == 1 && temperature < temperatureBands[0]) {
-                    terrain = 2;
+                // Coldest temperature band produces mud instead of grass.
+                if (
+                    terrain == Terrains.Grassland &&
+                    temperature < temperatureBands[0]
+                ) {
+                    terrain = Terrains.Mud;
                 }
 
-                hex.terrainType = (Terrains)terrain;
+                hex.Biome = new Biome(terrain, 0);
+                hex.ClimateData = climates[hex.Index];
             }
         }
-    }
-
-    private float GenerateTemperature(
-        HexMap hexMap, 
-        Hex hex,
-        HemisphereMode hemisphere,
-        int waterLevel,
-        int elevationMax,
-        float temperatureJitter,
-        float lowTemperature,
-        float highTemperature,
-        float hexOuterRadius
-    ) {
-        float latitude =
-            (float)hex.Coordinates.Z / hexMap.HexOffsetRows;
-
-        if (hemisphere == HemisphereMode.Both) {
-            latitude *= 2f;
-
-            if (latitude > 1f) {
-                latitude = 2f - latitude;
-            }
-        }
-        else if (hemisphere == HemisphereMode.North) {
-            latitude = 1f - latitude;
-        }
-
-        float temperature =
-            Mathf.LerpUnclamped(
-                lowTemperature,
-                highTemperature,
-                latitude
-            );
-
-        temperature *= 
-            1f - 
-            (hex.ViewElevation - waterLevel) /
-            (elevationMax - waterLevel + 1f);
-
-        float jitter =
-            HexagonPoint.SampleNoise(
-                hex.Position * 0.1f,
-                hexOuterRadius,
-                hexMap.WrapSize
-            )[_temperatureJitterChannel];
-
-        temperature += (jitter * 2f - 1f) * temperatureJitter;
-
-        return temperature;
-    }
-
-    private Hex GetRandomHex(HexMap hexMap, MapRegionRect region)
-    {
-        return hexMap.GetHex(
-            Random.Range(region.OffsetXMin, region.OffsetXMax),
-            Random.Range(region.OffsetZMin, region.OffsetZMax)
-        );
     }
 
     private void VisualizeRiverOrigins(
         HexMap hexMap,
         int hexCount,
         int waterLevel,
-        int elevationMax
+        int elevationMax,
+        List<ClimateData> climate
     ) {
         for (int i = 0; i < hexCount; i++) {
             Hex hex = hexMap.GetHex(i);
 
-            float data = _climate[i].moisture * (hex.Elevation - waterLevel) /
+            float data = climate[i].moisture * (hex.elevation - waterLevel) /
                             (elevationMax - waterLevel);
 
             if (data > 0.75f) {
@@ -1641,6 +1246,12 @@ public class MapGenerator {
             }
         }
     }
+
+    #endregion
+
+    #endregion
+
+    
 
 /// <summary>
 /// Struct defining the bounds of a rectangular map region.
@@ -1776,27 +1387,27 @@ public class MapGenerator {
                 ", zMax: " + _offsetZMax; 
         }
 
-/// <summary>
-/// Constructor.
-/// </summary>
-/// <param name="offsetXMin">
-///     The minimum X axis offset coordinate of the region.
-///     Will be set to offsetXMax if greater than offsetXMax.
-///     If set to a negative value, will be set to 0.
-/// </param>
-/// <param name="offsetXMax">
-///     The maximum X axis offset coordinate of the region.
-///     Will be set to offsetXMin if less than offsetXMin.
-/// </param>
-/// <param name="offsetZMin">
-///     The minimum Z axis offset coordinate of the region.
-///     Will be set ot offsetZMax is greater than offsetZMax.
-///     if set to a negative value, will be set to 0.
-/// </param>
-/// <param name="offsetZMax">
-///     The maximum Z axis offset coordinate of the region.
-///     Will be set of offsetZMin if greater than offsetZMin.
-/// </param>
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="offsetXMin">
+        ///     The minimum X axis offset coordinate of the region.
+        ///     Will be set to offsetXMax if greater than offsetXMax.
+        ///     If set to a negative value, will be set to 0.
+        /// </param>
+        /// <param name="offsetXMax">
+        ///     The maximum X axis offset coordinate of the region.
+        ///     Will be set to offsetXMin if less than offsetXMin.
+        /// </param>
+        /// <param name="offsetZMin">
+        ///     The minimum Z axis offset coordinate of the region.
+        ///     Will be set ot offsetZMax is greater than offsetZMax.
+        ///     if set to a negative value, will be set to 0.
+        /// </param>
+        /// <param name="offsetZMax">
+        ///     The maximum Z axis offset coordinate of the region.
+        ///     Will be set of offsetZMin if greater than offsetZMin.
+        /// </param>
         public MapRegionRect(
             int offsetXMin,
             int offsetXMax,
@@ -1901,23 +1512,8 @@ public class MapGenerator {
 
             return result;
         }
-    }
-
-        private struct ClimateData {
-            public float clouds;
-            public float moisture;
-        }
-
-        private struct Biome {
-            public Terrains terrain;
-            public int plant;
-
-            public Biome(Terrains terrain, int plant) {
-                this.terrain = terrain;
-                this.plant = plant;
-            }
-        }
-    }
+    }        
+}
 
     
 

@@ -1,8 +1,7 @@
 ﻿sampler2D _hexData;
 float4 _hexData_TexelSize;
 
-float4 FilterHexData(float4 data) 
-{
+float4 FilterHexData(float4 data) {
 	#if defined(HEX_MAP_EDIT_MODE)
 		data.xy = 1;
 	#endif
@@ -10,8 +9,7 @@ float4 FilterHexData(float4 data)
 	return data;
 }
 
-float4 GetHexData(appdata_full v, int index) 
-{
+float4 GetHexData(appdata_full v, int index) {
 	float2 uv;
 	uv.x = (v.texcoord2[index] + 0.5) * _hexData_TexelSize.x;
 	float row = floor(uv.x);

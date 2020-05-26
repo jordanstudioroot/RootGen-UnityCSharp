@@ -475,7 +475,7 @@ public class FeatureContainer : MonoBehaviour
             if (hasRightWall) {
                 bool hasTower = false;
 
-                if (leftHex.Elevation == rightHex.Elevation) {
+                if (leftHex.elevation == rightHex.elevation) {
                     RandomHash rootHash = HexagonPoint.SampleHashGrid (
                         (pivot + left + right) * 1f / 3f
                     );
@@ -495,7 +495,7 @@ public class FeatureContainer : MonoBehaviour
                     hasTower
                 );
             }
-            else if (leftHex.Elevation < rightHex.Elevation) {
+            else if (leftHex.elevation < rightHex.elevation) {
                 AddWallWedge(
                     pivot,
                     left,
@@ -514,7 +514,7 @@ public class FeatureContainer : MonoBehaviour
             }
         }
         else if (hasRightWall) {
-            if (rightHex.Elevation < leftHex.Elevation) {
+            if (rightHex.elevation < leftHex.elevation) {
                 AddWallWedge(
                     right,
                     pivot,

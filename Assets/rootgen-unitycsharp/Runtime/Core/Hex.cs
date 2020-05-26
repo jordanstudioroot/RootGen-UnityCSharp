@@ -4,9 +4,38 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class Hex : MonoBehaviour, IHexPoint {
-    
     [SerializeField]
-    public Terrains terrainType;
+    private ClimateData _climateData;
+    public ClimateData ClimateData { 
+        get {
+            return _climateData;
+        } 
+        
+        set {
+            _climateData = value;
+        } 
+    }
+
+    [SerializeField]
+    private Biome _biome;
+    public Biome Biome { 
+        get {
+            return _biome;
+        } 
+        
+        set {
+            _biome = value;
+        } 
+    }
+
+    public Terrains TerrainType {
+        get {
+            return _biome.terrain;
+        }
+    }
+
+    [SerializeField]
+    private CubeVector _cubeCoordinates;
 
     private static int MaxFeatureLevel {
         get {
@@ -26,7 +55,7 @@ public class Hex : MonoBehaviour, IHexPoint {
     public float StreamBedY {
         get {
             return
-                (Elevation + HexagonPoint.streamBedElevationOffset) *
+                (elevation + HexagonPoint.streamBedElevationOffset) *
                 HexagonPoint.elevationStep;
         }
     }
@@ -34,7 +63,7 @@ public class Hex : MonoBehaviour, IHexPoint {
     public float RiverSurfaceY {
         get {
             return
-                (Elevation + HexagonPoint.waterElevationOffset) *
+                (elevation + HexagonPoint.waterElevationOffset) *
                 HexagonPoint.elevationStep;
         }
     }
@@ -49,7 +78,7 @@ public class Hex : MonoBehaviour, IHexPoint {
 
     public bool IsUnderwater {
         get {
-            return WaterLevel > Elevation;
+            return WaterLevel > elevation;
         }
     }
 
@@ -61,8 +90,8 @@ public class Hex : MonoBehaviour, IHexPoint {
 
     public int ViewElevation {
         get { 
-            return Elevation >= WaterLevel ? 
-                Elevation : WaterLevel;
+            return elevation >= WaterLevel ? 
+                elevation : WaterLevel;
         }
     }
 
@@ -72,7 +101,15 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
 
-    public CubeVector Coordinates { get; private set; }
+    public CubeVector CubeCoordinates {
+        get {
+            return _cubeCoordinates;
+        } 
+        
+        private set {
+            _cubeCoordinates = value;
+        } 
+    }
 
     private Mesh GetInteractionMesh(float radius) {
         Mesh result = new Mesh();
@@ -119,20 +156,20 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
 
-    public int Elevation { get; private set; }
+    public int elevation;
 
     public void SetElevation(
         int elevation,
         float hexOuterRadius,
         int wrapSize
     ) {
-        if (Elevation == elevation) {
+        if (this.elevation == elevation) {
             return;
         }
 
         int originalViewElevation = ViewElevation;
 
-        Elevation = elevation;
+        this.elevation = elevation;
 
         if (ViewElevation != originalViewElevation) {
             ShaderData.ViewElevationChanged();
@@ -148,7 +185,13 @@ public class Hex : MonoBehaviour, IHexPoint {
     public int WaterLevel { get; set; }
     public int UrbanLevel { get; set; }
     public int FarmLevel { get; set; }
-    public int PlantLevel { get; set; }
+    
+    public int PlantLevel { 
+        get {
+            return _biome.plant;
+        }
+    }
+
     public int SpecialIndex { get; set; }
     public bool IsExplored { get; set; }
     public int SearchPhase { get; set; }
@@ -187,7 +230,7 @@ public class Hex : MonoBehaviour, IHexPoint {
         GameObject resultObj = new GameObject("Hex");
         Hex resultMono = resultObj.AddComponent<Hex>();
 
-        resultMono.Coordinates = CubeVector.FromOffsetCoordinates(
+        resultMono.CubeCoordinates = CubeVector.FromOffsetCoordinates(
             offsetX,
             offsetZ,
             wrapSize
@@ -210,7 +253,7 @@ public class Hex : MonoBehaviour, IHexPoint {
     }
 
     public ElevationEdgeTypes GetEdgeType(Hex otherHex) {
-        return HexagonPoint.GetEdgeType(Elevation, otherHex.Elevation);
+        return HexagonPoint.GetEdgeType(elevation, otherHex.elevation);
     }
 
     public void DisableHighlight() {
@@ -272,21 +315,21 @@ public class Hex : MonoBehaviour, IHexPoint {
     public override string ToString() {
         return 
             "[X: " +
-                Coordinates.X.ToString() + ", Y:" +
-                Coordinates.Y.ToString() + ", Z:" +
-                Coordinates.Z.ToString() +
+                CubeCoordinates.X.ToString() + ", Y:" +
+                CubeCoordinates.Y.ToString() + ", Z:" +
+                CubeCoordinates.Z.ToString() +
             "]";
     }
 
     private void Awake() {
         //SetEnabledInteractionMesh(true);
-        Elevation = int.MinValue;
+        elevation = int.MinValue;
     }
 
     private bool IsValidRiverDestination(Hex neighbor) {
         return neighbor &&
         (
-            Elevation >= neighbor.Elevation || WaterLevel == neighbor.Elevation
+            elevation >= neighbor.elevation || WaterLevel == neighbor.elevation
         );
     }
 
@@ -304,7 +347,7 @@ public class Hex : MonoBehaviour, IHexPoint {
         int wrapSize
     ) {
         Vector3 position = transform.localPosition;
-        position.y = Elevation * HexagonPoint.elevationStep;
+        position.y = elevation * HexagonPoint.elevationStep;
 
         position.y +=
             (

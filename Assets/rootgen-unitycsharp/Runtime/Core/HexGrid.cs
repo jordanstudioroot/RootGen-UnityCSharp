@@ -423,8 +423,8 @@ public class HexGrid<T> where T : IHexPoint {
 
                         if (
                             CubeVector.WrappedHexTileDistance(
-                                origin.Coordinates,
-                                neighborCandidate.Coordinates,
+                                origin.CubeCoordinates,
+                                neighborCandidate.CubeCoordinates,
                                 WrapSize
                             ) == 1
                         ) {
@@ -548,7 +548,7 @@ public class HexGrid<T> where T : IHexPoint {
                 result += leftPad;    
             for (int column = 0; column < Columns; column++) {
                 result +=
-                    GetElement(column, row).Coordinates +
+                    GetElement(column, row).CubeCoordinates +
                     innerPad;
             }
 

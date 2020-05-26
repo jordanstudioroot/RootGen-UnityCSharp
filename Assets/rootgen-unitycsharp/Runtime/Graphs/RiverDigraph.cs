@@ -19,8 +19,8 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
         IEnumerable<RiverEdge> edges;
 
         if (
-            TryGetOutEdges(hex, out edges) ||
-            TryGetInEdges(hex, out edges)
+            IncomingRiverCount(hex) > 0 ||
+            OutgoingRiverCount(hex) > 0
         ) {
             return true;
         }
@@ -72,47 +72,52 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     public bool HasRiverEnd(
         Hex hex
     ) {
-        IEnumerable<RiverEdge> edges;
-
-        if (TryGetOutEdges(hex, out edges)) {
-            return false;
+        if (
+            OutgoingRiverCount(hex) == 0 &&
+            IncomingRiverCount(hex) == 1
+        ) {
+            return true;
         }
 
-        if (TryGetInEdges(hex, out edges)) {
-            int count = 0;
-            foreach(RiverEdge edge in edges) {
-                count++;
-                
-                if (count > 1) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return false;
     }
 
     public bool HasRiverStart(
         Hex hex
     ) {
+        if (
+            IncomingRiverCount(hex) == 0 &&
+            OutgoingRiverCount(hex) == 1
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    public int OutgoingRiverCount(Hex hex) {
+        int result = 0;
         IEnumerable<RiverEdge> edges;
 
-        if (TryGetInEdges(hex, out edges)) {
-            return false;
-        }
-
         if (TryGetOutEdges(hex, out edges)) {
-            int count = 0;
-            foreach(RiverEdge edge in edges) {
-                count++;
-                
-                if (count > 1) {
-                    return false;
-                }
+            foreach (RiverEdge edge in edges) {
+                result++;
             }
         }
 
-        return true;
+        return result;
+    }
+
+    public int IncomingRiverCount(Hex hex) {
+        int result = 0;
+        IEnumerable<RiverEdge> edges;
+
+        if (TryGetInEdges(hex, out edges)) {
+            foreach (RiverEdge edge in edges) {
+                result++;
+            }
+        }
+
+        return result;
     }
 
     public bool HasRiverStartOrEnd(
@@ -124,13 +129,7 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     public bool HasIncomingRiver(
         Hex hex
     ) {
-        IEnumerable<RiverEdge> edges;
-
-        if (TryGetInEdges(hex, out edges)) {
-            return true;
-        }
-
-        return false;
+        return IncomingRiverCount(hex) > 0;
     }
 
     /// <summary>
@@ -164,13 +163,7 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     public bool HasOutgoingRiver(
         Hex hex
     ) {
-        IEnumerable<RiverEdge> edges;
-
-        if (TryGetOutEdges(hex, out edges)) {
-            return true;
-        }
-
-        return false;
+        return OutgoingRiverCount(hex) > 0;
     }
 
     public bool HasOutgoingRiverInDirection(

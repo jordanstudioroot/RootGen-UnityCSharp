@@ -265,8 +265,8 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
                     current,
                     neighbor,
                     CubeVector.HexDirectionWrapping(
-                        current.Coordinates,
-                        neighbor.Coordinates,
+                        current.CubeCoordinates,
+                        neighbor.CubeCoordinates,
                         hexGrid.WrapSize
                     )
                 );

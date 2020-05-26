@@ -14,16 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 40
   height: 30
-  wrapping: 1
+  wrapping: 0
   useFixedSeed: 0
-  seed: 567174542
+  seed: 1771868053
+  initialClimateSteps: 40
   hexSize: 10
   jitterProbability: 0.25
   minimumRegionDensity: 30
   maximumRegionDensity: 100
   landPercentage: 50
   waterLevel: 3
-  highRiseProbability: 0.222
+  highRiseProbability: 0.193
   sinkProbability: 0.2
   elevationMin: -2
   elevationMax: 8
@@ -31,17 +32,17 @@ MonoBehaviour:
   mapBorderZ: 5
   regionBorder: 5
   numRegions: 1
-  erosionPercentage: 50
+  erosionPercentage: 75
   evaporationFactor: 0.5
   precipitationFactor: 0.25
   runoffFactor: 0.25
   seepageFactor: 0.125
-  windDirection: 5
+  windDirection: 0
   windStrength: 4
   startingMoisture: 0.1
   riverPercentage: 10
   extraLakeProbability: 0.25
   lowTemperature: 0
   highTemperature: 1
-  temperatureJitter: 0.236
+  temperatureJitter: 0.1
   hemisphere: 0
