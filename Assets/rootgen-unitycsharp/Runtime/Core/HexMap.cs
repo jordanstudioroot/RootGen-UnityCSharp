@@ -68,6 +68,19 @@ public class HexMap : MonoBehaviour {
     #endregion
 
     #region Public Read Only Properties
+    public List<Hex> LandHexes {
+        get {
+            IEnumerable<Hex> hexes = HexGrid.Hexes;
+            List<Hex> result = new List<Hex>();
+            foreach (Hex hex in hexes) {
+                if (hex.elevation >= hex.WaterLevel) {
+                    result.Add(hex);
+                }
+            }
+
+            return result;
+        }
+    }
 
     public Transform[] HexMeshColumnTransforms {
         get; private set;

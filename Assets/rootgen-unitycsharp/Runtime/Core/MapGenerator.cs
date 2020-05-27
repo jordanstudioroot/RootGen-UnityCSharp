@@ -19,6 +19,13 @@ public class MapGenerator {
     /// for that hex to be considered erodible.
     /// <summary>
     private const int DELTA_ERODIBLE_THRESHOLD = 2;
+
+    /// <summary>
+    /// A constant representing the maximum simulation steps that
+    /// HexMapTectonics may simulate in order to get the land percentage
+    /// specified by the config before it aborts.
+    /// </summary>
+    private const int MAX_TECTONIC_STEPS = 10000;
     
     #endregion
 
@@ -125,9 +132,10 @@ public class MapGenerator {
         }
 
         Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
         
-        List<MapRegionRect> regions = GenerateRegions(
+        stopwatch.Start();
+
+        HexMapTectonics hexMapTectonics = new HexMapTectonics(
             result,
             config.regionBorder,
             config.mapBorderX,
@@ -135,42 +143,81 @@ public class MapGenerator {
             config.numRegions
         );
 
-        stopwatch.Stop();
-        diagnostics += "Generate Regions: " + stopwatch.Elapsed + "\n";
-        
-        
-        stopwatch.Start();
-
-        int numLandHexes = GetNumLandHexes(
-            config.landPercentage,
-            result.HexOffsetColumns * result.HexOffsetRows,
-            config.sinkProbability,
-            config.minimumRegionDensity,
-            config.maximumRegionDensity,
-            result,
-            config.highRiseProbability,
-            config.elevationMin,
-            config.elevationMax,
-            config.waterLevel,
-            config.jitterProbability,
-            config.hexSize,
-            result.WrapSize,
-            regions
+        int landBudget = Mathf.RoundToInt(
+            result.SizeSquared *
+            config.landPercentage *
+            0.01f
         );
 
+        int newLandHexes = 0;
+
+        TectonicParameters tectonicParameters =
+            new TectonicParameters(
+                config.hexSize,
+                config.highRiseProbability,
+                config.jitterProbability,
+                config.sinkProbability,
+                config.elevationMax,
+                config.elevationMin,
+                config.waterLevel,
+                landBudget,
+                config.maximumRegionDensity,
+                config.minimumRegionDensity
+            );
+
+        for (int i = 0; i < MAX_TECTONIC_STEPS; i++) {
+            newLandHexes = hexMapTectonics.Step(
+                newLandHexes,
+                tectonicParameters
+            );
+
+            if (newLandHexes == landBudget)
+                break;
+        }
+
+        // If land budget is greater than 0, all land hexes specified to
+        // be allocated were not allocated successfully. Log a warning,
+        // decrement the remaining land budget from the result, and return
+        // the result as the number of land hexes allocated.
+        if (landBudget > 0) {
+            RootLog.Log(
+                "Failed to use up " + landBudget + " land budget.",
+                Severity.Warning,
+                "MapGenerator"
+            );
+        }
+
         stopwatch.Stop();
-        diagnostics += "GetNumLandHexes: " + stopwatch.Elapsed + "\n";
+        diagnostics += "Generate Tectonics: " + stopwatch.Elapsed + "\n";
 
         stopwatch.Start();
 
-        GenerateErosion(
+        HexMapErosion erosion = new HexMapErosion(result);
+        int erodibleHexes = erosion.ErodibleHexes.Count;
+
+        // Calculate the target number of uneroded hexes.
+        int targetUnerodedHexes =
+            (int)(
+                erodibleHexes *
+                (100 - config.erosionPercentage) *
+                0.01f
+            );
+        
+        while (erosion.ErodibleHexes.Count > targetUnerodedHexes) {
+            erosion.Step(
+                config.hexSize
+            );
+        }
+        
+
+        /*GenerateErosion(
             result,
             config.erosionPercentage,
             config.hexSize
-        );
+        );*/
 
         stopwatch.Stop();
-        diagnostics += "GenerateErosion: " + stopwatch.Elapsed + "\n";
+        diagnostics += "Generate Erosion: " + stopwatch.Elapsed + "\n";
 
 
         stopwatch.Start();
@@ -201,26 +248,47 @@ public class MapGenerator {
             hexMapClimate.Step(climateParameters);
         }
 
-        List<ClimateData> climate = hexMapClimate.List;
+        List<ClimateData> climates = hexMapClimate.List;
         
         stopwatch.Stop();
         diagnostics += "Generate Climate: " + stopwatch.Elapsed + "\n";
 
         stopwatch.Start();
 
-        GenerateRivers(
+        /*GenerateRivers(
             result,
-            numLandHexes,
+            newLandHexes,
             config.waterLevel,
             config.elevationMax,
             config.riverPercentage,
             config.extraLakeProbability,
             config.hexSize,
             climate
+        );*/
+
+        HexMapRivers hexMapRivers = new HexMapRivers(
+            result,
+            climates,
+            config.waterLevel,
+            config.elevationMax
         );
 
+        for (int i = 0; i < config.numInitialRivers; i++)
+            hexMapRivers.StartRiver();
+
+        for (int i = 0; i < config.numInitialRiverSteps; i++)
+            hexMapRivers.Step(
+                config.waterLevel,
+                config.elevationMax,
+                config.extraLakeProbability,
+                config.hexSize,
+                climates
+            );
+
+        result.RiverDigraph = hexMapRivers.RiverDigraph;
+
         stopwatch.Stop();
-        diagnostics += "GenerateRivers: " + stopwatch.Elapsed + "\n";
+        diagnostics += "Generate Rivers: " + stopwatch.Elapsed + "\n";
 
         stopwatch.Start();
 
@@ -233,11 +301,12 @@ public class MapGenerator {
             config.highTemperature,
             result,
             config.hexSize,
-            climate
+            climates,
+            hexMapRivers.RiverDigraph
         );
 
         stopwatch.Stop();
-        diagnostics += "SetTerrainTypes: " + stopwatch.Elapsed + "\n";
+        diagnostics += "Assign Terrain Types: " + stopwatch.Elapsed + "\n";
 
         RootLog.Log(
             diagnostics,
@@ -254,507 +323,6 @@ public class MapGenerator {
     #endregion
 
     #region Private Methods
-
-    private List<MapRegionRect> GenerateRegions(
-        HexMap hexMap,
-        int regionBorder,
-        int mapBorderX,
-        int mapBorderZ,
-        int numRegions
-    ) {
-        return new List<MapRegionRect>(
-            SubdivideRegions(
-                hexMap.HexOffsetColumns,
-                hexMap.HexOffsetRows,
-                mapBorderX,
-                mapBorderZ,
-                numRegions,
-                regionBorder,
-                hexMap.IsWrapping
-            )
-        );
-    }
-
-    private List<MapRegionRect> SubdivideRegions(
-        int hexCountX,
-        int hexCountZ,
-        int mapBorderX,
-        int mapBorderZ,
-        int numRegions,
-        int regionBorder,
-        bool wrapping
-    ) {
-        List<MapRegionRect> result = new List<MapRegionRect>();
-
-        int borderX = wrapping ? regionBorder : mapBorderX;
-
-        int rootXMin = hexCountX > (borderX * 2) ?
-            borderX : 0;
-        int rootZMin = hexCountZ > (borderX * 2) ?
-            borderX : 0;
-        int rootXMax = hexCountX > (borderX * 2) ?
-            hexCountX - borderX  - 1 : hexCountX - 1;
-        int rootZMax = hexCountZ > (borderX * 2) ?
-            hexCountZ - mapBorderZ - 1 : hexCountZ - 1;
-
-
-        MapRegionRect root = new MapRegionRect(
-            rootXMin,
-            rootXMax,
-            rootZMin,
-            rootZMax
-        );
-
-        result.Add(root);
-
-        List<MapRegionRect> temp = new List<MapRegionRect>();
-
-        int i = 0;
-
-        while (result.Count < numRegions) {
-            foreach (MapRegionRect mapRect in result) {
-                if (i % 2 == 0) {
-                    temp.AddRange(
-                        mapRect.SubdivideVertical(regionBorder)
-                    );
-                }
-                else {
-                    temp.AddRange(
-                        mapRect.SubdivideHorizontal(regionBorder)
-                    );
-                }
-            }
-
-            result.Clear();
-            result.AddRange(temp);
-            temp.Clear();
-            i++;
-        }
-
-        return result;
-    }
-
-    private int GetNumLandHexes(
-        int landPercentage,
-        int numHexes,
-        float sinkProbability,
-        int chunkSizeMin,
-        int chunkSizeMax, 
-        HexMap hexMap,
-        float highRiseProbability,
-        int elevationMin,
-        int elevationMax,
-        int waterLevel,
-        float jitterProbability,
-        float hexOuterRadius,
-        int wrapSize,
-        List<MapRegionRect> regions
-    ) {
-        // Set the land budget to the fraction of the overall hexes as
-        // specified by the percentLand arguement.
-        int landBudget = Mathf.RoundToInt(
-            numHexes * landPercentage * 0.01f
-        );
-
-        // Initialize the result;
-        int result = landBudget;
-
-        // Guard against permutations that result in an impossible map and
-        // by extension an infinite loop by including a guard clause that
-        // aborts the loop at 10,000 attempts to sink or raise the terrain.
-        for (int guard = 0; guard < 10000; guard++) {
-            
-            // Determine whether this hex should be sunk            
-            bool sink = Random.value < sinkProbability;
-
-            // For each region . . . 
-            for (int i = 0; i < regions.Count; i++) {
-                
-                MapRegionRect region = regions[i];
-
-                // Get a chunk size to use within the bounds of the region based
-                // of the minimum and maximum chunk sizes.
-                int maximumRegionDensity = Random.Range(
-                    chunkSizeMin,
-                    chunkSizeMax + 1
-                );
-                
-                // If hex is to be sunk, sink hex and decrement decrement
-                // land budget if sinking results in a hex below water
-                // level.
-                if (sink) {
-                    landBudget = SinkTerrain(
-                        hexMap,
-                        maximumRegionDensity,
-                        landBudget,
-                        region,
-                        highRiseProbability,
-                        elevationMin,
-                        waterLevel,
-                        jitterProbability,
-                        hexOuterRadius
-                    );
-                }
-
-                // Else, raise hex and increment land budget if raising
-                // results in a hex above the water level.
-                else {
-                    landBudget = RaiseTerrain(
-                        hexMap,
-                        maximumRegionDensity,
-                        landBudget,
-                        region,
-                        highRiseProbability,
-                        elevationMax,
-                        waterLevel,
-                        jitterProbability,
-                        hexOuterRadius,
-                        wrapSize
-                    );
-
-                    // If land budget is 0, return initial land budget
-                    // value because all land hexes specified to be
-                    // allocated were allocated successfully. 
-                    if (landBudget == 0) {
-                        return result;
-                    }
-                }
-            }
-        }
-
-        // If land budget is greater than 0, all land hexes specified to
-        // be allocated were not allocated successfully. Log a warning,
-        // decrement the remaining land budget from the result, and return
-        // the result as the number of land hexes allocated.
-        if (landBudget > 0) {
-            RootLog.Log(
-                "Failed to use up " + landBudget + " land budget.",
-                Severity.Warning,
-                "MapGenerator"
-            );
-            result -= landBudget;
-        }
-
-        return result;
-    }
-
-    int SinkTerrain(
-        HexMap hexMap,
-        int maximumRegionDensity,
-        int landBudget,
-        MapRegionRect region,
-        float highRiseProbability,
-        int elevationMin,
-        int waterLevel,
-        float jitterProbability,
-        float hexOuterRadius
-    ) {
-        PriorityQueue<Hex> open = new PriorityQueue<Hex>();
-        List<Hex> closed = new List<Hex>();
-        // Get a random hex within the region bounds to be the first hex
-        // searched.
-        Hex firstHex = GetRandomHex(hexMap, region);
-        open.Enqueue(firstHex, 0);
-        CubeVector center = firstHex.CubeCoordinates;
-        int sink = Random.value < highRiseProbability ? 2 : 1;
-        int regionDensity = 0;
-
-        while (
-            regionDensity < maximumRegionDensity &&
-            open.Count > 0
-        ) {
-            Hex current = open.Dequeue();
-            closed.Add(current);
-            
-            int originalElevation = current.elevation;
-
-            int newElevation = current.elevation - sink;
-
-            if (newElevation < elevationMin) {
-                continue;
-            }
-
-            current.SetElevation(
-                newElevation,
-                hexOuterRadius,
-                hexMap.WrapSize
-            );
-
-            if (
-                originalElevation >= waterLevel &&
-                newElevation < waterLevel
-            ) {
-                landBudget += 1;
-            }
-
-            regionDensity += 1;
-
-            List<Hex> neighbors;
-
-            if (hexMap.TryGetNeighbors(current, out neighbors)) {
-                foreach(Hex neighbor in neighbors) {
-                    if (closed.Contains(neighbor))
-                    continue;
-
-                int priority =
-                    CubeVector.WrappedHexTileDistance(
-                        neighbor.CubeCoordinates,
-                        center,
-                        hexMap.WrapSize
-                    ) +
-                    Random.value < jitterProbability ? 1 : 0;
-
-                    open.Enqueue(
-                        neighbor,
-                        priority
-                    );
-                }
-            }
-        }
-
-        return landBudget;
-    }
-
-    private int RaiseTerrain(
-        HexMap hexMap,
-        int maximumRegionDensity, 
-        int budget, 
-        MapRegionRect region,
-        float highRiseProbability,
-        int elevationMax,
-        int waterLevel,
-        float jitterProbability,
-        float hexOuterRadius,
-        int wrapSize
-    ) {
-        Hex firstHex = GetRandomHex(hexMap, region);
-
-        PriorityQueue<Hex> open = new PriorityQueue<Hex>();
-        List<Hex> closed = new List<Hex>();
-
-        open.Enqueue(firstHex, 0);
-
-        CubeVector center = firstHex.CubeCoordinates;
-
-        int rise = Random.value < highRiseProbability ? 2 : 1;
-        int regionDensity = 0;
-
-        while (
-            regionDensity < maximumRegionDensity &&
-            open.Count > 0
-        ) {
-            
-            Hex current = open.Dequeue();
-            closed.Add(current);
-            
-            int originalElevation = current.elevation;
-            int newElevation = originalElevation + rise;
-
-            if (newElevation > elevationMax) {
-                continue;
-            }
-
-            current.SetElevation(
-                newElevation,
-                hexOuterRadius,
-                hexMap.WrapSize
-            );
-
-            current.SetElevation(
-                newElevation,
-                hexOuterRadius,
-                hexMap.WrapSize
-            );
-
-            if (
-                originalElevation < waterLevel &&
-                newElevation >= waterLevel &&
-                --budget == 0
-            ) {
-                break;
-            }
-
-            regionDensity += 1;
-
-            List<Hex> neighbors;
-
-            if (hexMap.TryGetNeighbors(current, out neighbors)) {
-                foreach(Hex neighbor in neighbors) {
-                    if (closed.Contains(neighbor))
-                    continue;
-
-                    int priority =
-                        CubeVector.WrappedHexTileDistance(
-                            neighbor.CubeCoordinates,
-                            center,
-                            hexMap.WrapSize
-                        ) +
-                        Random.value < jitterProbability ? 1 : 0;
-
-                    open.Enqueue(neighbor, priority);
-                }
-            }
-        }
-
-        return budget;
-    }
-
-    private void GenerateErosion(
-        HexMap hexMap,
-        int erosionPercentage,
-        float hexOuterRadius
-    ) {
-        List<Hex> erodibleHexes = ListPool<Hex>.Get();
-
-        // For each hex in the hex map, check if the hex is erodible.
-        // If it is add it to the list of erodible hexes.
-        foreach (Hex erosionCandidate in hexMap.Hexes) {
-            List<Hex> erosionCandidateNeighbors;
-
-            hexMap.TryGetNeighbors(
-                erosionCandidate,
-                out erosionCandidateNeighbors
-            );
-
-            if (
-                IsErodible(
-                    erosionCandidate,
-                    erosionCandidateNeighbors
-                )
-            ) {
-                erodibleHexes.Add(erosionCandidate);
-            }
-        }
-
-        // Calculate the target number of uneroded hexes.
-        int targetUnerodedHexes =
-            (int)(
-                erodibleHexes.Count *
-                (100 - erosionPercentage) *
-                0.01f
-            );
-
-        // While the number of erodible hexes is greater than the target
-        // number of uneroded hexes...
-        while (erodibleHexes.Count > targetUnerodedHexes) {
-
-            // Select a random hex from the erodible hexes.
-            int index = Random.Range(0, erodibleHexes.Count);
-            Hex originHex = erodibleHexes[index];
-
-            // Get the candidates for erosion runoff for the selected hex.
-            List<Hex> originNeighborHexes;
-
-            if(
-                hexMap.TryGetNeighbors(
-                    originHex,
-                    out originNeighborHexes
-                )
-            ) {
-                Hex runoffHex =
-                    GetErosionRunoffTarget(
-                        originHex,
-                        originNeighborHexes
-                    );
-
-                // Lower the elevation of the hex being eroded.
-                originHex.SetElevation(
-                    originHex.elevation - 1,
-                    hexOuterRadius,
-                    hexMap.WrapSize
-                );
-
-                // Raise the elevation of the hex selected for runoff.
-                runoffHex.SetElevation(
-                    runoffHex.elevation + 1,
-                    hexOuterRadius,
-                    hexMap.WrapSize
-                );
-
-                // If the hex is not erodible after this erosion step,
-                // remove it from the list of erodible hexes.
-                if (
-                    !IsErodible(
-                        originHex,
-                        originNeighborHexes
-                    )
-                ) {
-                    erodibleHexes[index] =
-                        erodibleHexes[erodibleHexes.Count - 1];
-
-                    erodibleHexes.RemoveAt(erodibleHexes.Count - 1);
-                }
-                
-                // For each neighbor of the current hex...
-                foreach(Hex originNeighbor in originNeighborHexes) {
-                    // If the elevation of the hexes neighbor is is exactly
-                    // 2 steps higher than the current hex, and is not an
-                    // erodible hex...
-                    if (
-                        (
-                            originNeighbor.elevation ==
-                            originHex.elevation + DELTA_ERODIBLE_THRESHOLD
-                        ) &&
-                        !erodibleHexes.Contains(originNeighbor)
-                    ) {
-                        // ...this erosion step has modified the map so
-                        // that the hex is now erodible, so add it to the
-                        // list of erodible hexes.
-                        erodibleHexes.Add(originNeighbor);
-                    }
-                }
-
-                List<Hex> runoffNeighborHexes;
-
-                // If the target of the runoff is now erodible due to the
-                // change in elevation, add it to the list of erodible
-                // hexes.
-                if (
-                    hexMap.TryGetNeighbors(
-                        runoffHex,
-                        out runoffNeighborHexes
-                    )
-                ) {
-                    if (
-                        IsErodible(
-                            runoffHex,
-                            runoffNeighborHexes
-                        ) && 
-                        !erodibleHexes.Contains(runoffHex)
-                    ) {
-                        erodibleHexes.Add(runoffHex);
-                    }
-
-                    foreach (
-                        Hex runoffNeighbor in
-                        runoffNeighborHexes
-                    ) {
-                        List<Hex> runoffNeighborNeighborHexes;
-
-                        if (
-                            hexMap.TryGetNeighbors(
-                                runoffNeighbor,
-                                out runoffNeighborNeighborHexes
-                            ) &&
-                            runoffNeighbor != originHex &&
-                            (
-                                runoffNeighbor.elevation ==
-                                runoffHex.elevation + 1 
-                            ) &&
-                            !IsErodible(
-                                runoffNeighbor,
-                                runoffNeighborNeighborHexes
-                            )
-                        ) {
-                            erodibleHexes.Remove(runoffNeighbor);
-                        }   
-                    }
-                }
-            }
-        }
-
-        ListPool<Hex>.Add(erodibleHexes);
-    }
 
     private void GenerateRivers(
         HexMap hexMap,
@@ -1031,64 +599,6 @@ public class MapGenerator {
         return localRiverLength;
     }
 
-    /// <summary>
-    /// Gets a boolean value representing whether the specified hex is
-    /// erodible based on the state of its neighbors.
-    /// </summary>
-    /// <param name="candidate">
-    /// The provided hex.
-    /// </param>
-    /// <param name="candidateNeighbors">
-    /// The provided hexes neighbors.
-    /// </param>
-    /// <returns>
-    /// A boolean value representing whether the specified hex is erodible
-    /// based on the state of its neighbors.
-    /// </returns>
-    private bool IsErodible(
-        Hex candidate,
-        List<Hex> candidateNeighbors
-    ) {
-        // For each neighbor of this hex...
-        foreach (Hex neighbor in candidateNeighbors) {
-
-            if (
-                neighbor &&
-                (
-
-                    // If the neighbors elevation is less than or equal to
-                    // the erosion threshold value...
-                    neighbor.elevation <=
-                    candidate.elevation - DELTA_ERODIBLE_THRESHOLD
-                )
-            ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private Hex GetErosionRunoffTarget(
-        Hex origin,
-        List<Hex> neighbors
-    ) {
-        List<Hex> candidates = ListPool<Hex>.Get();
-        int erodibleElevation =
-            origin.elevation - DELTA_ERODIBLE_THRESHOLD;
-
-        foreach (Hex neighbor in neighbors) {
-            if (neighbor && neighbor.elevation <= erodibleElevation) {
-                candidates.Add(neighbor);
-            }
-        }
-
-        Hex target = candidates[Random.Range(0, candidates.Count)];
-            
-        ListPool<Hex>.Add(candidates);
-        return target;
-    }
-
     private void SetTerrainTypes(
         int elevationMax,
         int waterLevel,
@@ -1098,10 +608,9 @@ public class MapGenerator {
         float highTemperature,
         HexMap hexMap,
         float hexOuterRadius,
-        List<ClimateData> climates
+        List<ClimateData> climates,
+        RiverDigraph riverDigraph
     ) {
-        RiverDigraph riverGraph = hexMap.RiverDigraph;
-
         int temperatureJitterChannel = Random.Range(0, 4);
 
         int rockDesertElevation =
@@ -1148,7 +657,7 @@ public class MapGenerator {
                     hexBiome.plant = 0;
                 }
 
-                if (hexBiome.plant < 3 && riverGraph.HasRiver(hex)) {
+                if (hexBiome.plant < 3 && riverDigraph.HasRiver(hex)) {
                     hexBiome.plant += 1;
                 }
 
@@ -1249,270 +758,7 @@ public class MapGenerator {
 
     #endregion
 
-    #endregion
-
-    
-
-/// <summary>
-/// Struct defining the bounds of a rectangular map region.
-/// </summary>
-    private struct MapRegionRect {
-        private int _offsetXMin;
-        private int _offsetXMax;
-        private int _offsetZMin;
-        private int _offsetZMax;
-
-/// <summary>
-/// The minimum X axis offset coordinate in the region.
-/// </summary>
-/// <value>
-///     The provided value if <= OffsetXMax, otherwise
-///     OffsetXMax.
-/// </value>
-        public int OffsetXMin {
-            get { return _offsetXMin; }
-            set {
-                if (value < 0) {
-                    _offsetXMin = 0;
-                }
-                else {
-                    _offsetXMin = value <= _offsetXMax ?
-                        value : _offsetXMax;
-                }
-            } 
-        }
-
-/// <summary>
-/// The maximum X axis offset coordinate in the region.
-/// </summary>
-/// <value>
-///     The provided value if >= OffsetXMin, otherwise
-///     OffsetXMin.
-/// </value>
-        public int OffsetXMax {
-            get { return _offsetXMax; }
-            set {
-                _offsetXMin = value >= _offsetXMin ?
-                    value : _offsetXMin;
-            }
-        }
-
-/// <summary>
-/// The minimum Z axis offset coordinate in the region.
-/// </summary>
-/// <value>
-///     The provided value if <= OffsetZMax,
-///     otherwise OffsetZMax.
-/// </value>
-        public int OffsetZMin {
-            get { return _offsetZMin; }
-            set {
-                if (value < 0) {
-                    _offsetZMin = 0;
-                }
-                else {
-                    _offsetZMin = value <= _offsetZMax ?
-                        value : _offsetZMax;
-                }
-            }
-        }
-
-/// <summary>
-/// The maximum Z axis offset coordinate in the region.
-/// </summary>
-/// <value>
-///     The provided value if >= than OffsetZMin, otherwise
-///     OffsetZMin.
-/// </value>
-        public int OffsetZMax {
-            get { return _offsetZMax; }
-            set {
-                _offsetZMax = value >= _offsetZMin ?
-                    value : _offsetZMin;
-            }
-        }
-
-/// <summary>
-/// The area of the region using offset coordinates.
-/// </summary>
-        public int OffsetArea {
-            get {
-                return OffsetSizeX * OffsetSizeZ;
-            }
-        }
-
-/// <summary>
-/// The size of the region along the x axis using offset coordinates.
-/// </summary>
-        public int OffsetSizeX {
-            get {
-                return (OffsetXMax - OffsetXMin);
-            }
-        }
-
-/// <summary>
-/// The size of the region along the z axis using offset coordinates.
-/// </summary>
-        public int OffsetSizeZ {
-            get {
-                return (OffsetZMax - OffsetZMin);
-            }
-        }
-
-/// <summary>
-/// The middle offset coordinate along the x axis.
-/// </summary>
-        public int OffsetXCenter {
-            get {
-                return
-                    OffsetXMin + (OffsetSizeX / 2);
-            }
-        }
-
-/// <summary>
-/// The middle offset coordinate along the z axis.
-/// </summary>
-        public int OffsetZCenter {
-            get {
-                return
-                    OffsetZMin + (OffsetSizeZ / 2);
-            }
-        }
-
-        public override string ToString() {
-            return 
-                "xMin: " + _offsetXMin +
-                ", xMax: " + _offsetXMax + 
-                ", zMin: " + _offsetZMin +
-                ", zMax: " + _offsetZMax; 
-        }
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="offsetXMin">
-        ///     The minimum X axis offset coordinate of the region.
-        ///     Will be set to offsetXMax if greater than offsetXMax.
-        ///     If set to a negative value, will be set to 0.
-        /// </param>
-        /// <param name="offsetXMax">
-        ///     The maximum X axis offset coordinate of the region.
-        ///     Will be set to offsetXMin if less than offsetXMin.
-        /// </param>
-        /// <param name="offsetZMin">
-        ///     The minimum Z axis offset coordinate of the region.
-        ///     Will be set ot offsetZMax is greater than offsetZMax.
-        ///     if set to a negative value, will be set to 0.
-        /// </param>
-        /// <param name="offsetZMax">
-        ///     The maximum Z axis offset coordinate of the region.
-        ///     Will be set of offsetZMin if greater than offsetZMin.
-        /// </param>
-        public MapRegionRect(
-            int offsetXMin,
-            int offsetXMax,
-            int offsetZMin,
-            int offsetZMax
-        ) {
-            offsetXMin = offsetXMin < 0 ? 0 : offsetXMin;
-            offsetZMin = offsetXMin < 0 ? 0 : offsetZMin;
-
-            _offsetXMin =
-                offsetXMin <= offsetXMax ? 
-                offsetXMin : offsetXMax;
-
-            _offsetXMax =
-                offsetXMax >= offsetXMin ?
-                offsetXMax : offsetXMin;
-
-            _offsetZMin =
-                offsetZMin <= offsetZMax ?
-                offsetZMin : offsetZMax;
-
-            _offsetZMax =
-                offsetZMax >= offsetZMin ?
-                offsetZMax : offsetZMin;
-        }
-
-/// <summary>
-/// Subdivide the border along the z axis.
-/// </summary>
-/// <param name="border">
-///     (Optional) place a border between the two regions. If border is
-///     greater than or equal to the size of the X dimension, border will be
-///     set to the x dimension - 2.
-/// </param>
-/// <returns></returns>
-        public List<MapRegionRect> SubdivideHorizontal(int border = 0) {
-            if (this.OffsetSizeX - border < 3) {
-                RootLog.Log(
-                    "Border cannot reduce x dimension below 3 or divison will" +
-                    " be impossible. Setting border to 0.",
-                    Severity.Debug,
-                    "MapGenerator"
-                );
-
-                border = 0;
-            }
-
-            List<MapRegionRect> result = new List<MapRegionRect>();
-
-            result.Add(
-                new MapRegionRect(
-                    this.OffsetXMin,
-                    this.OffsetXMax,
-                    this.OffsetZMin,
-                    this.OffsetZCenter - border
-                )
-            );
-
-            result.Add(
-                new MapRegionRect(
-                    this.OffsetXMin,
-                    this.OffsetXMax,
-                    this.OffsetZCenter + border,
-                    this.OffsetZMax
-                )
-            );
-
-            return result;
-        }
-
-        public List<MapRegionRect> SubdivideVertical(int border = 0) {
-            if (this.OffsetSizeZ - border < 3) {
-                RootLog.Log(
-                    "Border cannot reduce z dimension below 3 or divison " +
-                    "will be impossible. Setting border to 0.",
-                    Severity.Debug,
-                    "MapGenerator"
-                );
-
-                border = 0;
-            }
-
-            List<MapRegionRect> result = new List<MapRegionRect>();
-
-            result.Add(
-                new MapRegionRect(
-                    this.OffsetXMin,
-                    this.OffsetXCenter - border,
-                    this.OffsetZMin,
-                    this.OffsetZMax
-                )
-            );
-
-            result.Add(
-                new MapRegionRect(
-                    this.OffsetXCenter + border,
-                    this.OffsetXMax,
-                    this.OffsetZMin,
-                    this.OffsetZMax
-                )
-            );
-
-            return result;
-        }
-    }        
+    #endregion     
 }
 
     

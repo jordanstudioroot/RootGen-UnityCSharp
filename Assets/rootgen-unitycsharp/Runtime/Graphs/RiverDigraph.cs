@@ -287,4 +287,36 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
             "The hex has no incoming or outgoing rivers."
         );
     }
+
+    public void RemoveOutgoingRivers(Hex hex) {
+        List<RiverEdge> toRemove = new List<RiverEdge>();
+        
+        IEnumerable<RiverEdge> edges;
+
+        if(TryGetOutEdges(hex, out edges)) {
+            foreach(RiverEdge edge in edges) {
+                toRemove.Add(edge);
+            }
+        }
+
+        foreach(RiverEdge edge in toRemove) {
+            RemoveEdge(edge);
+        }
+    }
+
+    public void RemoveIncomingRivers(Hex hex) {
+        List<RiverEdge> toRemove = new List<RiverEdge>();
+        
+        IEnumerable<RiverEdge> edges;
+
+        if(TryGetInEdges(hex, out edges)) {
+            foreach(RiverEdge edge in edges) {
+                toRemove.Add(edge);
+            }
+        }
+
+        foreach(RiverEdge edge in toRemove) {
+            RemoveEdge(edge);
+        }
+    }
 }

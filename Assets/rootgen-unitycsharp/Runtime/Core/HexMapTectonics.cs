@@ -4,126 +4,106 @@ using UnityEngine;
 
 public class HexMapTectonics {
     private HexMap _hexMap;
-    private List<MapRegionRect> regions;
+    private List<MapRegionRect> _regions;
     public HexMapTectonics(
         HexMap hexMap,
-        int regions
+        int regionBorder,
+        int mapBorderX,
+        int mapBorderZ,
+        int numRegions
     ) {
         _hexMap = hexMap;
+        _regions = GenerateRegions(
+            regionBorder,
+            mapBorderX,
+            mapBorderZ,
+            numRegions
+        );
     }
 
-    private int Step(
-        int landPercentage,
-        float sinkProbability,
-        int chunkSizeMin,
-        int chunkSizeMax,
-        float highRiseProbability,
-        int elevationMin,
-        int elevationMax,
-        int waterLevel,
-        float jitterProbability,
-        float hexOuterRadius,
-        int wrapSize,
-        List<MapRegionRect> regions
+    public int Step(
+        int numLandHexes,
+        TectonicParameters parameters
     ) {
         // Set the land budget to the fraction of the overall hexes as
         // specified by the percentLand arguement.
-        int landBudget = Mathf.RoundToInt(
-            _hexMap.SizeSquared * landPercentage * 0.01f
-        );
 
         // Initialize the result;
-        int result = landBudget;
+        int result = numLandHexes;
 
-        // Guard against permutations that result in an impossible map and
-        // by extension an infinite loop by including a guard clause that
-        // aborts the loop at 10,000 attempts to sink or raise the terrain.
-        for (int guard = 0; guard < 10000; guard++) {
+        // Determine whether this hex should be sunk            
+        bool sink = Random.value < parameters.SinkProbability;
+
+        // For each region . . . 
+        for (int i = 0; i < _regions.Count; i++) {
             
-            // Determine whether this hex should be sunk            
-            bool sink = Random.value < sinkProbability;
+            MapRegionRect region = _regions[i];
 
-            // For each region . . . 
-            for (int i = 0; i < regions.Count; i++) {
-                
-                MapRegionRect region = regions[i];
-
-                // Get a chunk size to use within the bounds of the region based
-                // of the minimum and maximum chunk sizes.
-                int maximumRegionDensity = Random.Range(
-                    chunkSizeMin,
-                    chunkSizeMax + 1
+            // Get a chunk size to use within the bounds of the region based
+            // of the minimum and maximum chunk sizes.
+            int regionDensity = Random.Range(
+                parameters.RegionDensityMin,
+                parameters.RegionDensityMax + 1
+            );
+            
+            // If hex is to be sunk, sink hex and decrement decrement
+            // land budget if sinking results in a hex below water
+            // level.
+            if (sink) {
+                result = SinkTerrain(
+                    result,
+                    regionDensity,
+                    region,
+                    parameters.HighRiseProbability,
+                    parameters.ElevationMin,
+                    parameters.ElevationMax,
+                    parameters.JitterProbability,
+                    parameters.HexSize
                 );
-                
-                // If hex is to be sunk, sink hex and decrement decrement
-                // land budget if sinking results in a hex below water
-                // level.
-                if (sink) {
-                    landBudget = SinkTerrain(
-                        maximumRegionDensity,
-                        landBudget,
-                        region,
-                        highRiseProbability,
-                        elevationMin,
-                        waterLevel,
-                        jitterProbability,
-                        hexOuterRadius
-                    );
-                }
+            }
 
-                // Else, raise hex and increment land budget if raising
-                // results in a hex above the water level.
-                else {
-                    landBudget = RaiseTerrain(
-                        maximumRegionDensity,
-                        landBudget,
-                        region,
-                        highRiseProbability,
-                        elevationMax,
-                        waterLevel,
-                        jitterProbability,
-                        hexOuterRadius,
-                        wrapSize
-                    );
+            // Else, raise hex and increment land budget if raising
+            // results in a hex above the water level.
+            else {
+                result = RaiseTerrain(
+                    result,
+                    parameters.LandBudget,
+                    regionDensity,
+                    region,
+                    parameters.HighRiseProbability,
+                    parameters.ElevationMax,
+                    parameters.WaterLevelGlobal,
+                    parameters.JitterProbability,
+                    parameters.HexSize,
+                    _hexMap.WrapSize
+                );
 
-                    // If land budget is 0, return initial land budget
-                    // value because all land hexes specified to be
-                    // allocated were allocated successfully. 
-                    if (landBudget == 0) {
-                        return result;
-                    }
+                // If land budget is 0, return initial land budget
+                // value because all land hexes specified to be
+                // allocated were allocated successfully. 
+                if (result == parameters.LandBudget) {
+                    return result;
                 }
             }
-        }
-
-        // If land budget is greater than 0, all land hexes specified to
-        // be allocated were not allocated successfully. Log a warning,
-        // decrement the remaining land budget from the result, and return
-        // the result as the number of land hexes allocated.
-        if (landBudget > 0) {
-            RootLog.Log(
-                "Failed to use up " + landBudget + " land budget.",
-                Severity.Warning,
-                "MapGenerator"
-            );
-            result -= landBudget;
         }
 
         return result;
     }
 
-    int SinkTerrain(
-            int maximumRegionDensity,
-            int landBudget,
-            MapRegionRect region,
-            float highRiseProbability,
-            int elevationMin,
-            int waterLevel,
-            float jitterProbability,
-            float hexOuterRadius
+    private int SinkTerrain(
+        int numLandCells,
+        int maximumRegionDensity,
+        MapRegionRect region,
+        float highRiseProbability,
+        int elevationMin,
+        int waterLevel,
+        float jitterProbability,
+        float hexOuterRadius
     ) {
+        int result = numLandCells;
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
         List<Hex> closed = new List<Hex>();
+
         // Get a random hex within the region bounds to be the first hex
         // searched.
         Hex firstHex = GetRandomHex(region);
@@ -157,7 +137,7 @@ public class HexMapTectonics {
                 originalElevation >= waterLevel &&
                 newElevation < waterLevel
             ) {
-                landBudget += 1;
+                result--;
             }
 
             regionDensity += 1;
@@ -167,7 +147,7 @@ public class HexMapTectonics {
             if (_hexMap.TryGetNeighbors(current, out neighbors)) {
                 foreach(Hex neighbor in neighbors) {
                     if (closed.Contains(neighbor))
-                    continue;
+                        continue;
 
                 int priority =
                     CubeVector.WrappedHexTileDistance(
@@ -185,13 +165,13 @@ public class HexMapTectonics {
             }
         }
 
-        return landBudget;
+        return result;
     }
 
     private int RaiseTerrain(
-        HexMap hexMap,
-        int maximumRegionDensity, 
-        int budget, 
+        int numLandCells,
+        int landBudget,
+        int maximumRegionDensity,
         MapRegionRect region,
         float highRiseProbability,
         int elevationMax,
@@ -200,6 +180,7 @@ public class HexMapTectonics {
         float hexOuterRadius,
         int wrapSize
     ) {
+        int result = numLandCells;
         Hex firstHex = GetRandomHex(region);
 
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
@@ -230,28 +211,31 @@ public class HexMapTectonics {
             current.SetElevation(
                 newElevation,
                 hexOuterRadius,
-                hexMap.WrapSize
+                _hexMap.WrapSize
             );
 
             current.SetElevation(
                 newElevation,
                 hexOuterRadius,
-                hexMap.WrapSize
+                _hexMap.WrapSize
             );
 
             if (
                 originalElevation < waterLevel &&
-                newElevation >= waterLevel &&
-                --budget == 0
+                newElevation >= waterLevel
             ) {
-                break;
+                result++;
+            }
+
+            if (result == landBudget) {
+                return result;
             }
 
             regionDensity += 1;
 
             List<Hex> neighbors;
 
-            if (hexMap.TryGetNeighbors(current, out neighbors)) {
+            if (_hexMap.TryGetNeighbors(current, out neighbors)) {
                 foreach(Hex neighbor in neighbors) {
                     if (closed.Contains(neighbor))
                     continue;
@@ -260,7 +244,7 @@ public class HexMapTectonics {
                         CubeVector.WrappedHexTileDistance(
                             neighbor.CubeCoordinates,
                             center,
-                            hexMap.WrapSize
+                            _hexMap.WrapSize
                         ) +
                         Random.value < jitterProbability ? 1 : 0;
 
@@ -269,7 +253,7 @@ public class HexMapTectonics {
             }
         }
 
-        return budget;
+        return result;
     }
 
     private Hex GetRandomHex(MapRegionRect region) {

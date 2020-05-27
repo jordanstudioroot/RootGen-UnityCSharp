@@ -99,6 +99,12 @@ public class RootGenConfig : ScriptableObject
     [Range(0f, 1f)]
     public float temperatureJitter = 0.1f;
 
+    [Range(0, 10)]
+    public int numInitialRivers = 5;
+    
+    [Range(0, 50)]
+    public int numInitialRiverSteps = 10;
+
     public HemisphereMode hemisphere;
 
 
