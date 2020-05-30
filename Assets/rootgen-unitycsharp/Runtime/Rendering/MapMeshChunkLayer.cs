@@ -56,7 +56,7 @@ public class MapMeshChunkLayer : MonoBehaviour {
 /// <summary>
 /// A list of Vector3s used to map the hex positions to the UV map.
 /// </summary>
-    [NonSerialized] private List<Vector3> _terrainTypes;
+    [NonSerialized] private List<Vector3> _uv3s;
 
     private Mesh _mesh;
     private MeshCollider _meshCollider;
@@ -328,9 +328,9 @@ public class MapMeshChunkLayer : MonoBehaviour {
         Color secondTextureWeight, 
         Color thirdTextureWeight
     ) {
-        _terrainTypes.Add(terrainTypes);
-        _terrainTypes.Add(terrainTypes);
-        _terrainTypes.Add(terrainTypes);
+        _uv3s.Add(terrainTypes);
+        _uv3s.Add(terrainTypes);
+        _uv3s.Add(terrainTypes);
         
         _textureWeights.Add(firstTextureWeight);
         _textureWeights.Add(secondTextureWeight);
@@ -348,10 +348,10 @@ public class MapMeshChunkLayer : MonoBehaviour {
         Color weights3, 
         Color weights4
     ) {
-        _terrainTypes.Add(indices);
-        _terrainTypes.Add(indices);
-        _terrainTypes.Add(indices);
-        _terrainTypes.Add(indices);
+        _uv3s.Add(indices);
+        _uv3s.Add(indices);
+        _uv3s.Add(indices);
+        _uv3s.Add(indices);
         _textureWeights.Add(weights1);
         _textureWeights.Add(weights2);
         _textureWeights.Add(weights3);
@@ -420,7 +420,7 @@ public class MapMeshChunkLayer : MonoBehaviour {
 
         if (_useHexData) {
             _textureWeights = ListPool<Color>.Get();
-            _terrainTypes = ListPool<Vector3>.Get();
+            _uv3s = ListPool<Vector3>.Get();
         }
 
         if (_useUVCoordinates) {
@@ -447,9 +447,9 @@ public class MapMeshChunkLayer : MonoBehaviour {
             _mesh.SetColors(_textureWeights);
             ListPool<Color>.Add(_textureWeights);
 
-            // Set the uv3 coordinates to represent terrain types.
-            _mesh.SetUVs(2, _terrainTypes);
-            ListPool<Vector3>.Add(_terrainTypes);
+            // Set the uv3 coordinates to represent cell indices.
+            _mesh.SetUVs(2, _uv3s);
+            ListPool<Vector3>.Add(_uv3s);
         }
 
         if (_useUVCoordinates) {

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 40
   height: 30
-  wrapping: 0
+  wrapping: 1
   useFixedSeed: 0
-  seed: 1771868053
+  seed: 1691491808
   initialClimateSteps: 40
   hexSize: 10
   jitterProbability: 0.25
@@ -28,16 +28,16 @@ MonoBehaviour:
   sinkProbability: 0.2
   elevationMin: -2
   elevationMax: 8
-  mapBorderX: 5
-  mapBorderZ: 5
-  regionBorder: 5
-  numRegions: 1
+  mapBorderX: 0
+  mapBorderZ: 0
+  regionBorder: 0
+  numRegions: 2
   erosionPercentage: 75
   evaporationFactor: 0.5
   precipitationFactor: 0.25
   runoffFactor: 0.25
   seepageFactor: 0.125
-  windDirection: 0
+  windDirection: 4
   windStrength: 4
   startingMoisture: 0.1
   riverPercentage: 10
@@ -45,4 +45,6 @@ MonoBehaviour:
   lowTemperature: 0
   highTemperature: 1
   temperatureJitter: 0.1
+  numInitialRivers: 10
+  numInitialRiverSteps: 10
   hemisphere: 0

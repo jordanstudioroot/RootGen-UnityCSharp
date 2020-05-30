@@ -22,7 +22,7 @@ public class HexMap : MonoBehaviour {
     /// <summary>
     /// The index of the MeshChunk column currently centered below the camera.
     /// </summary>
-    private HexShaderData _hexShaderData;
+    private HexMapShaderData _hexShaderData;
     private Material _terrainMaterial;
     private bool _uiVisible;
 
@@ -305,6 +305,16 @@ public class HexMap : MonoBehaviour {
         bool wrapping,
         bool editMode
     ) {
+        if (!GetComponent<HexMapShaderData>()) {
+            _hexShaderData = gameObject.AddComponent<HexMapShaderData>();
+            _hexShaderData.HexMap = this;
+        }
+
+        if (!_hexLabelPrefab) {
+// TODO: This is a presentation concern and should not be in this class.
+            _hexLabelPrefab = Resources.Load<Text>("Hex Label");
+        }
+
         ClearHexUnits(_units);
         ClearColumnTransforms(HexMeshColumnTransforms);
 
@@ -1268,11 +1278,11 @@ public class HexMap : MonoBehaviour {
 //       Right now it is buried in awake which makes it very hard to
 //       tell that ShaderData depends on this class. Also, this
 //       dependency is circular.
-        _hexShaderData = gameObject.AddComponent<HexShaderData>();
-        _hexShaderData.HexMap = this;
+//       _hexShaderData = gameObject.AddComponent<HexMapShaderData>();
+//       _hexShaderData.HexMap = this;
     
 // TODO: This is a presentation concern and should not be in this class.
-        _hexLabelPrefab = Resources.Load<Text>("Hex Label");
+//       _hexLabelPrefab = Resources.Load<Text>("Hex Label");
     }
 
     #endregion

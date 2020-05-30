@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using RootLogging;
 
 public class HexMapRivers {
     private RiverDigraph _riverDigraph;
@@ -61,8 +62,6 @@ public class HexMapRivers {
                 riverOrigin
             )
         );
-
-        _riverOriginCandidates.Remove(riverOrigin);
     }
 
     private Hex ConsumeNextRiverOrigin() {
@@ -70,7 +69,9 @@ public class HexMapRivers {
             Random.Range(0, _riverOriginCandidates.Count - 1)
         ];
 
-        _riverOriginCandidates.Remove(result);
+        _riverOriginCandidates.RemoveAll(
+            (a) => { return a == result; }
+        );
 
         return result;
     }
@@ -82,8 +83,6 @@ public class HexMapRivers {
         float hexOuterRadius,
         List<ClimateData> climate
     ) {
-        List<RiverList> cache = new List<RiverList>();
-        
         foreach(RiverList riverList in _riverLists) {        
             Hex branch =
                 riverList.Step(
@@ -96,31 +95,22 @@ public class HexMapRivers {
 
             if (branch)
                 _riverOriginCandidates.Remove(branch);
-            else {
-                Hex riverOrigin = ConsumeNextRiverOrigin();
-                cache.Add(
-                    new RiverList(
-                        _hexMap,
-                        riverOrigin
-                    )
-                );
+        }
+
+        /*string logString = "River Stats This Step\n";
+
+        foreach (RiverList list in _riverLists) {
+            foreach (Hex hex in list.River) {
+                logString += hex + " -> ";
             }
+
+            logString += "\n";
         }
 
-        foreach (RiverList cachedRiverList in cache) {
-            cachedRiverList.Step(
-                _adjacencyGraph,
-                ref _riverDigraph,
-                extraLakeProbability,
-                hexOuterRadius,
-                waterLevel
-            );
-
-            _riverLists.Add(cachedRiverList);
-        }
+        RootLog.Log(logString, Severity.Information, "HexMapRivers");*/
     }
 
-    public static void SetOutgoingRiver (
+    public static bool SetOutgoingRiver (
         Hex source,
         Hex target,
         HexDirections direction,
@@ -132,7 +122,7 @@ public class HexMapRivers {
                 direction
             )
         ) {
-			return;
+			return false;
 		}
 
 		if (
@@ -141,7 +131,7 @@ public class HexMapRivers {
                 target
             )
         ) {
-			return;
+			return false;
 		}
 
         riverDigraph.RemoveOutgoingRivers(
@@ -170,6 +160,8 @@ public class HexMapRivers {
             )
         );
 
+        return true;
+        
 //		SetRoad((int)direction, false);
 	}
 
@@ -181,21 +173,27 @@ public class HexMapRivers {
 	}
 
     private class RiverList {
-        private List<Hex> _river;
+        public List<Hex> River { get; private set; }
         private HexMap _hexMap;
+
+        public int Length {
+            get {
+                return River.Count;
+            }
+        }
 
         public Hex RiverHead {
             get {
-                if (_river.Count > 0)
-                    return _river[_river.Count - 1];
+                if (River.Count > 0)
+                    return River[River.Count - 1];
                 return null;
             }
         }
 
         public RiverList(HexMap hexMap, Hex riverOrigin) {
             _hexMap = hexMap;
-            _river = new List<Hex>();
-            _river.Add(riverOrigin);
+            River = new List<Hex>();
+            River.Add(riverOrigin);
         }
 
         public Hex Step(
@@ -205,18 +203,16 @@ public class HexMapRivers {
             float hexOuterRadius,
             int waterLevel
         ) {
-            if (RiverHead.elevation < waterLevel)
+            if (RiverHead.IsUnderwater)
                 return null;
                 
             int minNeighborElevation = int.MaxValue;
 
-            List<HexDirections> flowDirections =
-                new List<HexDirections>();
-
+            List<HexDirections> flowDirections = new List<HexDirections>();
             HexDirections direction = HexDirections.Northeast;
 
             for (
-                HexDirections directionCandidate = direction;
+                HexDirections directionCandidate = HexDirections.Northeast;
                 directionCandidate <= HexDirections.Northwest;
                 directionCandidate++
             ) {
@@ -226,7 +222,7 @@ public class HexMapRivers {
                           directionCandidate
                       );
 
-                if (!neighborInDirection) {
+                if (!neighborInDirection || River.Contains(neighborInDirection)) {
                     continue;
                 }
 
@@ -267,17 +263,8 @@ public class HexMapRivers {
                         ref riverDigraph
                     );
 
-                    _river.Add(neighborInDirection);
+                    River.Add(neighborInDirection);
                     return neighborInDirection;
-                    /*riverDigraph.RemoveOutgoingRivers(RiverHead);
-                    RiverEdge mergeEdge = new RiverEdge(
-                        RiverHead,
-                        riverBranch,
-                        directionCandidate
-                    );
-
-                    riverDigraph.AddVerticesAndEdge(mergeEdge);
-                    return riverBranch;*/
                 }
 
                 // If the direction points away from the river origin and
@@ -299,7 +286,7 @@ public class HexMapRivers {
                 // river or a corner river, make the probability of the
                 // branch 2 / 5
                 if (
-                    _river.Count == 1 ||
+                    River.Count == 1 ||
                     (directionCandidate != direction.NextClockwise2() &&
                     directionCandidate != direction.PreviousClockwise2())
                 ) {
@@ -312,7 +299,7 @@ public class HexMapRivers {
             // If there are no candidates for branching the river...
             if (flowDirections.Count == 0) {
                 // If the river contains only the river origin...
-                if (_river.Count == 1) {
+                if (River.Count == 1) {
                     // Do nothing and return null
                     return null;
                 }
@@ -351,24 +338,13 @@ public class HexMapRivers {
                     RiverHead,
                     direction
                 );
-
+            
             SetOutgoingRiver(
                 RiverHead,
                 neighborInRandomDirection,
                 direction,
                 ref riverDigraph
             );
-
-            /*RiverEdge randomEdge = new RiverEdge(
-                RiverHead,
-                adjacencyGraph.TryGetNeighborInDirection(
-                    RiverHead,
-                    direction
-                ),
-                direction
-            );*/
-
-            // riverDigraph.AddVerticesAndEdge(randomEdge);
 
             // If the hex is lower than the minimum elevation of its
             // neighbors assign a lake based on a specified probability.
@@ -385,22 +361,33 @@ public class HexMapRivers {
                 );
             }
 
-            _river.Add(neighborInRandomDirection);    
+            River.Add(neighborInRandomDirection);    
             return neighborInRandomDirection;
         }
 
-        public bool HasLandTerminus(HexAdjacencyGraph adjacencyGraph) {
-            IEnumerable<HexEdge> edges;
+        private void VisualizeRiverOrigins(
+            HexMap hexMap,
+            int hexCount,
+            int waterLevel,
+            int elevationMax,
+            List<ClimateData> climate
+        ) {
+            for (int i = 0; i < hexCount; i++) {
+                Hex hex = hexMap.GetHex(i);
 
-            if (adjacencyGraph.TryGetOutEdges(RiverHead, out edges)) {
-                foreach (HexEdge edge in edges) {
-                    if (edge.Target.elevation <= RiverHead.elevation) {
-                        return false;
-                    }
+                float data = climate[i].moisture * (hex.elevation - waterLevel) /
+                                (elevationMax - waterLevel);
+
+                if (data > 0.75f) {
+                    hex.SetMapData(1f);
+                }
+                else if (data > 0.5f) {
+                    hex.SetMapData(0.5f);
+                }
+                else if (data > 0.25f) {
+                    hex.SetMapData(0.25f);
                 }
             }
-
-            return true;
         }
     }
 }

@@ -22,17 +22,12 @@ public class HexMapTectonics {
     }
 
     public int Step(
-        int numLandHexes,
         TectonicParameters parameters
     ) {
-        // Set the land budget to the fraction of the overall hexes as
-        // specified by the percentLand arguement.
-
-        // Initialize the result;
-        int result = numLandHexes;
-
         // Determine whether this hex should be sunk            
         bool sink = Random.value < parameters.SinkProbability;
+
+        int result = parameters.LandBudget;
 
         // For each region . . . 
         for (int i = 0; i < _regions.Count; i++) {
@@ -56,7 +51,7 @@ public class HexMapTectonics {
                     region,
                     parameters.HighRiseProbability,
                     parameters.ElevationMin,
-                    parameters.ElevationMax,
+                    parameters.WaterLevelGlobal,
                     parameters.JitterProbability,
                     parameters.HexSize
                 );
@@ -67,23 +62,17 @@ public class HexMapTectonics {
             else {
                 result = RaiseTerrain(
                     result,
-                    parameters.LandBudget,
                     regionDensity,
                     region,
                     parameters.HighRiseProbability,
                     parameters.ElevationMax,
                     parameters.WaterLevelGlobal,
                     parameters.JitterProbability,
-                    parameters.HexSize,
-                    _hexMap.WrapSize
+                    parameters.HexSize
                 );
 
-                // If land budget is 0, return initial land budget
-                // value because all land hexes specified to be
-                // allocated were allocated successfully. 
-                if (result == parameters.LandBudget) {
+                if (result == 0)
                     return result;
-                }
             }
         }
 
@@ -91,16 +80,16 @@ public class HexMapTectonics {
     }
 
     private int SinkTerrain(
-        int numLandCells,
+        int landBudget,
         int maximumRegionDensity,
         MapRegionRect region,
         float highRiseProbability,
         int elevationMin,
-        int waterLevel,
+        int globalWaterLevel,
         float jitterProbability,
         float hexOuterRadius
     ) {
-        int result = numLandCells;
+        int result = landBudget;
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
         List<Hex> closed = new List<Hex>();
 
@@ -134,10 +123,10 @@ public class HexMapTectonics {
             );
 
             if (
-                originalElevation >= waterLevel &&
-                newElevation < waterLevel
+                originalElevation >= globalWaterLevel &&
+                newElevation < globalWaterLevel
             ) {
-                result--;
+                result++;
             }
 
             regionDensity += 1;
@@ -169,18 +158,16 @@ public class HexMapTectonics {
     }
 
     private int RaiseTerrain(
-        int numLandCells,
         int landBudget,
         int maximumRegionDensity,
         MapRegionRect region,
         float highRiseProbability,
         int elevationMax,
-        int waterLevel,
+        int globalWaterLevel,
         float jitterProbability,
-        float hexOuterRadius,
-        int wrapSize
+        float hexOuterRadius
     ) {
-        int result = numLandCells;
+        int result = landBudget;
         Hex firstHex = GetRandomHex(region);
 
         PriorityQueue<Hex> open = new PriorityQueue<Hex>();
@@ -214,21 +201,12 @@ public class HexMapTectonics {
                 _hexMap.WrapSize
             );
 
-            current.SetElevation(
-                newElevation,
-                hexOuterRadius,
-                _hexMap.WrapSize
-            );
-
             if (
-                originalElevation < waterLevel &&
-                newElevation >= waterLevel
+                originalElevation < globalWaterLevel &&
+                newElevation >= globalWaterLevel &&
+                --result == 0
             ) {
-                result++;
-            }
-
-            if (result == landBudget) {
-                return result;
+                break;
             }
 
             regionDensity += 1;
@@ -238,7 +216,7 @@ public class HexMapTectonics {
             if (_hexMap.TryGetNeighbors(current, out neighbors)) {
                 foreach(Hex neighbor in neighbors) {
                     if (closed.Contains(neighbor))
-                    continue;
+                        continue;
 
                     int priority =
                         CubeVector.WrappedHexTileDistance(

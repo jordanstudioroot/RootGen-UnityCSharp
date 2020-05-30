@@ -8,30 +8,36 @@
 		_BackgroundColor("Background Color", Color) = (0,0,0)
 		[Toggle(SHOW_MAP_DATA)] _ShowMapData ("Show Map Data", Float) = 0
 	}
-		SubShader{
-			Tags { "RenderType" = "Opaque" }
-			LOD 200
 
-			CGPROGRAM
-			// Physically based Standard lighting model, and enable shadows on all light types
-			#pragma surface surf StandardSpecular fullforwardshadows vertex:vert
-			#pragma multi_compile _ HEX_MAP_EDIT_MODE
+	SubShader{
+		Tags {
+			"RenderType" = "Opaque"
+		}
 
-			#pragma shader_feature SHOW_MAP_DATA
+		LOD 200
 
-			// Use shader model 3.0 target, to get nicer looking lighting
-			#pragma target 3.5
+		CGPROGRAM
+		// Define the surface shader function
+		// surface [function name] [light model] {optional params}
+		#pragma surface surf StandardSpecular fullforwardshadows vertex:vert
 
-			// Add toggle for grid texture
-			#pragma multi_compile _ GRID_ON
+		#pragma multi_compile _ HEX_MAP_EDIT_MODE
 
-			//sampler2D _MainTex;
-			sampler2D _GridTex;
+		#pragma shader_feature SHOW_MAP_DATA
 
-			#include "HexMetrics.cginc"	
-			#include "HexData.cginc"
-			
-			UNITY_DECLARE_TEX2DARRAY(_MainTex);
+		// Use shader model 3.0 target, to get nicer looking lighting
+		#pragma target 3.5
+
+		// Add toggle for grid texture
+		#pragma multi_compile _ GRID_ON
+
+		//sampler2D _MainTex;
+		sampler2D _GridTex;
+
+		#include "HexMetrics.cginc"	
+		#include "HexData.cginc"
+		
+		UNITY_DECLARE_TEX2DARRAY(_MainTex);
 
 		struct Input {
 			//float2 uv_MainTex;
@@ -48,24 +54,41 @@
 		void vert(inout appdata_full v, out Input data) {
 			UNITY_INITIALIZE_OUTPUT(Input, data);
 
+			// Get the texture data cooresponding to the 3 hexes touching
+			// the mesh vertex.
 			float4 hex0 = GetHexData(v, 0);
 			float4 hex1 = GetHexData(v, 1);
 			float4 hex2 = GetHexData(v, 2);
 
+			// Store the terrain values for the 3 hexes touching the mesh
+			// vertex in the Input struct.
 			data.terrain.x = hex0.w;
 			data.terrain.y = hex1.w;
 			data.terrain.z = hex2.w;
 
+			// Store the visibility values for the 3 hexes touching the
+			// mesh vertex in the Input struct. (???)
 			data.visibility.x = hex0.x;
 			data.visibility.y = hex1.x;
 			data.visibility.z = hex2.x;
+
+			// Transition from 25 percent to 100 percent visibilty
+			// for the three hexes touching the mesh vertex by
+			// their current combined visibility values. (???)
 			data.visibility.xyz = lerp(0.25, 1, data.visibility.xyz);
+			
 			data.visibility.w =
-				hex0.y * v.color.x + hex1.y * v.color.y + hex2.y * v.color.z;
+				hex0.y *
+				v.color.x + hex1.y *
+				v.color.y + hex2.y *
+				v.color.z;
 
 			#if defined(SHOW_MAP_DATA)
-				data.mapData = hex0.z * v.color.x + hex1.z * v.color.y +
-					hex2.z * v.color.z;
+				data.mapData =
+					hex0.z *
+					v.color.x + hex1.z *
+					v.color.y + hex2.z *
+					v.color.z;
 			#endif
 		}
 
@@ -78,12 +101,11 @@
 		// See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
 		// #pragma instancing_options assumeuniformscaling
 		UNITY_INSTANCING_BUFFER_START(Props)
-			// put more per-instance properties here
+		// put more per-instance properties here
 		UNITY_INSTANCING_BUFFER_END(Props)
 
 		float4 GetTerrainColor(Input IN, int index) {
-			float3 uvw = float3
-			(
+			float3 uvw = float3(
 				IN.worldPos.xz * (2 * TILING_SCALE), 
 				IN.terrain[index]
 			);
@@ -94,7 +116,7 @@
 
 		void surf (Input IN, inout SurfaceOutputStandardSpecular o) {
 			/* Scale the texture by 0.02, whcih tiles the texture roughly
-			 * every 4 hexes.*/
+				* every 4 hexes.*/
 			// float2 uv = IN.worldPos.xz * 0.02;
 
 			fixed4 c =
@@ -104,11 +126,10 @@
 
 			fixed4 grid = 1;
 
-			/* Have to scale gridUV so that it matches the texture, which
-			 * is approximately a 2 Hex x 2 Hex square. Therfore, adjust
-			 * the "u" coord of the UV by four times the inner radius and
-			 * the "v" coord by twice the distance between adjacent hexes.
-			 */
+			// Have to scale gridUV so that it matches the texture, which
+			// is approximately a 2 Hex x 2 Hex square. Therfore, adjust
+			// the "u" coord of the UV by four times the inner radius and
+			// the "v" coord by twice the distance between adjacent hexes.
 
 			#if defined(GRID_ON)
 				float2 gridUV = IN.worldPos.xz;

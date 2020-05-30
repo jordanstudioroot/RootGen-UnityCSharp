@@ -51,11 +51,11 @@ public class HexMapClimate {
 
     public ClimateData this[int index] {
         get {
-            return Array[index];
+            return ClimateArray[index];
         }
     }
     
-    public ClimateData[] Array {
+    public ClimateData[] ClimateArray {
         get; private set;
     }
 
@@ -63,7 +63,7 @@ public class HexMapClimate {
         get {
             List<ClimateData> result = new List<ClimateData>();
 
-            foreach (ClimateData data in Array) {
+            foreach (ClimateData data in ClimateArray) {
                 result.Add(data);
             }
 
@@ -80,9 +80,9 @@ public class HexMapClimate {
         _hexMap = hexMap;
         _temperatureJitterChannel = Random.Range(0, 4);
 
-        Array = new ClimateData[_hexMap.SizeSquared];
+        ClimateArray = new ClimateData[_hexMap.SizeSquared];
 
-        for (int i = 0; i < Array.Length; i++) {
+        for (int i = 0; i < ClimateArray.Length; i++) {
             ClimateData initial = new ClimateData(
                 0,
                 startingMoisture,
@@ -98,10 +98,10 @@ public class HexMapClimate {
             _hexMap.AdjacencyGraph;
 
         // Initialize the next climate step.
-        ClimateData[] nextClimates = new ClimateData[Array.Length];
+        ClimateData[] nextClimates = new ClimateData[ClimateArray.Length];
 
         // Populate the next climate step.
-        for (int i = 0; i < Array.Length; i++) {
+        for (int i = 0; i < ClimateArray.Length; i++) {
             nextClimates[i] = new ClimateData();
         }
 
@@ -113,7 +113,7 @@ public class HexMapClimate {
 
             // Get the next climate step for that cell.
             StepClimate(
-                Array,
+                ClimateArray,
                 ref nextClimates,
                 source,
                 adjacentEdges,
@@ -121,7 +121,7 @@ public class HexMapClimate {
             );
         }
 
-        Array = nextClimates;
+        ClimateArray = nextClimates;
     }
 
     private void StepClimate(
@@ -258,8 +258,13 @@ public class HexMapClimate {
         float highTemperature,
         float hexOuterRadius
     ) {
+        if (_hexMap.HexOffsetRows == 0)
+            throw new System.ArgumentException(
+                "Cannot generate temperature for a map with 0 height."
+            );
+
         float latitude =
-            (float)hex.CubeCoordinates.Z / _hexMap.HexOffsetRows;
+            (float)hex.CubeCoordinates.Z / (_hexMap.HexOffsetRows - 1f);
 
         if (hemisphere == HemisphereMode.Both) {
             latitude *= 2f;
@@ -293,6 +298,139 @@ public class HexMapClimate {
 
         temperature += (jitter * 2f - 1f) * temperatureJitter;
 
+        temperature = Mathf.Clamp(
+            temperature,
+            lowTemperature,
+            highTemperature
+        );
+
         return temperature;
+    }
+
+    public void RefreshTerrainTypes(
+        ClimateParameters parameters,
+        RiverDigraph riverDigraph
+    ) {
+        int temperatureJitterChannel = Random.Range(0, 4);
+
+        int rockDesertElevation =
+            parameters.elevationMax -
+            (parameters.elevationMax - parameters.waterLevel) / 2;
+
+        Holdridge holdridge = new Holdridge();
+
+        foreach (Hex hex in _hexMap.Hexes) {
+            float temperature = ClimateArray[hex.Index].temperature;
+            float moisture = ClimateArray[hex.Index].moisture;
+            hex.HoldrigeZone = holdridge.GetHoldridgeZone(temperature, moisture);
+            continue;
+            if (!hex.IsUnderwater) {
+                int temperatureBand = 0;
+
+                for (
+                    ;
+                    temperatureBand < temperatureBands.Length;
+                    temperatureBand++
+                ) {
+                    if (temperature < temperatureBands[temperatureBand]) {
+                        break;
+                    }
+                }
+
+                int moistureBand = 0;
+
+                for (; moistureBand < moistureBands.Length; moistureBand++) {
+                    if (moisture < moistureBands[moistureBand]) {
+                        break;
+                    }
+                }
+
+                Biome hexBiome = biomes[temperatureBand * 4 + moistureBand];
+
+                if (hexBiome.terrain == Terrains.Desert) {
+                    if (hex.elevation >= rockDesertElevation) {
+                        hexBiome.terrain = Terrains.Stone;
+                    }
+                }
+                else if (hex.elevation == parameters.elevationMax) {
+                    hexBiome.terrain = Terrains.Snow;
+                }
+
+                if (hexBiome.terrain == Terrains.Snow) {
+                    hexBiome.plant = 0;
+                }
+
+                if (hexBiome.plant < 3 && riverDigraph.HasRiver(hex)) {
+                    hexBiome.plant += 1;
+                }
+
+                //hex.Biome = hexBiome;
+                hex.ClimateData = ClimateArray[hex.Index];
+            }
+            else {
+                Terrains terrain;
+
+                if (hex.elevation == parameters.waterLevel - 1) {
+                    int cliffs = 0;
+                    int slopes = 0;
+                    List<Hex> neighbors;
+
+                    if (_hexMap.TryGetNeighbors(hex, out neighbors)) {
+                        foreach (Hex neighbor in neighbors) {
+                            int delta =
+                                neighbor.elevation - hex.WaterLevel;
+
+                            if (delta == 0) {
+                                slopes += 1;
+                            }
+                            else if (delta > 0) {
+                                cliffs += 1;
+                            }
+                        }
+                    }
+
+                    // More than half neighbors at same level. Inlet or
+                    // lake, therefore terrain is grass.
+                    if (cliffs + slopes > 3) {
+                        terrain = Terrains.Grassland;
+                    }
+
+                    // More than half cliffs, terrain is stone.
+                    else if (cliffs > 0) {
+                        terrain = Terrains.Stone;
+                    }
+
+                    // More than half slopes, terrain is beach.
+                    else if (slopes > 0) {
+                        terrain = Terrains.Desert;
+                    }
+
+                    // Shallow non-coast, terrain is grass.
+                    else {
+                        terrain = Terrains.Grassland;
+                    }
+                }
+                else if (hex.elevation >= parameters.waterLevel) {
+                    terrain = Terrains.Grassland;
+                }
+                else if (hex.elevation < 0) {
+                    terrain = Terrains.Desert;
+                }
+                else {
+                    terrain = Terrains.Mud;
+                }
+
+                // Coldest temperature band produces mud instead of grass.
+                if (
+                    terrain == Terrains.Grassland &&
+                    temperature < temperatureBands[0]
+                ) {
+                    terrain = Terrains.Mud;
+                }
+
+                //hex.Biome = new Biome(terrain, 0);
+                hex.ClimateData = ClimateArray[hex.Index];
+            }
+        }
     }
 }

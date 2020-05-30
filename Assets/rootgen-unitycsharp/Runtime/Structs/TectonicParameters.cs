@@ -6,7 +6,7 @@ public struct TectonicParameters {
     public int ElevationMax { get; private set; }
     public int ElevationMin { get; private set; }
     public int WaterLevelGlobal { get; private set; }
-    public int LandBudget { get; private set; }
+    public int LandBudget { get; set; }
     public int RegionDensityMax { get; private set; }
     public int RegionDensityMin { get; private set; }
 

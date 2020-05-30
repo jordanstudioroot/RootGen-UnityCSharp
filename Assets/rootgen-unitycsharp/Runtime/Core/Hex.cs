@@ -6,6 +6,8 @@ using System.Collections.Generic;
 public class Hex : MonoBehaviour, IHexPoint {
     [SerializeField]
     private ClimateData _climateData;
+    [SerializeField]
+    private HoldridgeZone _holdridgeZone;
     public ClimateData ClimateData { 
         get {
             return _climateData;
@@ -16,21 +18,13 @@ public class Hex : MonoBehaviour, IHexPoint {
         } 
     }
 
-    [SerializeField]
-    private Biome _biome;
-    public Biome Biome { 
+    public HoldridgeZone HoldrigeZone {
         get {
-            return _biome;
-        } 
-        
-        set {
-            _biome = value;
-        } 
-    }
+            return _holdridgeZone;
+        }
 
-    public Terrains TerrainType {
-        get {
-            return _biome.terrain;
+        set {
+            _holdridgeZone = value;
         }
     }
 
@@ -188,7 +182,10 @@ public class Hex : MonoBehaviour, IHexPoint {
     
     public int PlantLevel { 
         get {
-            return _biome.plant;
+            return 3 - (int)(
+                3 * 
+                ((float)_holdridgeZone.altitudinalBelt / 5f)
+            );
         }
     }
 
@@ -196,7 +193,7 @@ public class Hex : MonoBehaviour, IHexPoint {
     public bool IsExplored { get; set; }
     public int SearchPhase { get; set; }
     public HexUnit Unit { get; set; }
-    public HexShaderData ShaderData { get; set; }
+    public HexMapShaderData ShaderData { get; set; }
     public int Index { get; set; }
     public int ColumnIndex { get; set; }
     public bool IsExplorable { get; set; }
@@ -245,8 +242,7 @@ public class Hex : MonoBehaviour, IHexPoint {
 
 // ~~ public
     public void ResetVisibility() {
-        if (_visibility > 0)
-        {
+        if (_visibility > 0) {
             _visibility = 0;
             ShaderData.RefreshVisibility(this);
         }
