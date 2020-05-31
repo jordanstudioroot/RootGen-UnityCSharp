@@ -6,6 +6,7 @@ using RootUtils.Randomization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Class encapsulating the RootGen map generation algorithms.
@@ -108,6 +109,8 @@ public class MapGenerator {
             tectonicParameters.LandBudget = hexMapTectonics.Step(
                 tectonicParameters
             );
+
+            //result.Draw(config.hexSize);
 
             logString +=
                 "Step " + i + ", Land Hexes: " +
@@ -239,6 +242,7 @@ public class MapGenerator {
         Random.state = snapshot;
         return result;
     }
+
     #endregion
 
     #region Private Methods

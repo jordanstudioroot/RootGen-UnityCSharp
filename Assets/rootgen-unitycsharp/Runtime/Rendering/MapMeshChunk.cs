@@ -204,13 +204,13 @@ public class MapMeshChunk : MonoBehaviour {
         int wrapSize
     ) {
         List<HexEdge> edges =
-            neighborGraph.GetOutEdges(hex);        
+            neighborGraph.GetOutEdgesList(hex);        
 
-        foreach(HexEdge edge in edges) {
+        for (int i = 0; i < edges.Count; i++) {
             TriangulateEdge(
                 hex,
-                edge.Target,
-                edge.Direction,
+                edges[i].Target,
+                edges[i].Direction,
                 hexOuterRadius,
                 neighborGraph,
                 riverGraph,
@@ -220,14 +220,13 @@ public class MapMeshChunk : MonoBehaviour {
             );
         }
 
-        foreach(
-            HexDirections borderDirection in
-            neighborGraph.GetBorderDirections(hex)
-        ) {
+        List<HexDirections> borderDirections =
+            neighborGraph.GetBorderDirections(hex);
+        for(int i = 0; i < borderDirections.Count; i++) 
             TriangulateEdge(
                 hex,
                 null,
-                borderDirection,
+                borderDirections[i],
                 hexOuterRadius,
                 neighborGraph,
                 riverGraph,
@@ -235,12 +234,13 @@ public class MapMeshChunk : MonoBehaviour {
                 elevationGraph,
                 wrapSize
             );
-        }
 
         if (!hex.IsUnderwater) {
             if (
-                    !riverGraph.HasRiver(hex) &&
-                    !roadGraph.HasRoad(hex)
+                riverGraph != null &&
+                riverGraph.EdgeCount > 0 &&
+                !riverGraph.HasRiver(hex) &&
+                !roadGraph.HasRoad(hex)
             ) {
                 features.AddFeature(
                     hex,
@@ -288,7 +288,11 @@ public class MapMeshChunk : MonoBehaviour {
             )
         );
 
-        if (riverDigraph.HasRiver(source)) {
+        if (
+            riverDigraph != null &&
+            riverDigraph.EdgeCount > 0 &&
+            riverDigraph.HasRiver(source)
+        ) {
             if (
                 riverDigraph.HasRiverInDirection(
                     source,
@@ -345,7 +349,6 @@ public class MapMeshChunk : MonoBehaviour {
                 target,
                 direction,
                 edgeVertices,
-                riverDigraph,
                 roadUndirectedGraph,
                 center,
                 hexOuterRadius,
@@ -407,7 +410,6 @@ public class MapMeshChunk : MonoBehaviour {
         Hex target,
         HexDirections direction,
         EdgeVertices edgeVertices,
-        RiverDigraph riverGraph,
         RoadUndirectedGraph roadGraph,
         Vector3 center,
         float hexOuterRadius,
@@ -927,7 +929,10 @@ public class MapMeshChunk : MonoBehaviour {
         );
 
 //        bool hasRiver = hex.HasRiverThroughEdge(direction);
-        bool hasRiver = riverGraph.HasRiverInDirection(
+        bool hasRiver =
+        riverGraph != null &&
+        riverGraph.EdgeCount > 0 && 
+        riverGraph.HasRiverInDirection(
             source,
             direction
         );
@@ -2594,6 +2599,8 @@ public class MapMeshChunk : MonoBehaviour {
         );
 
         if (
+            riverGraph != null &&
+            riverGraph.EdgeCount > 0 &&
 //          hex.HasRiverThroughEdge(direction)
             riverGraph.HasRiverInDirection(
                 source,

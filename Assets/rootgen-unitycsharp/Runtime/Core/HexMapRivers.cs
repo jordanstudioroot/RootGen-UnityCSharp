@@ -207,6 +207,7 @@ public class HexMapRivers {
                 return null;
                 
             int minNeighborElevation = int.MaxValue;
+            int minNeighborWaterLevel = int.MaxValue;
 
             List<HexDirections> flowDirections = new List<HexDirections>();
             HexDirections direction = HexDirections.Northeast;
@@ -228,6 +229,7 @@ public class HexMapRivers {
 
                 if (neighborInDirection.elevation < minNeighborElevation) {
                     minNeighborElevation = neighborInDirection.elevation;
+                    minNeighborWaterLevel = neighborInDirection.WaterLevel;
                 }
 
                 // If the direction points to the river origin, or to a
@@ -241,10 +243,11 @@ public class HexMapRivers {
 
                 int delta =
                     neighborInDirection.elevation - RiverHead.elevation;
-
+                    
                 // If the elevation in the given direction is positive,
                 // continue.
                 if (delta > 0) {
+                    
                     continue;
                 }
 
@@ -308,7 +311,7 @@ public class HexMapRivers {
                 // set the water level of the hex to the minium elevation
                 // of all neighbors.
                 if (minNeighborElevation >= RiverHead.elevation) {
-                    RiverHead.WaterLevel = minNeighborElevation;
+                    RiverHead.WaterLevel = RiverHead.elevation;
 
                     // If the hex is of equal elevation to a neighbor with
                     // a minimum elevation, lower the current hexes
@@ -355,7 +358,7 @@ public class HexMapRivers {
                 RiverHead.WaterLevel = RiverHead.elevation;
 
                 RiverHead.SetElevation(
-                    RiverHead.elevation - 1,
+                    minNeighborElevation - 1,
                     hexOuterRadius,
                     _hexMap.WrapSize
                 );

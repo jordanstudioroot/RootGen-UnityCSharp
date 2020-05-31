@@ -148,7 +148,6 @@ public struct HoldridgeZone {
     public LZone lifeZone;
     public ABelt altitudinalBelt;
     public LRegion latitudinalRegion;
-
     public HoldridgeZone(
         LZone lifeZone,
         ABelt altitudinalBelt,

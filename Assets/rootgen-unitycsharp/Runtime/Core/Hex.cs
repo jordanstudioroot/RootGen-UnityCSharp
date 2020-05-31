@@ -5,18 +5,10 @@ using System.Collections.Generic;
 
 public class Hex : MonoBehaviour, IHexPoint {
     [SerializeField]
-    private ClimateData _climateData;
+    public float clouds, temperature, moisture;
+    
     [SerializeField]
     private HoldridgeZone _holdridgeZone;
-    public ClimateData ClimateData { 
-        get {
-            return _climateData;
-        } 
-        
-        set {
-            _climateData = value;
-        } 
-    }
 
     public HoldridgeZone HoldrigeZone {
         get {
@@ -150,6 +142,7 @@ public class Hex : MonoBehaviour, IHexPoint {
         }
     }
 
+    [SerializeField]
     public int elevation;
 
     public void SetElevation(

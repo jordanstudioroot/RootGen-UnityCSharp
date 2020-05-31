@@ -10,49 +10,51 @@ public enum HexDirections
     Northwest = 5
 }
 
-public static class HexDirectionExtensions
-{
-    /* 'this' keyword is required to add the functionality of this method to
-        * the 'HexDirections' enum. The class referenced after 'this' is the
-        * target of the added functionality, and the method provided can be
-        * executed by calling the method on the class predicated by 'this'
-        * in the arguement list.*/
+public static class HexDirectionExtensions {
+    public static HexDirections Min(this HexDirections direction) {
+        return (HexDirections)0;
+    }
 
-    public static HexDirections Opposite(this HexDirections direction)
-    {
-        /* If the direction is less than 3, returns the opposite direction at
-            * HexDirections + 3. If the direction is greater than 3, loops back 
-            * around the HexDirections enum and returns the opposite direction.*/
+    public static HexDirections Max(this HexDirections direction) {
+        return (HexDirections)5;
+    }
+
+    public static HexDirections Opposite(this HexDirections direction) {
+// If the direction is less than 3, returns the opposite direction at
+// HexDirections + 3. If the direction is greater than 3, loops back around
+// the HexDirections enum and returns the opposite direction.
 
         return (int)direction < 3 ? (direction + 3) : (direction - 3);
     }
 
-    public static HexDirections PreviousClockwise(this HexDirections direction)
-    {
-        /* If the hex direction is the first in the enum, wrap back and return the last enum
-            * value, otherwise return the preceding enum value.
-            */
+    public static HexDirections PreviousClockwise(
+        this HexDirections direction
+    ) {
+// If the hex direction is the first in the enum, wrap back and return the
+// last enum value, otherwise return the preceding enum value.
 
         return direction == HexDirections.Northeast ? HexDirections.Northwest : (direction - 1);
     }
 
-    public static HexDirections PreviousClockwise2(this HexDirections direction)
-    {
+    public static HexDirections PreviousClockwise2(
+        this HexDirections direction
+    ) {
         direction -= 2;
         return direction >= HexDirections.Northeast ? direction : direction + 6;
     }
 
-    public static HexDirections NextClockwise(this HexDirections direction)
-    {
-        /* If the hex direction is the last in the enu, wrap forward and return the last enum
-            * value, otherwise return the next enum value.
-            */
+    public static HexDirections NextClockwise(
+        this HexDirections direction
+    ) {
+// If the hex direction is the last in the enu, wrap forward and return the
+// last enum value, otherwise return the next enum value.
 
         return direction == HexDirections.Northwest ? HexDirections.Northeast : (direction + 1);
     }
 
-    public static HexDirections NextClockwise2(this HexDirections direction)
-    {
+    public static HexDirections NextClockwise2(
+        this HexDirections direction
+    ) {
         direction += 2;
         return direction <= HexDirections.Northwest ? direction : (direction - 6);
     }

@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce2e8e7003601f44faf50f5baf0608df, type: 3}
   m_Name: defaultconfig
   m_EditorClassIdentifier: 
-  width: 40
+  width: 50
   height: 30
   wrapping: 1
   useFixedSeed: 0
-  seed: 1691491808
+  seed: 1554775572
   initialClimateSteps: 40
   hexSize: 10
   jitterProbability: 0.25
@@ -37,14 +37,14 @@ MonoBehaviour:
   precipitationFactor: 0.25
   runoffFactor: 0.25
   seepageFactor: 0.125
-  windDirection: 4
+  windDirection: 0
   windStrength: 4
   startingMoisture: 0.1
   riverPercentage: 10
   extraLakeProbability: 0.25
   lowTemperature: 0
   highTemperature: 1
-  temperatureJitter: 0.1
+  temperatureJitter: 0
   numInitialRivers: 10
   numInitialRiverSteps: 10
   hemisphere: 0
