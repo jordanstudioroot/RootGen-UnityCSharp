@@ -679,12 +679,9 @@ public class HexMap : MonoBehaviour {
 
         string diagnostic = "Mesh Triangulation Diagnostics\n\n";
         Stopwatch stopwatch = new Stopwatch();
-        Stopwatch currentStopwatch = new Stopwatch();
         stopwatch.Start();
 
         foreach(MapMeshChunk chunk in HexMeshChunks) {
-            currentStopwatch.Restart();
-
             chunk.Triangulate(
                 this,
                 hexOuterRadius,
@@ -693,24 +690,17 @@ public class HexMap : MonoBehaviour {
                 RoadUndirectedGraph,
                 CreateElevationDigraph            
             );
-
-            currentStopwatch.Stop();
-            diagnostic +=
-                "Mesh chunk triangulated in: " +
-                currentStopwatch.Elapsed + "\n";
         }
 
         stopwatch.Stop();
         diagnostic +=
             "All mesh chunks triangulated in: " + stopwatch.Elapsed;
 
-        foreach(string toLog in SplitByChar(diagnostic, 30000)) {
-            RootLog.Log(
-                toLog,
-                Severity.Information,
-                "Diagnostic"
-            );
-        }
+        RootLog.Log(
+            diagnostic,
+            Severity.Information,
+            "Diagnostic"
+        );
     }
 
     // TODO: Put this in a utility class or move it directly ito

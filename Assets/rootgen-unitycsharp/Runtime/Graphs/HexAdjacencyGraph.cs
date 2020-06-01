@@ -49,6 +49,19 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
     /// The out edges of the specified hex or null if there are no out edges
     /// for the specified hex.
     /// </returns>
+    
+    public IEnumerable<HexEdge> GetOutEdges(Hex hex) {
+        IEnumerable<HexEdge> result;
+
+        TryGetOutEdges(hex, out result);
+
+        if (result == null) {
+            return null;
+        }
+        
+        return result;  
+    }
+
     public List<HexEdge> GetOutEdgesList(Hex hex) {
         IEnumerable<HexEdge> result;
 
@@ -326,7 +339,7 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
         return result;
     }
 
-    public List<HexDirections> GetBorderDirections(Hex hex) {
+    public List<HexDirections> GetBorderDirectionsList(Hex hex) {
         List<HexDirections> result = new List<HexDirections> {
             HexDirections.East,
             HexDirections.Northeast,

@@ -197,50 +197,80 @@ public class MapMeshChunk : MonoBehaviour {
     private void TriangulateHex(
         Hex hex,
         float hexOuterRadius,
-        HexAdjacencyGraph neighborGraph,
-        RiverDigraph riverGraph,
-        RoadUndirectedGraph roadGraph,
-        ElevationDigraph elevationGraph,
+        HexAdjacencyGraph adjacencyGraph,
+        RiverDigraph riverDigraph,
+        RoadUndirectedGraph roadUndirectedGraph,
+        ElevationDigraph elevationDigraph,
         int wrapSize
     ) {
-        List<HexEdge> edges =
-            neighborGraph.GetOutEdgesList(hex);        
+        HexEdge[] edges =
+            adjacencyGraph.GetOutEdgesArray(hex);        
 
-        for (int i = 0; i < edges.Count; i++) {
-            TriangulateEdge(
+        for (int i = 0; i < edges.Length; i++) {
+            HexDirections direction = edges[i].Direction;
+            Hex neighbor = edges[i].Target;
+
+            EdgeVertices centerEdgeVertices =
+                TriangulateEdgeCenter(
+                    hex,
+                    direction,
+                    hexOuterRadius,
+                    riverDigraph,
+                    roadUndirectedGraph,
+                    elevationDigraph,
+                    wrapSize
+                );
+
+            if (edges[i].Direction <= HexDirections.Southeast) {
+                EdgeVertices connectionEdgeVertices = 
+                    TriangulateNeighborConnection(
+                        hex,
+                        neighbor,
+                        direction,
+                        adjacencyGraph,
+                        riverDigraph,
+                        roadUndirectedGraph,
+                        elevationDigraph,
+                        centerEdgeVertices,
+                        hexOuterRadius,
+                        wrapSize
+                    );
+            }
+
+            if (hex.IsUnderwater) {
+                TriangulateNeighborWater(
+                    hex,
+                    edges[i].Target,
+                    edges[i].Direction,
+                    adjacencyGraph,
+                    riverDigraph,
+                    hexOuterRadius,
+                    wrapSize
+                );
+            }
+        }
+
+        List<HexDirections> borderDirections =
+            adjacencyGraph.GetBorderDirectionsList(hex);
+
+        for(int i = 0; i < borderDirections.Count; i++) {
+            TriangulateEdgeCenter(
                 hex,
-                edges[i].Target,
-                edges[i].Direction,
+                borderDirections[i],
                 hexOuterRadius,
-                neighborGraph,
-                riverGraph,
-                roadGraph,
-                elevationGraph,
+                riverDigraph,
+                roadUndirectedGraph,
+                elevationDigraph,
                 wrapSize
             );
         }
 
-        List<HexDirections> borderDirections =
-            neighborGraph.GetBorderDirections(hex);
-        for(int i = 0; i < borderDirections.Count; i++) 
-            TriangulateEdge(
-                hex,
-                null,
-                borderDirections[i],
-                hexOuterRadius,
-                neighborGraph,
-                riverGraph,
-                roadGraph,
-                elevationGraph,
-                wrapSize
-            );
-
         if (!hex.IsUnderwater) {
             if (
-                riverGraph != null &&
-                riverGraph.EdgeCount > 0 &&
-                !riverGraph.HasRiver(hex) &&
-                !roadGraph.HasRoad(hex)
+                riverDigraph != null &&
+                riverDigraph.EdgeCount > 0 &&
+                !riverDigraph.HasRiver(hex) &&
+                !roadUndirectedGraph.HasRoad(hex)
             ) {
                 features.AddFeature(
                     hex,
@@ -261,12 +291,10 @@ public class MapMeshChunk : MonoBehaviour {
         }
     }
 
-    private void TriangulateEdge(
+    private EdgeVertices TriangulateEdgeCenter(
         Hex source,
-        Hex target,
         HexDirections direction,
         float hexOuterRadius,
-        HexAdjacencyGraph hexAdjacencyGraph,
         RiverDigraph riverDigraph,
         RoadUndirectedGraph roadUndirectedGraph,
         ElevationDigraph elevationDigraph,
@@ -299,16 +327,13 @@ public class MapMeshChunk : MonoBehaviour {
                     direction
                 )
             ) {
-/* If the triangle has a river through the edge, lower center edge vertex
-*  to simulate stream bed.
-*/
+// If the triangle has a river through the edge, lower center edge vertex
+// to simulate stream bed.
                 edgeVertices.vertex3.y = source.StreamBedY;
 
                 if (riverDigraph.HasRiverStartOrEnd(source)) {
                     TriangulateWithRiverBeginOrEnd(
                         source,
-                        target,
-                        direction,
                         center,
                         edgeVertices,
                         riverDigraph,
@@ -317,9 +342,8 @@ public class MapMeshChunk : MonoBehaviour {
                     );
                 }
                 else {
-                    TriangulateWithRiver(
+                    TriangulateRiver(
                         source,
-                        target,
                         direction,
                         center,
                         edgeVertices,
@@ -332,7 +356,6 @@ public class MapMeshChunk : MonoBehaviour {
             else {
                 TriangulateAdjacentToRiver(
                     source,
-                    target,
                     direction,
                     center,
                     edgeVertices,
@@ -346,7 +369,6 @@ public class MapMeshChunk : MonoBehaviour {
         else {
             TriangulateWithoutRiver(
                 source,
-                target,
                 direction,
                 edgeVertices,
                 roadUndirectedGraph,
@@ -357,7 +379,10 @@ public class MapMeshChunk : MonoBehaviour {
 
             if (
                 !source.IsUnderwater &&
-                !roadUndirectedGraph.HasRoadInDirection(source, direction)
+                !roadUndirectedGraph.HasRoadInDirection(
+                    source,
+                    direction
+                )
             ) {
                 features.AddFeature(
                     source,
@@ -371,12 +396,14 @@ public class MapMeshChunk : MonoBehaviour {
             }
         }
 
+        return edgeVertices;
+
 // If the direction of triangulation is between NE and SE, triangulate
 // the connection between hexes. Otherwise, do not triangulate the
 // connection. Since the connections are triangulated from west to east,
 // south to north, the connection will already have been triangulated
 // for SW, W, an NW.
-        if (direction <= HexDirections.Southeast) {
+        /*if (direction <= HexDirections.Southeast) {
             TriangulateConnection(
                 source,
                 target,
@@ -402,12 +429,11 @@ public class MapMeshChunk : MonoBehaviour {
                 hexOuterRadius,
                 wrapSize
             );
-        }
+        }*/
     }
 
     private void TriangulateWithoutRiver(
         Hex source,
-        Hex target,
         HexDirections direction,
         EdgeVertices edgeVertices,
         RoadUndirectedGraph roadGraph,
@@ -454,9 +480,8 @@ public class MapMeshChunk : MonoBehaviour {
     }
     
 
-    private void TriangulateWithRiver(
+    private void TriangulateRiver(
         Hex source,
-        Hex target,
         HexDirections direction,
         Vector3 center,
         EdgeVertices edgeVertices,
@@ -682,8 +707,6 @@ public class MapMeshChunk : MonoBehaviour {
 
     private void TriangulateWithRiverBeginOrEnd(
         Hex source,
-        Hex target,
-        HexDirections direction,
         Vector3 center,
         EdgeVertices edgeVertices,
         RiverDigraph riverGraph,
@@ -722,8 +745,11 @@ public class MapMeshChunk : MonoBehaviour {
                 source
             );
 
-            Vector3 indices;
-            indices.x = indices.y = indices.z = source.Index;
+            Vector3 indices = new Vector3(
+                source.Index,
+                source.Index,
+                source.Index
+            );
             
             TriangulateRiverQuad(
                 middle.vertex2,
@@ -739,7 +765,9 @@ public class MapMeshChunk : MonoBehaviour {
             );
 
             center.y =
-                middle.vertex2.y = middle.vertex4.y = source.RiverSurfaceY;
+                middle.vertex2.y =
+                middle.vertex4.y =
+                source.RiverSurfaceY;
 
             rivers.AddTrianglePerturbed(
                 center,
@@ -770,7 +798,6 @@ public class MapMeshChunk : MonoBehaviour {
 
     private void TriangulateAdjacentToRiver(
         Hex source,
-        Hex target,
         HexDirections direction,
         Vector3 center,
         EdgeVertices edgeVertices,
@@ -783,7 +810,6 @@ public class MapMeshChunk : MonoBehaviour {
         if (roadGraph.HasRoad(source)) {
             TriangulateRoadAdjacentToRiver(
                 source,
-                target,
                 direction,
                 center,
                 riverGraph,
@@ -898,44 +924,39 @@ public class MapMeshChunk : MonoBehaviour {
         }
     }
 
-    private void TriangulateConnection(
+    private EdgeVertices TriangulateNeighborConnection(
         Hex source,
-        Hex target,
+        Hex neighbor,
         HexDirections direction,
-        HexAdjacencyGraph neighborGraph,
+        HexAdjacencyGraph adjacencyGraph,
         RiverDigraph riverGraph,
         RoadUndirectedGraph roadGraph,
         ElevationDigraph elevationGraph,
-        EdgeVertices edgeVertices1,
+        EdgeVertices centerEdgeVertices,
         float hexOuterRadius,
         int wrapSize
     ) {
-// If the target cell is null, do not triangulate the connection as
-// there is no cell with which to make a connection to in this direction.
-        if (target == null) {
-            return;
-        }
 
         Vector3 bridge = HexagonPoint.GetBridge(
             direction,
             hexOuterRadius
         );
 
-        bridge.y = target.Position.y - source.Position.y;
+        bridge.y = neighbor.Position.y - source.Position.y;
 
-        EdgeVertices edge2 = new EdgeVertices(
-            edgeVertices1.vertex1 + bridge,
-            edgeVertices1.vertex5 + bridge
+        EdgeVertices connectionEdgeVertices = new EdgeVertices(
+            centerEdgeVertices.vertex1 + bridge,
+            centerEdgeVertices.vertex5 + bridge
         );
 
 //        bool hasRiver = hex.HasRiverThroughEdge(direction);
-        bool hasRiver =
-        riverGraph != null &&
-        riverGraph.EdgeCount > 0 && 
-        riverGraph.HasRiverInDirection(
-            source,
-            direction
-        );
+        bool hasRiverInDirection =
+            riverGraph != null &&
+            riverGraph.EdgeCount > 0 && 
+            riverGraph.HasRiverInDirection(
+                source,
+                direction
+            );
 
 //        bool hasRoad = hex.HasRoadThroughEdge(direction);
         bool hasRoad = roadGraph.HasRoadInDirection(
@@ -946,22 +967,22 @@ public class MapMeshChunk : MonoBehaviour {
 /* Adjust the other edge of the connection
 * if there is a river through that edge.
 */
-        if (hasRiver) {
-            edge2.vertex3.y = target.StreamBedY;
+        if (hasRiverInDirection) {
+            connectionEdgeVertices.vertex3.y = neighbor.StreamBedY;
 
             Vector3 indices;
             indices.x = indices.z = source.Index;
-            indices.y = target.Index;
+            indices.y = neighbor.Index;
 
             if (!source.IsUnderwater) {
-                if (!target.IsUnderwater) {
+                if (!neighbor.IsUnderwater) {
                     TriangulateRiverQuad(
-                        edgeVertices1.vertex2,
-                        edgeVertices1.vertex4,
-                        edge2.vertex2,
-                        edge2.vertex4,
+                        centerEdgeVertices.vertex2,
+                        centerEdgeVertices.vertex4,
+                        connectionEdgeVertices.vertex2,
+                        connectionEdgeVertices.vertex4,
                         source.RiverSurfaceY,
-                        target.RiverSurfaceY,
+                        neighbor.RiverSurfaceY,
                         0.8f,
                         (
 //                            hex.HasIncomingRiver &&
@@ -976,13 +997,13 @@ public class MapMeshChunk : MonoBehaviour {
                         wrapSize
                     );
                 }
-                else if(source.elevation > target.WaterLevel) {
+                else if(source.elevation > neighbor.WaterLevel) {
                     TriangulateWaterfallInWater(
-                        edgeVertices1.vertex2, edgeVertices1.vertex4, 
-                        edge2.vertex2, edge2.vertex4, 
+                        centerEdgeVertices.vertex2, centerEdgeVertices.vertex4, 
+                        connectionEdgeVertices.vertex2, connectionEdgeVertices.vertex4, 
                         source.RiverSurfaceY, 
-                        target.RiverSurfaceY,
-                        target.WaterSurfaceY,
+                        neighbor.RiverSurfaceY,
+                        neighbor.WaterSurfaceY,
                         indices,
                         hexOuterRadius,
                         wrapSize
@@ -990,15 +1011,15 @@ public class MapMeshChunk : MonoBehaviour {
                 }
             }
             else if (
-                !target.IsUnderwater &&
-                target.elevation > source.WaterLevel
+                !neighbor.IsUnderwater &&
+                neighbor.elevation > source.WaterLevel
             ) {
                 TriangulateWaterfallInWater(
-                    edge2.vertex4,
-                    edge2.vertex2,
-                    edgeVertices1.vertex4,
-                    edgeVertices1.vertex2,
-                    target.RiverSurfaceY,
+                    connectionEdgeVertices.vertex4,
+                    connectionEdgeVertices.vertex2,
+                    centerEdgeVertices.vertex4,
+                    centerEdgeVertices.vertex2,
+                    neighbor.RiverSurfaceY,
                     source.RiverSurfaceY,
                     source.WaterSurfaceY,
                     indices,
@@ -1016,10 +1037,10 @@ public class MapMeshChunk : MonoBehaviour {
             ) == ElevationEdgeTypes.Slope
         ) {
             TriangulateEdgeTerraces(
-                edgeVertices1, 
+                centerEdgeVertices, 
                 source, 
-                edge2, 
-                target,
+                connectionEdgeVertices, 
+                neighbor,
                 hasRoad,
                 hexOuterRadius,
                 wrapSize
@@ -1027,12 +1048,12 @@ public class MapMeshChunk : MonoBehaviour {
         }
         else {
             TriangulateEdgeStrip(
-                edgeVertices1,
+                centerEdgeVertices,
                 _weights1,
                 source.Index,
-                edge2,
+                connectionEdgeVertices,
                 _weights2,
-                target.Index,
+                neighbor.Index,
                 hexOuterRadius,
                 wrapSize, 
                 hasRoad
@@ -1040,95 +1061,113 @@ public class MapMeshChunk : MonoBehaviour {
         }
 
         features.AddWall(
-            edgeVertices1,
+            centerEdgeVertices,
             source,
-            edge2,
-            target,
-            hasRiver,
+            connectionEdgeVertices,
+            neighbor,
+            hasRiverInDirection,
             hasRoad,
             hexOuterRadius,
             wrapSize
         );
-
-/* Drawn and color the triangle between the bridge of the current hex
-* and its current neighbor and the bridge of the next hex and the
-* current neighbor.*/
-//        hex nextNeighbor = hex.GetNeighbor(direction.Next());
-        Hex nextNeighbor = neighborGraph.TryGetNeighborInDirection(
+        
+        Hex nextNeighbor = adjacencyGraph.TryGetNeighborInDirection(
             source,
             direction.NextClockwise()
         );
 
         if (direction <= HexDirections.East && nextNeighbor != null) {
+            TriangulateNeighborCorner(
+                source,
+                neighbor,
+                nextNeighbor,
+                direction,
+                centerEdgeVertices,
+                connectionEdgeVertices,
+                hexOuterRadius,
+                wrapSize
+            );
+        }
 
-/* Create a 5th vertex and assign it with the elevation of the neighbor
-* under consideration. This will be used as the final vertex in the
-* triangle which fills the gap between bridges.
-*/
-            Vector3 vertex5 =
-                edgeVertices1.vertex5 + HexagonPoint.GetBridge(
-                    direction.NextClockwise(),
-                    hexOuterRadius
-                );
+        return connectionEdgeVertices;
+    }
 
-            vertex5.y = nextNeighbor.Position.y;
+    private void TriangulateNeighborCorner(
+        Hex source,
+        Hex neighbor,
+        Hex nextNeighbor,
+        HexDirections direction,
+        EdgeVertices centerEdgeVertices,
+        EdgeVertices connectionEdgeVertices,
+        float hexOuterRadius,
+        int wrapSize
+    ) {
+// Create a 5th vertex and assign it with the elevation of the neighbor
+// under consideration. This will be used as the final vertex in the
+// triangle which fills the gap between bridges.
+        Vector3 vertex5 =
+            centerEdgeVertices.vertex5 + HexagonPoint.GetBridge(
+                direction.NextClockwise(),
+                hexOuterRadius
+            );
 
-            if (source.elevation <= target.elevation) {
-                if (source.elevation <= nextNeighbor.elevation) {
+        vertex5.y = nextNeighbor.Position.y;
 
-//This hex has lowest elevation, no rotation.
-                    TriangulateCorner(
-                        edgeVertices1.vertex5,
-                        source,
-                        edge2.vertex5,
-                        target,
-                        vertex5,
-                        nextNeighbor,
-                        hexOuterRadius,
-                        wrapSize
-                    );
-                }
-                else {
-// Next neighbor has lowest elevation, rotate counter-clockwise.
-                    TriangulateCorner(
-                        vertex5,
-                        nextNeighbor,
-                        edgeVertices1.vertex5,
-                        source,
-                        edge2.vertex5,
-                        target,
-                        hexOuterRadius,
-                        wrapSize
-                    );
-                }
-            }
-            else if (target.elevation <= nextNeighbor.elevation) {
-// Neighbor is lowest hex, rotate triangle clockwise.
+        if (source.elevation <= neighbor.elevation) {
+            if (source.elevation <= nextNeighbor.elevation) {
+
+// This hex has lowest elevation, no rotation.
                 TriangulateCorner(
-                    edge2.vertex5,
-                    target,
+                    centerEdgeVertices.vertex5,
+                    source,
+                    connectionEdgeVertices.vertex5,
+                    neighbor,
                     vertex5,
                     nextNeighbor,
-                    edgeVertices1.vertex5,
-                    source,
                     hexOuterRadius,
                     wrapSize
                 );
             }
             else {
-
 // Next neighbor has lowest elevation, rotate counter-clockwise.
                 TriangulateCorner(
                     vertex5,
                     nextNeighbor,
-                    edgeVertices1.vertex5,
+                    centerEdgeVertices.vertex5,
                     source,
-                    edge2.vertex5,
-                    target,
+                    connectionEdgeVertices.vertex5,
+                    neighbor,
                     hexOuterRadius,
                     wrapSize
                 );
             }
+        }
+        else if (neighbor.elevation <= nextNeighbor.elevation) {
+// Neighbor is lowest hex, rotate triangle clockwise.
+            TriangulateCorner(
+                connectionEdgeVertices.vertex5,
+                neighbor,
+                vertex5,
+                nextNeighbor,
+                centerEdgeVertices.vertex5,
+                source,
+                hexOuterRadius,
+                wrapSize
+            );
+        }
+        else {
+
+// Next neighbor has lowest elevation, rotate counter-clockwise.
+            TriangulateCorner(
+                vertex5,
+                nextNeighbor,
+                centerEdgeVertices.vertex5,
+                source,
+                connectionEdgeVertices.vertex5,
+                neighbor,
+                hexOuterRadius,
+                wrapSize
+            );
         }
     }
 
@@ -1146,8 +1185,7 @@ public class MapMeshChunk : MonoBehaviour {
         float index1 = beginHex.Index;
         float index2 = endHex.Index;
 
-        TriangulateEdgeStrip
-        (
+        TriangulateEdgeStrip(
             begin,
             _weights1, 
             index1, 
@@ -1220,7 +1258,8 @@ public class MapMeshChunk : MonoBehaviour {
                 );
             }
 
-// If the right edge is flat, must terrace from left instead of bottom. Slope-Flat-Slope
+// If the right edge is flat, must terrace from left instead of bottom.
+// Slope-Flat-Slope
             else if (rightEdgeType == ElevationEdgeTypes.Flat) {
                 TriangulateCornerTerraces (
                     left,
@@ -1986,7 +2025,6 @@ public class MapMeshChunk : MonoBehaviour {
 
     private void TriangulateRoadAdjacentToRiver(
         Hex source,
-        Hex target,
         HexDirections direction, 
         Vector3 center,
         RiverDigraph riverGraph,
@@ -2371,16 +2409,16 @@ public class MapMeshChunk : MonoBehaviour {
         return interpolators;
     }
 
-    private void TriangulateWater(
+    private void TriangulateNeighborWater(
         Hex source,
         Hex target,
         HexDirections direction,
         HexAdjacencyGraph neighborGraph,
         RiverDigraph riverGraph,
-        Vector3 center,
         float hexOuterRadius,
         int wrapSize
     ) {
+        Vector3 center = source.Position;
         center.y = source.WaterSurfaceY;
 
         if (
@@ -2557,9 +2595,11 @@ public class MapMeshChunk : MonoBehaviour {
             wrapSize
         );
 
-        Vector3 indices = new Vector3();
-        indices.x = indices.y = source.Index;
-        indices.y = target.Index;
+        Vector3 indices = new Vector3(
+            source.Index,
+            target.Index,
+            source.Index
+        );
 
         water.AddTriangleHexData(indices, _weights1);
         water.AddTriangleHexData(indices, _weights1);

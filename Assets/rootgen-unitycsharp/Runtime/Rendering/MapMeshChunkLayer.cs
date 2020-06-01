@@ -12,50 +12,53 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class MapMeshChunkLayer : MonoBehaviour {
 
-/// <summary>
-/// Boolean value representing whether the mesh collider is used.
-/// </summary>
+    /// <summary>
+    /// Boolean value representing whether the mesh collider is used.
+    /// </summary>
     private bool _useCollider;
 
-/// <summary>
-/// Boolean value representing whether the hexData is used in rendering.
-/// </summary>
+    /// <summary>
+    /// Boolean value representing whether the hexData is used in rendering.
+    /// </summary>
     private bool _useHexData;
 
-/// <summary>
-/// Boolean value representing whether the UV coordinates are used in rendering.
-/// </summary>
+    /// <summary>
+    /// Boolean value representing whether the UV coordinates are used in rendering.
+    /// </summary>
     private bool _useUVCoordinates;
-/// <summary>
-/// Boolean value representing whether the UV2 coordinates are used in rendering.
-/// </summary>
+    /// <summary>
+    /// Boolean value representing whether the UV2 coordinates are used in rendering.
+    /// </summary>
     private bool _useUV2Coordinates;
 
-/// <summary>
-/// The list of UV coordinates used to render the HexMesh.
-/// </summary>
+    /// <summary>
+    /// The list of UV coordinates used to render the HexMesh.
+    /// </summary>
     [NonSerialized] private List<Vector2> _uvs;
-/// <summary>
-/// The list of the UV2 coordinates used to render the HexMesh.
-/// </summary>
+
+    /// <summary>
+    /// The list of the UV2 coordinates used to render the HexMesh.
+    /// </summary>
     [NonSerialized] private List<Vector2> _uv2s;
-/// <summary>
-/// The list of vertices used to render the HexMesh.
-/// </summary>
+
+    /// <summary>
+    /// The list of vertices used to render the HexMesh.
+    /// </summary>
     [NonSerialized] private List<Vector3> _vertices;
-/// <summary>
-/// The list of triangles used to render the HexMesh.
-/// </summary>
+
+    /// <summary>
+    /// The list of triangles used to render the HexMesh.
+    /// </summary>
     [NonSerialized] private List<int> _triangles;
 
-/// <summary>
-/// A list of Color values used as weights to blend textures between hexes. 
-/// </summary>
+    /// <summary>
+    /// A list of Color values used as weights to blend textures between hexes. 
+    /// </summary>
     [NonSerialized] private List<Color> _textureWeights;
     
-/// <summary>
-/// A list of Vector3s used to map the hex positions to the UV map.
-/// </summary>
+    /// <summary>
+    /// A list of Vector3s used to map the hex positions to the UV map.
+    /// </summary>
     [NonSerialized] private List<Vector3> _uv3s;
 
     private Mesh _mesh;
@@ -90,18 +93,18 @@ public class MapMeshChunkLayer : MonoBehaviour {
         return resultMono;
     }
 
-/// <summary>
-/// Add a triangle.
-/// </summary>
-/// <param name="firstCorner">
-/// The first corner of the triangle to be drawn, counter-clockwise.
-/// </param>
-/// <param name="secondCorner">
-/// The second corner of the triangle to be drawn, counter-clockwise.
-/// </param>
-/// <param name="thirdCorner">
-/// The third corner of the triangle to be drawn, counter-clockwise.
-/// </param>
+    /// <summary>
+    /// Add a triangle.
+    /// </summary>
+    /// <param name="firstCorner">
+    /// The first corner of the triangle to be drawn, counter-clockwise.
+    /// </param>
+    /// <param name="secondCorner">
+    /// The second corner of the triangle to be drawn, counter-clockwise.
+    /// </param>
+    /// <param name="thirdCorner">
+    /// The third corner of the triangle to be drawn, counter-clockwise.
+    /// </param>
     public void AddTriangleUnperturbed(
         Vector3 firstCorner, 
         Vector3 secondCorner, 
@@ -305,23 +308,23 @@ public class MapMeshChunkLayer : MonoBehaviour {
         _triangles.Add(vertexIndex + 3);
     }
 
-/// <summary>
-/// Add hex data to the mesh corresponding to a particular set of hex
-/// indicies represented as a collection by a Vector3.
-/// </summary>
-/// <param name="terrainTypes">
-/// A Vector3 containing the terrain type of each vertex which composes
-/// the triangle, where the terrain type is represented as an integer.
-/// </param>
-/// <param name="firstTextureWeight">
-/// 
-/// </param>
-/// <param name="secondTextureWeight">
-/// The weight of the terrain texture for the second corner.
-/// </param>
-/// <param name="thirdTextureWeight">
-/// The weight of the terrain texture for the third corner.
-/// </param>
+    /// <summary>
+    /// Add hex data to the mesh corresponding to a particular set of hex
+    /// indicies represented as a collection by a Vector3.
+    /// </summary>
+    /// <param name="terrainTypes">
+    /// A Vector3 containing the terrain type of each vertex which composes
+    /// the triangle, where the terrain type is represented as an integer.
+    /// </param>
+    /// <param name="firstTextureWeight">
+    /// 
+    /// </param>
+    /// <param name="secondTextureWeight">
+    /// The weight of the terrain texture for the second corner.
+    /// </param>
+    /// <param name="thirdTextureWeight">
+    /// The weight of the terrain texture for the third corner.
+    /// </param>
     public void AddTriangleHexData(
         Vector3 terrainTypes, 
         Color firstTextureWeight, 

@@ -16,15 +16,8 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
 ///     A boolean value representing whether the query hex has a river.
 /// </returns>
     public bool HasRiver(Hex hex) {
-        IEnumerable<RiverEdge> edges;
-
-        if (
-            IncomingRiverCount(hex) > 0 ||
-            OutgoingRiverCount(hex) > 0
-        ) {
+        if (ContainsVertex(hex))
             return true;
-        }
-
         return false;
     }
 
@@ -320,57 +313,61 @@ public class RiverDigraph : BidirectionalGraph<Hex, RiverEdge> {
     }
 
     public HexRiverData GetRiverData(Hex hex) {
-        IEnumerable<RiverEdge> inEdges;
-        HexDirections incomingRiverDirection = default(HexDirections);
-        bool hasIncomingRiver = false;
+        HexDirections incomingRiver =
+            HasIncomingRiver(hex) ?
+                IncomingRiverDirections(hex)[0] : default(HexDirections);
 
-        if (TryGetInEdges(hex, out inEdges)) {
-            List<RiverEdge> inEdgeList = inEdges as List<RiverEdge>;
-            if (inEdgeList.Count > 0) {
-                hasIncomingRiver = true;
-                incomingRiverDirection = inEdgeList[0].Direction;
-            }
-        }
-
-        IEnumerable<RiverEdge> outEdges;
-        HexDirections outgoingRiverDirection = default(HexDirections);
-        bool hasOutgoingRiver = false;
-
-        if (TryGetInEdges(hex, out outEdges)) {
-            List<RiverEdge> outEdgeList = outEdges as List<RiverEdge>;
-            if (outEdgeList.Count > 0) {
-                hasOutgoingRiver = true;
-                outgoingRiverDirection = outEdgeList[0].Direction;
-            }
-        }
+        HexDirections outgoingRiver =
+            HasOutgoingRiver(hex) ?
+                OutgoingRiverDirections(hex)[0] : default(HexDirections);
 
         return new HexRiverData(
-            incomingRiverDirection,
-            outgoingRiverDirection,
-            hasIncomingRiver,
-            hasOutgoingRiver
+            incomingRiver,
+            outgoingRiver,
+            HasIncomingRiver(hex),
+            HasOutgoingRiver(hex)
         );
     }
 }
 
-public struct HexRiverData {
-    public bool HasIncomingRiver { get; set; }
-    public bool HasOutgoingRiver { get; set; }
+[System.Serializable]
+public class HexRiverData {
+    [UnityEngine.SerializeField]
+    public bool HasIncomingRiver, HasOutgoingRiver;
 
-    public HexDirections IncomingRiverDirection { get; set; }
-    public HexDirections OutgoingRiverDirection { get; set; }
+    [UnityEngine.SerializeField]
+    private HexDirections _incomingRiverDirection;
+    public HexDirections IncomingRiverDirection {
+        get {
+            if (!HasIncomingRiver)
+                throw new System.NullReferenceException();
+            return _incomingRiverDirection;
+        }
+    }
+    
+    [UnityEngine.SerializeField]
+    private HexDirections _outgoingRiverDirection;
+    public HexDirections OutgoingRiverDirection {
+        get {
+            if (!HasOutgoingRiver)
+                throw new System.NullReferenceException();
+            return _outgoingRiverDirection;
+        }
+    }
 
     public bool HasClockwiseCornerRiver {
         get {
-            return 
-            IncomingRiverDirection ==
-            OutgoingRiverDirection.ClockwiseRotation(1);
+            return
+                HasFullRiver && 
+                IncomingRiverDirection ==
+                OutgoingRiverDirection.ClockwiseRotation(1);
         } 
     }
 
     public bool HasCounterClockwiseCornerRiver {
         get {
             return
+                HasFullRiver &&
                 IncomingRiverDirection ==
                 OutgoingRiverDirection.ClockwiseRotation(-1);
         }
@@ -379,6 +376,7 @@ public struct HexRiverData {
     public bool HasClockwiseRiverBend {
         get {
             return
+                HasFullRiver &&
                 IncomingRiverDirection ==
                 OutgoingRiverDirection.ClockwiseRotation(2);
         }
@@ -387,6 +385,7 @@ public struct HexRiverData {
     public bool HasCounterClockwiseRiverBend {
         get {
             return
+                HasFullRiver &&
                 IncomingRiverDirection ==
                 OutgoingRiverDirection.ClockwiseRotation(-2);
         }
@@ -410,11 +409,16 @@ public struct HexRiverData {
         }
     }
 
+    public bool HasFullRiver {
+        get {
+            return HasIncomingRiver && HasOutgoingRiver;
+        }
+    }
+
     public bool HasStraightRiver {
         get {
             if (
-                HasIncomingRiver &&
-                HasOutgoingRiver &&
+                HasFullRiver &&
                 IncomingRiverDirection ==
                 OutgoingRiverDirection.Opposite()
             ) {
@@ -432,26 +436,37 @@ public struct HexRiverData {
     }
 
     public HexRiverData(
-        HexDirections incomingRiver,
-        HexDirections outgoingRiver,
+        HexDirections incomingRiverDirection,
+        HexDirections outgoingRiverDirection,
         bool hasIncomingRiver,
         bool hasOutgoingRiver
     ) {
-        HasIncomingRiver = false;
-        IncomingRiverDirection = incomingRiver;
+        HasIncomingRiver = hasIncomingRiver;
+        _incomingRiverDirection = incomingRiverDirection;
 
-        HasOutgoingRiver = true;
-        OutgoingRiverDirection = outgoingRiver;
+        HasOutgoingRiver = hasOutgoingRiver;
+        _outgoingRiverDirection = outgoingRiverDirection;
     }
 
     public bool HasRiverInDirection(HexDirections direction) {
-        if (
-            direction == IncomingRiverDirection ||
-            direction == OutgoingRiverDirection
-        ) {
-            return true;
-        }
+        return
+            (HasIncomingRiver && direction == IncomingRiverDirection) ||
+            (HasOutgoingRiver && direction == OutgoingRiverDirection);
+    }
 
-        return false;
+    public override string ToString() {
+        string result = "";
+
+        if (HasIncomingRiver)
+            result += "IncomingR: " + IncomingRiverDirection + ", ";
+        else
+            result += "IncomingR: None ,";
+        
+        if (HasOutgoingRiver)
+            result += "OutgoingR: " + OutgoingRiverDirection;
+        else
+            result += "OutgoingR: None";
+
+        return result;
     }
 }
