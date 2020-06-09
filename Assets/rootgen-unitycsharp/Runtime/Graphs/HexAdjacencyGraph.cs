@@ -364,6 +364,23 @@ public class HexAdjacencyGraph : AdjacencyGraph<Hex, HexEdge> {
         return result;
     }
 
+    public Dictionary<HexDirections, Hex> GetNeighborByDirection(Hex hex) {
+        IEnumerable<HexEdge> edges;
+
+        if (TryGetOutEdges(hex, out edges)) {
+            Dictionary<HexDirections, Hex> result =
+                new Dictionary<HexDirections, Hex>();
+            
+            foreach (HexEdge edge in edges) {
+                result.Add(edge.Direction, edge.Target);
+            }
+
+            return result;
+        }
+
+        return null;
+    }
+
     #endregion
 
     #region Structs

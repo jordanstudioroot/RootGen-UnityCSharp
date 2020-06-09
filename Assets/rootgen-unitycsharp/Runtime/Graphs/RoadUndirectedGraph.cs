@@ -47,4 +47,21 @@ public class RoadUndirectedGraph : UndirectedGraph<Hex, RoadEdge> {
     public static RoadUndirectedGraph FromHexGrid(HexGrid<Hex> array) {
         return new RoadUndirectedGraph();
     }
+
+    public Dictionary<HexDirections, bool> GetNeighborRoads(Hex hex) {
+        Dictionary<HexDirections, bool> result =
+            new Dictionary<HexDirections, bool>();
+        
+        for (int i = 0; i < 6; i++) {
+            result.Add((HexDirections)i, false);
+        }
+
+        if (ContainsVertex(hex)) {
+            foreach(RoadEdge edge in AdjacentEdges(hex)) {
+                result[edge.Direction] = true;
+            }
+        }
+
+        return result;
+    }
 }

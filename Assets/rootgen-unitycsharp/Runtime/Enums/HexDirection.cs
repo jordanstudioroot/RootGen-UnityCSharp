@@ -2,11 +2,29 @@
 
 public enum HexDirections
 {
+    /// <summary>
+    /// Northeast = 0
+    /// </summary>
     Northeast = 0,
+    /// <summary>
+    /// East = 1
+    /// </summary>
     East = 1,
+    /// <summary>
+    /// Southeast = 2
+    /// </summary>
     Southeast = 2,
+    /// <summary>
+    /// Southwest = 3
+    /// </summary>
     Southwest = 3,
+    /// <summary>
+    /// West = 4
+    /// </summary>
     West = 4,
+    /// <summary>
+    /// Northwest = 5
+    /// </summary>
     Northwest = 5
 }
 

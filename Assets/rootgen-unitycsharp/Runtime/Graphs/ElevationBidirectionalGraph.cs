@@ -102,4 +102,29 @@ public class ElevationDigraph :
         result.AddVerticesAndEdgeRange(edges);
         return result;
     }
+
+    public Dictionary<HexDirections, ElevationEdgeTypes> GetNeighborEdgeTypes(
+        Hex hex
+    ) {
+        Dictionary<HexDirections, ElevationEdgeTypes> result =
+                new Dictionary<HexDirections, ElevationEdgeTypes>();
+        
+        for (int i = 0; i < 6; i++) {
+            result.Add((HexDirections)i, ElevationEdgeTypes.Flat);
+        }
+
+        IEnumerable<ElevationEdge> edges;
+
+        if(TryGetOutEdges(hex, out edges)) {
+            
+
+            foreach(ElevationEdge edge in edges) {
+                result[edge.Direction] = edge.EdgeType;
+            }
+
+            return result;
+        }
+
+        return result;
+    }
 }
