@@ -11,58 +11,70 @@ using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class MapMeshChunkLayer : MonoBehaviour {
+    /// <summary>
+    /// Splat map vector representing an entirely red channel.
+    /// </summary>
+        protected static Color _weights1 = new Color(1f, 0f, 0f);
+    /// <summary>
+    ///  Splat map vector representing an entirely green channel.
+    /// </summary>
+        protected static Color _weights2 = new Color(0f, 1f, 0f);
+    /// <summary>
+    /// Splat map vector representing an entirely blue channel.
+    /// </summary>
+        protected static Color _weights3 = new Color(0f, 0f, 1f);
 
     /// <summary>
     /// Boolean value representing whether the mesh collider is used.
     /// </summary>
-    private bool _useCollider;
+    protected bool _useCollider;
 
     /// <summary>
     /// Boolean value representing whether the hexData is used in rendering.
     /// </summary>
-    private bool _useHexData;
+    protected bool _useHexData;
 
     /// <summary>
     /// Boolean value representing whether the UV coordinates are used in rendering.
     /// </summary>
-    private bool _useUVCoordinates;
+    protected bool _useUVCoordinates;
     /// <summary>
     /// Boolean value representing whether the UV2 coordinates are used in rendering.
     /// </summary>
-    private bool _useUV2Coordinates;
+    protected bool _useUV2Coordinates;
 
     /// <summary>
     /// The list of UV coordinates used to render the HexMesh.
     /// </summary>
-    [NonSerialized] private List<Vector2> _uvs;
+    [NonSerialized] protected List<Vector2> _uvs;
 
     /// <summary>
     /// The list of the UV2 coordinates used to render the HexMesh.
     /// </summary>
-    [NonSerialized] private List<Vector2> _uv2s;
+    [NonSerialized] protected List<Vector2> _uv2s;
 
     /// <summary>
     /// The list of vertices used to render the HexMesh.
     /// </summary>
-    [NonSerialized] private List<Vector3> _vertices;
+    [NonSerialized] protected List<Vector3> _vertices;
 
     /// <summary>
     /// The list of triangles used to render the HexMesh.
     /// </summary>
-    [NonSerialized] private List<int> _triangles;
+    [NonSerialized] protected List<int> _triangles;
 
     /// <summary>
     /// A list of Color values used as weights to blend textures between hexes. 
     /// </summary>
-    [NonSerialized] private List<Color> _textureWeights;
+    [NonSerialized] protected List<Color> _textureWeights;
     
     /// <summary>
     /// A list of Vector3s used to map the hex positions to the UV map.
     /// </summary>
-    [NonSerialized] private List<Vector3> _uv3s;
+    [NonSerialized] protected List<Vector3> _cellIndexToUV3;
 
-    private Mesh _mesh;
-    private MeshCollider _meshCollider;
+    protected Mesh _mesh;
+    protected MeshCollider _meshCollider;
     
 
     protected void Awake() {
@@ -331,9 +343,9 @@ public class MapMeshChunkLayer : MonoBehaviour {
         Color secondTextureWeight, 
         Color thirdTextureWeight
     ) {
-        _uv3s.Add(terrainTypes);
-        _uv3s.Add(terrainTypes);
-        _uv3s.Add(terrainTypes);
+        _cellIndexToUV3.Add(terrainTypes);
+        _cellIndexToUV3.Add(terrainTypes);
+        _cellIndexToUV3.Add(terrainTypes);
         
         _textureWeights.Add(firstTextureWeight);
         _textureWeights.Add(secondTextureWeight);
@@ -351,10 +363,10 @@ public class MapMeshChunkLayer : MonoBehaviour {
         Color weights3, 
         Color weights4
     ) {
-        _uv3s.Add(indices);
-        _uv3s.Add(indices);
-        _uv3s.Add(indices);
-        _uv3s.Add(indices);
+        _cellIndexToUV3.Add(indices);
+        _cellIndexToUV3.Add(indices);
+        _cellIndexToUV3.Add(indices);
+        _cellIndexToUV3.Add(indices);
         _textureWeights.Add(weights1);
         _textureWeights.Add(weights2);
         _textureWeights.Add(weights3);
@@ -423,7 +435,7 @@ public class MapMeshChunkLayer : MonoBehaviour {
 
         if (_useHexData) {
             _textureWeights = ListPool<Color>.Get();
-            _uv3s = ListPool<Vector3>.Get();
+            _cellIndexToUV3 = ListPool<Vector3>.Get();
         }
 
         if (_useUVCoordinates) {
@@ -451,8 +463,8 @@ public class MapMeshChunkLayer : MonoBehaviour {
             ListPool<Color>.Add(_textureWeights);
 
             // Set the uv3 coordinates to represent cell indices.
-            _mesh.SetUVs(2, _uv3s);
-            ListPool<Vector3>.Add(_uv3s);
+            _mesh.SetUVs(2, _cellIndexToUV3);
+            ListPool<Vector3>.Add(_cellIndexToUV3);
         }
 
         if (_useUVCoordinates) {
@@ -472,5 +484,370 @@ public class MapMeshChunkLayer : MonoBehaviour {
         if (_useCollider) {
             _meshCollider.sharedMesh = _mesh;
         }
+    }
+
+    protected EdgeVertices GetCenterEdgeVertices(
+        HexDirections direction,
+        TriangulationData data,
+        float hexOuterRadius
+    ) {
+    // Triangle edge.
+        EdgeVertices edgeVertices = new EdgeVertices(
+            data.terrainCenter + HexagonPoint.GetFirstSolidCorner(
+                direction,
+                hexOuterRadius
+            ),
+            data.terrainCenter +
+            HexagonPoint.GetSecondSolidCorner(
+                direction,
+                hexOuterRadius
+            )
+        );
+
+        return edgeVertices;
+    }
+
+    protected void TriangulateEdgeStrip(
+        EdgeVertices edge1,
+        Color weight1,
+        float index1,
+        EdgeVertices edge2,
+        Color weight2,
+        float index2,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain,
+        MapMeshChunkLayer roads,
+        bool hasRoad = false
+    ) {
+        terrain.AddQuadPerturbed(
+            edge1.vertex1,
+            edge1.vertex2,
+            edge2.vertex1,
+            edge2.vertex2,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex2,
+            edge1.vertex3,
+            edge2.vertex2,
+            edge2.vertex3,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex3,
+            edge1.vertex4,
+            edge2.vertex3,
+            edge2.vertex4,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex4,
+            edge1.vertex5,
+            edge2.vertex4,
+            edge2.vertex5,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        Vector3 indices;
+        indices.x = indices.z = index1;
+        indices.y = index2;
+
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+
+        if (hasRoad) {
+            TriangulateRoadSegment(
+                edge1.vertex2, 
+                edge1.vertex3, 
+                edge1.vertex4, 
+                edge2.vertex2, 
+                edge2.vertex3, 
+                edge2.vertex4,
+                weight1, 
+                weight2, 
+                indices,
+                hexOuterRadius,
+                wrapSize,
+                roads
+            );
+        }
+    }
+
+    protected void TriangulateRoadSegment (
+        Vector3 vertex1,
+        Vector3 vertex2,
+        Vector3 vertex3,
+        Vector3 vertex4,
+        Vector3 vertex5,
+        Vector3 vertex6,
+        Color weight1,
+        Color weight2,
+        Vector3 indices,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer roads
+    ) {
+        roads.AddQuadPerturbed(
+            vertex1,
+            vertex2,
+            vertex4,
+            vertex5,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        roads.AddQuadPerturbed(
+            vertex2,
+            vertex3,
+            vertex5,
+            vertex6,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        roads.AddQuadUV(0f, 1f, 0f, 0f);
+        roads.AddQuadUV(1f, 0f, 0f, 0f);
+
+        roads.AddQuadHexData(indices, weight1, weight2);
+        roads.AddQuadHexData(indices, weight1, weight2);
+    }
+
+    protected void TriangulateEdgeFan(
+        Vector3 center,
+        EdgeVertices edge,
+        float index,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain
+    ) {
+        terrain.AddTrianglePerturbed(
+            center,
+            edge.vertex1,
+            edge.vertex2,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddTrianglePerturbed(
+            center,
+            edge.vertex2,
+            edge.vertex3,
+            hexOuterRadius,
+            wrapSize
+        );
+        
+        terrain.AddTrianglePerturbed(
+            center,
+            edge.vertex3,
+            edge.vertex4,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddTrianglePerturbed(
+            center,
+            edge.vertex4,
+            edge.vertex5,
+            hexOuterRadius,
+            wrapSize
+        );
+        
+        // All three cell indices corresponing to the sides of this
+        // edge are of one cell.
+        Vector3 indices;
+        indices.x = indices.y = indices.z = index;
+
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+        terrain.AddTriangleHexData(indices, _weights1);
+    }
+
+    protected EdgeVertices GetConnectionEdgeVertices(
+        Hex source,
+        Hex neighbor,
+        HexDirections direction,
+        EdgeVertices centerEdgeVertices,
+        float hexOuterRadius
+    ) {
+
+        Vector3 bridge = HexagonPoint.GetBridge(
+            direction,
+            hexOuterRadius
+        );
+
+        bridge.y = neighbor.Position.y - source.Position.y;
+
+        EdgeVertices result = new EdgeVertices(
+            centerEdgeVertices.vertex1 + bridge,
+            centerEdgeVertices.vertex5 + bridge
+        );
+
+        return result;
+    }
+
+    protected void TriangulateEdgeTerraces(
+        EdgeVertices begin,
+        Hex beginHex,
+        EdgeVertices end,
+        Hex endHex,
+        bool hasRoad,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain,
+        MapMeshChunkLayer roads
+    ) {
+        EdgeVertices edge2 = EdgeVertices.TerraceLerp(begin, end, 1);
+        Color weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, 1);
+        float index1 = beginHex.Index;
+        float index2 = endHex.Index;
+
+        TriangulateEdgeStrip(
+            begin,
+            _weights1, 
+            index1, 
+            edge2, 
+            weight2, 
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            terrain,
+            roads,
+            hasRoad
+        );
+
+        for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
+            EdgeVertices edge1 = edge2;
+            Color weight1 = weight2;
+            edge2 = EdgeVertices.TerraceLerp(begin, end, i);
+            weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, i);
+
+            TriangulateEdgeStrip(
+                edge1, 
+                weight1, 
+                index1,
+                edge2, 
+                weight2, 
+                index2,
+                hexOuterRadius,
+                wrapSize,
+                terrain,
+                roads,
+                hasRoad
+            );
+        }
+
+        TriangulateEdgeStrip(
+            edge2, 
+            weight2, 
+            index1,
+            end, 
+            _weights2, 
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            terrain,
+            roads,
+            hasRoad
+        );
+    }
+
+    protected void TriangulateBoundaryTriangle(
+        Vector3 begin,
+        Color beginWeights,
+        Vector3 left, 
+        Color leftWeights,
+        Vector3 boundary,
+        Color boundaryWeights,
+        Vector3 indices,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain
+    ) {
+
+/* Immediately perturb vertex 2 as an optimization since it is not
+* being used to derive any other point.
+*/
+        Vector3 vertex2 = 
+            HexagonPoint.Perturb(
+                HexagonPoint.TerraceLerp(begin, left, 1),
+                hexOuterRadius,
+                wrapSize
+            );
+
+        Color weight2 = 
+            HexagonPoint.TerraceLerp(
+                beginWeights,
+                leftWeights,
+                1
+            );
+
+/* Perturb all vertices except the boundary vertex, to avoid moving
+* the vertex out of alignment with a cliff. vertex2 has already been
+* perturbed. Handles the Cliff-Slope-Slope and Slope-Cliff-Slope cases
+* of the Cliff-Slope perturbation problem.
+*/
+        terrain.AddTriangleUnperturbed(
+            HexagonPoint.Perturb(
+                begin,
+                hexOuterRadius,
+                wrapSize
+            ),
+            vertex2,
+            boundary
+        );
+
+        terrain.AddTriangleHexData(indices, beginWeights, weight2, boundaryWeights);
+
+        for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
+
+/* vertex2 has already been perturbed, need not pertub
+* vertex1 as it is derived from vertex2.
+*/
+            Vector3 vertex1 = vertex2;
+            Color weight1 = weight2;
+
+            vertex2 = HexagonPoint.Perturb(
+                HexagonPoint.TerraceLerp(begin, left, i),
+                hexOuterRadius,
+                wrapSize
+            );
+
+            weight2 = HexagonPoint.TerraceLerp(
+                beginWeights,
+                leftWeights,
+                i
+            );
+
+            terrain.AddTriangleUnperturbed(vertex1, vertex2, boundary);
+
+            terrain.AddTriangleHexData(
+                indices,
+                weight1,
+                weight2,
+                boundaryWeights
+            );
+        }
+
+        terrain.AddTriangleUnperturbed(
+            vertex2,
+            HexagonPoint.Perturb(
+                left,
+                hexOuterRadius,
+                wrapSize
+            ),
+            boundary
+        );
+        terrain.AddTriangleHexData(indices, weight2, leftWeights, boundaryWeights);
     }
 }
