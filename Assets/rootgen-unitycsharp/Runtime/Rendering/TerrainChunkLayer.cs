@@ -57,9 +57,20 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             hexOuterRadius,
             wrapSize,
             this,
-            roads,
             features,
             roadEdges
+        );
+
+        triangulationData = TriangulateCenterRiverRoad(
+            riverData,
+            direction,
+            hex,
+            triangulationData,
+            hexOuterRadius,
+            wrapSize,
+            roads,
+            roadEdges,
+            features
         );
 
         if (direction <= HexDirections.Southeast) {
@@ -105,6 +116,73 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
+    private TriangulationData TriangulateCenterRiverRoad(
+        HexRiverData riverData,
+        HexDirections direction,
+        Hex source,
+        TriangulationData data,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer roads,
+        Dictionary<HexDirections, bool> roadEdges,
+        FeatureContainer features
+    ) {
+        if (riverData.HasRiver) {
+            bool hasRoad = false;
+
+            foreach (
+                KeyValuePair<HexDirections, bool> pair in roadEdges
+            ) {
+                if (pair.Value) {
+                    hasRoad = true;
+                    break;
+                }
+            }
+
+            if (hasRoad) {
+                TriangulateRoadAdjacentToRiver(
+                    source,
+                    direction,
+                    data.terrainCenter,
+                    riverData,
+                    roadEdges,
+                    data.centerEdgeVertices,
+                    hexOuterRadius,
+                    wrapSize,
+                    roads,
+                    features
+                );
+            }
+        }
+        else {
+            bool anyRoad = false;
+
+            foreach (
+                KeyValuePair<HexDirections, bool> pair in roadEdges
+            ) {
+                if (pair.Value) {
+                    anyRoad = true;
+                    break;
+                }
+            }
+            
+            if (anyRoad) {
+                TriangulateRoadWithoutRiver(
+                    source,
+                    direction,
+                    data.centerEdgeVertices,
+                    roadEdges,
+                    data.terrainCenter,
+                    hexOuterRadius,
+                    wrapSize,
+                    roads
+                );
+            }
+        }
+
+        return data;
+    }
+
     private TriangulationData TriangulateCenterRiverBed(
         HexRiverData riverData,
         HexDirections direction,
@@ -113,7 +191,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain,
-        MapMeshChunkLayer roads,
         FeatureContainer features,
         Dictionary<HexDirections, bool> roadEdges
     ) {
@@ -129,8 +206,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                         data,
                         hexOuterRadius,
                         wrapSize,
-                        terrain,
-                        roads
+                        terrain
                     );
                 }
                 else {
@@ -146,12 +222,37 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                         data,
                         hexOuterRadius,
                         wrapSize,
-                        terrain,
-                        roads
+                        terrain
                     );
                 }
             }
             else {
+                /*bool hasRoad = false;
+
+                foreach (
+                    KeyValuePair<HexDirections, bool> pair in roadEdges
+                ) {
+                    if (pair.Value) {
+                        hasRoad = true;
+                        break;
+                    }
+                }
+
+                if (hasRoad) {
+                    TriangulateRoadAdjacentToRiver(
+                        source,
+                        direction,
+                        data.terrainCenter,
+                        riverData,
+                        roadEdges,
+                        data.centerEdgeVertices,
+                        hexOuterRadius,
+                        wrapSize,
+                        roads,
+                        features
+                    );
+                }*/
+
                 TriangulateTerrainAdjacentToRiver(
                     source,
                     direction,
@@ -162,13 +263,46 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                     hexOuterRadius,
                     wrapSize,
                     terrain,
-                    roads,
                     features
                 );
             }
         }
         else {
-            TriangulateTerrainWithoutRiver(
+            /*bool anyRoad = false;
+
+            foreach (
+                KeyValuePair<HexDirections, bool> pair in roadEdges
+            ) {
+                if (pair.Value) {
+                    anyRoad = true;
+                    break;
+                }
+            }
+            
+            if (anyRoad) {
+                TriangulateRoadWithoutRiver(
+                    source,
+                    direction,
+                    data.centerEdgeVertices,
+                    roadEdges,
+                    data.terrainCenter,
+                    hexOuterRadius,
+                    wrapSize,
+                    roads
+                );
+            }*/
+            
+            // Triangulate terrain center without river, basic edge fan.
+            TriangulateEdgeFan(
+                data.terrainCenter,
+                data.centerEdgeVertices,
+                source.Index,
+                hexOuterRadius,
+                wrapSize,
+                terrain
+            );
+
+            /*TriangulateTerrainWithoutRiver(
                 source,
                 direction,
                 data.centerEdgeVertices,
@@ -178,7 +312,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 wrapSize,
                 terrain,
                 roads
-            );
+            );*/
 
             if (
                 !source.IsUnderwater &&
@@ -206,8 +340,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         TriangulationData data,
         float hexOuterRadius,
         int wrapSize,
-        MapMeshChunkLayer terrain,
-        MapMeshChunkLayer roads
+        MapMeshChunkLayer terrain
     ) {
         data.middleEdgeVertices = new EdgeVertices(
             Vector3.Lerp(center, data.centerEdgeVertices.vertex1, 0.5f),
@@ -216,7 +349,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 
         data.middleEdgeVertices.vertex3.y = source.StreamBedY;
 
-        TriangulateEdgeStrip(
+        TriangulateEdgeStripTerrain(
             data.middleEdgeVertices,
             _weights1,
             source.Index,
@@ -225,8 +358,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             source.Index,
             hexOuterRadius,
             wrapSize,
-            terrain,
-            roads
+            terrain
         );
 
         TriangulateEdgeFan(
@@ -265,7 +397,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 //            hex.GetEdgeType(direction) == ElevationEdgeTypes.Slope
             elevationEdgeTypes[direction] == ElevationEdgeTypes.Slope
         ) {
-            TriangulateEdgeTerraces(
+            TriangulateEdgeTerracesTerrain(
                 data.centerEdgeVertices, 
                 source, 
                 data.connectionEdgeVertices, 
@@ -278,7 +410,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             );
         }
         else {
-            TriangulateEdgeStrip(
+            TriangulateEdgeStripTerrain(
                 data.centerEdgeVertices,
                 _weights1,
                 source.Index,
@@ -287,10 +419,22 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 neighbor.Index,
                 hexOuterRadius,
                 wrapSize,
-                terrain,
-                roads,
-                hasRoad
+                terrain
             );
+
+            if (hasRoad) {
+                TriangulateEdgeStripRoads(
+                    data.centerEdgeVertices,
+                    _weights1,
+                    source.Index,
+                    data.connectionEdgeVertices,
+                    _weights2,
+                    neighbor.Index,
+                    hexOuterRadius,
+                    wrapSize,
+                    roads
+                );
+            }
         }
 
         features.AddWall(
@@ -455,10 +599,9 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         TriangulationData triangulationData,
         float hexOuterRadius,
         int wrapSize,
-        MapMeshChunkLayer terrain,
-        MapMeshChunkLayer roads
+        MapMeshChunkLayer terrain
     ) {
-        TriangulateEdgeStrip(
+        TriangulateEdgeStripTerrain(
             triangulationData.middleEdgeVertices,
             _weights1,
             source.Index,
@@ -467,8 +610,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             source.Index,
             hexOuterRadius,
             wrapSize,
-            terrain,
-            roads
+            terrain
         );
 
         terrain.AddTrianglePerturbed(
@@ -543,34 +685,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain,
-        MapMeshChunkLayer roads,
         FeatureContainer features
     ) {
-        bool anyRoad = false;
-
-        foreach (KeyValuePair<HexDirections, bool> pair in roadEdges) {
-            if (pair.Value) {
-                anyRoad = true;
-                break;
-            }
-        }
-
-//        if (hex.HasRoads) {
-        if (anyRoad) {
-            TriangulateRoadAdjacentToRiver(
-                source,
-                direction,
-                center,
-                riverData,
-                roadEdges,
-                edgeVertices,
-                hexOuterRadius,
-                wrapSize,
-                roads,
-                features
-            );
-        }
-
 //        if (hex.HasRiverThroughEdge(direction.Next())) {
         if (riverData.HasRiverInDirection(direction.NextClockwise())) {
 /* If the direction has a river on either side, it has a slight curve. 
@@ -625,7 +741,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             Vector3.Lerp(center, edgeVertices.vertex5, 0.5f)
         );
 
-        TriangulateEdgeStrip(
+        TriangulateEdgeStripTerrain(
             middle,
             _weights1,
             source.Index,
@@ -634,8 +750,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             source.Index,
             hexOuterRadius,
             wrapSize,
-            terrain,
-            roads
+            terrain
         );
 
         TriangulateEdgeFan(
@@ -1064,7 +1179,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             terrain
         );
 
-        bool anyRoad = false;
+        /*bool anyRoad = false;
 
         foreach (KeyValuePair<HexDirections, bool> pair in roadEdges) {
             if (pair.Value) {
@@ -1101,7 +1216,45 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 wrapSize,
                 roads
             );
-        }
+        }*/
+    }
+
+    private void TriangulateRoadWithoutRiver(
+        Hex source,
+        HexDirections direction,
+        EdgeVertices edgeVertices,
+        Dictionary<HexDirections, bool> roadEdges,
+        Vector3 center,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer roads
+    ) {
+        Vector2 interpolators = GetRoadInterpolators(
+            source,
+            direction,
+            roadEdges
+        );
+
+        TriangulateRoad(
+            center,
+            Vector3.Lerp(
+                center,
+                edgeVertices.vertex1,
+                interpolators.x
+            ),
+            Vector3.Lerp(
+                center,
+                edgeVertices.vertex5,
+                interpolators.y
+            ),
+            edgeVertices,
+//                hex.HasRoadThroughEdge(direction),
+            roadEdges[direction],
+            source.Index,
+            hexOuterRadius,
+            wrapSize,
+            roads
+        );
     }
 
     private TriangulationData TryTriangulateNeighborTerrainCorner(
@@ -1705,5 +1858,271 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 boundaryWeights
             );
         }
+    }
+
+    private void TriangulateEdgeTerracesTerrain(
+        EdgeVertices begin,
+        Hex beginHex,
+        EdgeVertices end,
+        Hex endHex,
+        bool hasRoad,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain,
+        MapMeshChunkLayer roads
+    ) {
+        EdgeVertices edge2 = EdgeVertices.TerraceLerp(begin, end, 1);
+        Color weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, 1);
+        float index1 = beginHex.Index;
+        float index2 = endHex.Index;
+
+        TriangulateEdgeStripTerrain(
+            begin,
+            _weights1, 
+            index1, 
+            edge2, 
+            weight2, 
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            terrain
+        );
+
+        if (hasRoad) {
+            TriangulateEdgeStripRoads(
+                begin,
+                _weights1,
+                index1,
+                edge2,
+                weight2,
+                index2,
+                hexOuterRadius,
+                wrapSize,
+                roads
+            );
+        }
+
+        for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
+            EdgeVertices edge1 = edge2;
+            Color weight1 = weight2;
+            edge2 = EdgeVertices.TerraceLerp(begin, end, i);
+            weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, i);
+
+            TriangulateEdgeStripTerrain(
+                edge1, 
+                weight1, 
+                index1,
+                edge2, 
+                weight2, 
+                index2,
+                hexOuterRadius,
+                wrapSize,
+                terrain
+            );
+
+            if (hasRoad) {
+                TriangulateEdgeStripRoads(
+                    edge1,
+                    weight1,
+                    index1,
+                    edge2,
+                    weight2,
+                    index2,
+                    hexOuterRadius,
+                    wrapSize,
+                    roads
+                );
+            }
+        }
+
+        TriangulateEdgeStripTerrain(
+            edge2, 
+            weight2, 
+            index1,
+            end, 
+            _weights2, 
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            terrain
+        );
+
+        if (hasRoad) {
+            TriangulateEdgeStripRoads(
+                edge2,
+                weight2,
+                index1,
+                end,
+                _weights2,
+                index2,
+                hexOuterRadius,
+                wrapSize,
+                roads
+            );
+        }
+    }
+
+    private void TriangulateEdgeTerracesRoad(
+        EdgeVertices begin,
+        Hex beginHex,
+        EdgeVertices end,
+        Hex endHex,
+        bool hasRoad,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer roads
+    ) {
+        EdgeVertices edge2 = EdgeVertices.TerraceLerp(begin, end, 1);
+        Color weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, 1);
+        float index1 = beginHex.Index;
+        float index2 = endHex.Index;
+
+        TriangulateEdgeStripRoads(
+            begin,
+            _weights1,
+            index1,
+            edge2,
+            weight2,
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            roads
+        );
+
+        for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
+            EdgeVertices edge1 = edge2;
+            Color weight1 = weight2;
+            edge2 = EdgeVertices.TerraceLerp(begin, end, i);
+            weight2 = HexagonPoint.TerraceLerp(_weights1, _weights2, i);
+
+            TriangulateEdgeStripRoads(
+                edge1, 
+                weight1, 
+                index1,
+                edge2, 
+                weight2, 
+                index2,
+                hexOuterRadius,
+                wrapSize,
+                roads
+            );
+        }
+
+        TriangulateEdgeStripRoads(
+            edge2, 
+            weight2, 
+            index1,
+            end, 
+            _weights2, 
+            index2,
+            hexOuterRadius,
+            wrapSize,
+            roads
+        );
+    }
+
+    private void TriangulateEdgeStripRoads(
+        EdgeVertices edge1,
+        Color weight1,
+        float index1,
+        EdgeVertices edge2,
+        Color weight2,
+        float index2,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer roads
+    ) {
+        Vector3 indices;
+        indices.x = indices.z = index1;
+        indices.y = index2;
+
+        TriangulateRoadSegment(
+            edge1.vertex2, 
+            edge1.vertex3, 
+            edge1.vertex4, 
+            edge2.vertex2, 
+            edge2.vertex3, 
+            edge2.vertex4,
+            weight1, 
+            weight2, 
+            indices,
+            hexOuterRadius,
+            wrapSize,
+            roads
+        );
+    }
+
+    private void TriangulateEdgeStripTerrain(
+        EdgeVertices edge1,
+        Color weight1,
+        float index1,
+        EdgeVertices edge2,
+        Color weight2,
+        float index2,
+        float hexOuterRadius,
+        int wrapSize,
+        MapMeshChunkLayer terrain
+    ) {
+        terrain.AddQuadPerturbed(
+            edge1.vertex1,
+            edge1.vertex2,
+            edge2.vertex1,
+            edge2.vertex2,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex2,
+            edge1.vertex3,
+            edge2.vertex2,
+            edge2.vertex3,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex3,
+            edge1.vertex4,
+            edge2.vertex3,
+            edge2.vertex4,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        terrain.AddQuadPerturbed(
+            edge1.vertex4,
+            edge1.vertex5,
+            edge2.vertex4,
+            edge2.vertex5,
+            hexOuterRadius,
+            wrapSize
+        );
+
+        Vector3 indices;
+        indices.x = indices.z = index1;
+        indices.y = index2;
+
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+        terrain.AddQuadHexData(indices, weight1, weight2);
+
+        /*if (hasRoad) {
+            TriangulateRoadSegment(
+                edge1.vertex2, 
+                edge1.vertex3, 
+                edge1.vertex4, 
+                edge2.vertex2, 
+                edge2.vertex3, 
+                edge2.vertex4,
+                weight1, 
+                weight2, 
+                indices,
+                hexOuterRadius,
+                wrapSize,
+                roads
+            );
+        }*/
     }
 }
