@@ -27,49 +27,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 
         return resultMono;
     }
-
-    public TriangulationData TriangulateHexRoadEdge(
-        Hex hex,
-        Hex neighbor,
-        TriangulationData triangulationData,
-        HexDirections direction,
-        HexRiverData riverData,
-        MapMeshChunkLayer roads,
-        FeatureContainer features,
-        Dictionary<HexDirections, bool> roadEdges,
-        Dictionary<HexDirections, ElevationEdgeTypes> elevationEdgeTypes,
-        float hexOuterRadius,
-        int wrapSize
-    ) {
-        triangulationData = TriangulateCenterRiverRoad(
-            riverData,
-            direction,
-            hex,
-            triangulationData,
-            hexOuterRadius,
-            wrapSize,
-            roads,
-            roadEdges,
-            features
-        );
-
-        if (direction <= HexDirections.Southeast) {
-            triangulationData = TriangulateTerrainConnectionRoads(
-                hex,
-                neighbor,
-                triangulationData,
-                direction,
-                riverData,
-                roadEdges,
-                elevationEdgeTypes,
-                hexOuterRadius,
-                wrapSize,
-                roads
-            );
-        }
-
-        return triangulationData;
-    }
  
     public TriangulationData TriangulateHexTerrainEdge(
         Hex hex,
@@ -426,19 +383,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 wrapSize,
                 terrain
             );
-
-            /*if (hasRoad) {
-                TriangulateEdgeTerracesRoads(
-                    data.centerEdgeVertices,
-                    source,
-                    data.connectionEdgeVertices,
-                    neighbor,
-                    hasRoad,
-                    hexOuterRadius,
-                    wrapSize,
-                    roads
-                );
-            }*/
         }
         else {
             TriangulateEdgeStripTerrain(
@@ -452,20 +396,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 wrapSize,
                 terrain
             );
-
-            /*if (hasRoad) {
-                TriangulateEdgeStripRoads(
-                    data.centerEdgeVertices,
-                    _weights1,
-                    source.Index,
-                    data.connectionEdgeVertices,
-                    _weights2,
-                    neighbor.Index,
-                    hexOuterRadius,
-                    wrapSize,
-                    roads
-                );
-            }*/
         }
 
         features.AddWall(
@@ -488,7 +418,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         HexDirections direction,
         float hexOuterRadius
     ) {
-        //        if (hex.HasRiverThroughEdge(direction.Opposite())) {
         if (riverData.HasRiverInDirection(direction.Opposite())) {
 /* Create a vertex 1/4th of the way from the center of the hex 
 * to first solid corner of the previous edge, which is pointing
@@ -518,7 +447,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * Interpolate with an increased step to account for the rotation
 * of the center line.
 */
-//        else if (hex.HasRiverThroughEdge(direction.Next())) {
         else if (
             riverData.HasRiverInDirection(direction.NextClockwise())
         ) {
@@ -530,7 +458,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                     2f / 3f
                 );
         }
-//        else if (hex.HasRiverThroughEdge(direction.Previous())) {
         else if (
             riverData.HasRiverInDirection(direction.PreviousClockwise())
         ) {
@@ -551,7 +478,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * the midpoint of a solid edge is closer to the center
 * of a hex than a solid edge corner.
 */
-//        else if (hex.HasRiverThroughEdge(direction.Next2())) {
         else if (
             riverData.HasRiverInDirection(direction.NextClockwise2())
         ) {
@@ -718,7 +644,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         MapMeshChunkLayer terrain,
         FeatureContainer features
     ) {
-//        if (hex.HasRiverThroughEdge(direction.Next())) {
         if (riverData.HasRiverInDirection(direction.NextClockwise())) {
 /* If the direction has a river on either side, it has a slight curve. 
 * The center vertex of river-adjacent triangle needs to be moved toward 
@@ -739,7 +664,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * of the river-adjacent triangle so that it does not overlap the river.
 */
             else if (
-//                hex.HasRiverThroughEdge(direction.Previous2())
                 riverData.HasRiverInDirection(
                     direction.PreviousClockwise2()
                 )
@@ -756,9 +680,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * so it doesn't overlap the river.
 */
         else if (
-//            hex.HasRiverThroughEdge(direction.Previous()) &&
             riverData.HasRiverInDirection(direction.PreviousClockwise()) &&
-//            hex.HasRiverThroughEdge(direction.Next2())
             riverData.HasRiverInDirection(direction.NextClockwise2())
         ) {
             center += HexagonPoint.GetSecondSolidCorner(
@@ -793,7 +715,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             terrain
         );
 
-//            !hex.HasRoadThroughEdge(direction)
         if (!source.IsUnderwater && roadEdges[direction]) {
             features.AddFeature(
                 source,
@@ -816,17 +737,12 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         MapMeshChunkLayer roads,
         FeatureContainer features
     ) {
-//        bool hasRoadThroughEdge = hex.HasRoadThroughEdge(direction);
         bool hasRoadThroughEdge = roadEdges[direction];
 
-//          bool previousHasRiver = hex.HasRiverThroughEdge(
-//              direction.Previous()
-//          );
         bool previousHasRiver = riverData.HasIncomingRiverInDirection(
             direction.PreviousClockwise()
         );
 
-//        bool nextHasRiver = hex.HasRiverThroughEdge(direction.Next());
         bool nextHasRiver = riverData.HasIncomingRiverInDirection(
             direction.NextClockwise()
         );
@@ -839,28 +755,22 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 
         Vector3 roadCenter = center;
 
-//        if (hex.HasRiverBeginOrEnd) {
         if (riverData.HasRiverStartOrEnd) {
             roadCenter += 
                 HexagonPoint.GetSolidEdgeMiddle(
-//                    hex.RiverBeginOrEndDirection.Opposite(),
                     riverData.RiverStartOrEndDirection.Opposite(),
                     hexOuterRadius
                 ) * 
                 (1f / 3f);
         }
-//        else if(hex.IncomingRiver == hex.OutgoingRiver.Opposite()) {
         else if (
             riverData.HasStraightRiver
         ) {
             Vector3 corner;
 
-//  If the previous hex has a river, the corner the center will be
-//  moved toward is equal to the current direction + 1.
             if (previousHasRiver) {
                 if (
                     !hasRoadThroughEdge &&
-//                    !hex.HasRoadThroughEdge(direction.Next())
                     !roadEdges[direction.NextClockwise()]
                 ) {
                     return;
@@ -870,12 +780,9 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                     hexOuterRadius
                 );
             }
-// If the previous hex does not have a river, the corner the center will
-// be moved toward is the same index as the current direction.
             else {
                 if (
                     !hasRoadThroughEdge &&
-//                    !hex.HasRoadThroughEdge(direction.Previous())
                     !roadEdges[direction.PreviousClockwise()]
                 ) {
                     return;
@@ -893,11 +800,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             roadCenter += corner * 0.5f;
 
             if (
-//                hex.IncomingRiver == direction.Next() && 
                 riverData.IncomingRivers[direction.NextClockwise()] &&
-//                hex.HasRoadThroughEdge(direction.Next2()) ||
                 roadEdges[direction.NextClockwise2()] ||
-//                hex.HasRoadThroughEdge(direction.Opposite())
                 roadEdges[direction.Opposite()]
             ) {
                 features.AddBridge(
@@ -920,18 +824,14 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 // vector times 0.2f is sufficent to push the road center away from the
 // river.
 
-//        else if (hex.IncomingRiver == hex.OutgoingRiver.Previous()) {
           else if (riverData.HasPreviousClockwiseCornerRiver) {
             roadCenter -= HexagonPoint.GetSecondCorner(
-//                hex.IncomingRiver,
                 riverData.AnyIncomingRiver,
                 hexOuterRadius
             ) * 0.2f;
         }
-//        else if (hex.IncomingRiver == hex.OutgoingRiver.Next()) {
         else if (riverData.HasNextClockwiseCornerRiver) {
             roadCenter -= HexagonPoint.GetFirstCorner(
-//                hex.IncomingRiver,
                 riverData.AnyIncomingRiver,
                 hexOuterRadius
             ) * 0.2f;
@@ -967,15 +867,12 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         else {
             HexDirections middle;
             if (previousHasRiver) {
-//                middle = direction.Next();
                 middle = direction.NextClockwise();
             }
             else if (nextHasRiver) {
-//                middle = direction.Previous();
                 middle = direction.PreviousClockwise();
             }
             else {
-//                middle = direction;
                 middle = direction;
             }
 
@@ -983,11 +880,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 // river bend, then the road center need not move and should instead be
 // pruned.
             if (
-//                !hex.HasRoadThroughEdge(middle) &&
                 !roadEdges[middle] &&   
-//                !hex.HasRoadThroughEdge(middle.Previous()) &&
                 !roadEdges[middle.PreviousClockwise()] &&
-//                !hex.HasRoadThroughEdge(middle.Next())
                 !roadEdges[middle.NextClockwise()]
             ) {
                 return;
@@ -1002,7 +896,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 
             if (
                 direction == middle &&
-//                hex.HasRoadThroughEdge(direction.Opposite())
                 roadEdges[direction.Opposite()]
             ) {
                 features.AddBridge (
@@ -1065,20 +958,15 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
     ) {
         Vector2 interpolators;
 
-//        if (hex.HasRoadThroughEdge(direction)) {
         if (roadEdges[direction]) {
             interpolators.x = interpolators.y = 0.5f;
         }
         else {
             interpolators.x =
-//              hex.HasRoadThroughEdge(direction.Previous()) ?
-//                  0.5f : 0.25f;
                 roadEdges[direction.PreviousClockwise()] ?
                 0.5f : 0.25f;
             
             interpolators.y =
-//              hex.HasRoadThroughEdge(direction.Next()) ?
-//                  0.5f : 0.25f;
                 roadEdges[direction.NextClockwise()] ?
                 0.5f : 0.25f;
         }
@@ -1209,45 +1097,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             wrapSize,
             terrain
         );
-
-        /*bool anyRoad = false;
-
-        foreach (KeyValuePair<HexDirections, bool> pair in roadEdges) {
-            if (pair.Value) {
-                anyRoad = true;
-                break;
-            }
-        }
-
-//        if (hex.HasRoads) {
-        if (anyRoad) {
-            Vector2 interpolators = GetRoadInterpolators(
-                source,
-                direction,
-                roadEdges
-            );
-
-            TriangulateRoad(
-                center,
-                Vector3.Lerp(
-                    center,
-                    edgeVertices.vertex1,
-                    interpolators.x
-                ),
-                Vector3.Lerp(
-                    center,
-                    edgeVertices.vertex5,
-                    interpolators.y
-                ),
-                edgeVertices,
-    //                hex.HasRoadThroughEdge(direction),
-                roadEdges[direction],
-                source.Index,
-                hexOuterRadius,
-                wrapSize,
-                roads
-            );
-        }*/
     }
 
     private void TriangulateRoadWithoutRiver(
@@ -1279,7 +1128,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 interpolators.y
             ),
             edgeVertices,
-//                hex.HasRoadThroughEdge(direction),
             roadEdges[direction],
             source.Index,
             hexOuterRadius,
@@ -2155,22 +2003,5 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         terrain.AddQuadHexData(indices, weight1, weight2);
         terrain.AddQuadHexData(indices, weight1, weight2);
         terrain.AddQuadHexData(indices, weight1, weight2);
-
-        /*if (hasRoad) {
-            TriangulateRoadSegment(
-                edge1.vertex2, 
-                edge1.vertex3, 
-                edge1.vertex4, 
-                edge2.vertex2, 
-                edge2.vertex3, 
-                edge2.vertex4,
-                weight1, 
-                weight2, 
-                indices,
-                hexOuterRadius,
-                wrapSize,
-                roads
-            );
-        }*/
     }
 }

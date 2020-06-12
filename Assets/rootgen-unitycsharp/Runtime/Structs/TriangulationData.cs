@@ -57,6 +57,8 @@ public struct TriangulationData {
     ///  z = right of source
     /// </summary>
     public Vector3 terrainSourceRelativeHexIndices;
+    public EdgeVertices sourceWaterEdge;
+    public EdgeVertices neighborWaterEdge;
 
     public int terrainSourceHexIndex {
         get {

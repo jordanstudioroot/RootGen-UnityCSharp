@@ -38,7 +38,8 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         float hexOuterRadius,
         int wrapSize
     ) {
-        triangulationData = TriangulateCenterRiverSurface(
+        if (riverData.HasRiver) {
+            triangulationData = TriangulateCenterRiverSurface(
             riverData,
             direction,
             hex,
@@ -59,19 +60,21 @@ public class RiversChunkLayer : MapMeshChunkLayer {
                     hexOuterRadius
                 );
             
-    // Adjust the other edge of the connection  if there is a river through
-    // that edge.
-            triangulationData = TriangulateRiverConnection(
-                hex,
-                neighbor,
-                triangulationData,
-                direction,
-                riverData,
-                hexOuterRadius,
-                wrapSize,
-                this
-            );
+        // Adjust the other edge of the connection  if there is a river through
+        // that edge.
+                triangulationData = TriangulateRiverConnection(
+                    hex,
+                    neighbor,
+                    triangulationData,
+                    direction,
+                    riverData,
+                    hexOuterRadius,
+                    wrapSize,
+                    this
+                );
+            }
         }
+        
             
         return triangulationData;
     }

@@ -7,9 +7,9 @@ public class MapMeshChunk : MonoBehaviour {
     private TerrainChunkLayer _terrainLayer;
     private RiversChunkLayer _riversLayer;
     private RoadsChunkLayer _roadsLayer;
-    private MapMeshChunkLayer _water;
-    private MapMeshChunkLayer _waterShore;
-    private MapMeshChunkLayer _estuaries;
+    private OpenWaterChunkLayer _openWaterLayer;
+    private WaterShoreChunkLayer _waterShoreLayer;
+    private EstuariesChunkLayer _estuariesLayer;
     private FeatureContainer _features;
 
 /// <summary>
@@ -48,58 +48,128 @@ public class MapMeshChunk : MonoBehaviour {
             "World Space UI Canvas"
         );
         
-        Canvas resultCanvasMono = resultCanvasObj.AddComponent<Canvas>();
+        Canvas resultCanvasMono =
+            resultCanvasObj.AddComponent<Canvas>();
 
         CanvasScaler resultCanvasScalerMono =
             resultCanvasObj.AddComponent<CanvasScaler>();
 
-        resultCanvasObj.transform.SetParent(resultObj.transform, false);
+        resultCanvasObj.transform.SetParent(
+            resultObj.transform,
+            false
+        );
+
         resultMono.WorldSpaceUICanvas = resultCanvasMono;
         resultCanvasScalerMono.dynamicPixelsPerUnit = 10f;
-        resultCanvasObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+        
+        resultCanvasObj.transform.rotation = Quaternion.Euler(
+            90,
+            0,
+            0
+        );
+        
         resultCanvasObj.transform.position += Vector3.up * .005f;
 
         resultMono._terrainLayer = TerrainChunkLayer.CreateEmpty(
-            Resources.Load<Material>("Terrain"), true, true, false, false
+            Resources.Load<Material>("Terrain"),
+            true,
+            true,
+            false,
+            false
         );
-        resultMono._terrainLayer.transform.SetParent(resultObj.transform, false);
+
+        resultMono._terrainLayer.transform.SetParent(
+            resultObj.transform,
+            false
+        );
         
         resultMono._riversLayer = RiversChunkLayer.CreateEmpty(
-            Resources.Load<Material>("River"), false, true, true, false
+            Resources.Load<Material>("River"),
+            false,
+            true,
+            true,
+            false
         );
-        resultMono._riversLayer.transform.SetParent(resultObj.transform, false);
+
+        resultMono._riversLayer.transform.SetParent(
+            resultObj.transform,
+            false
+        );
 
         resultMono._roadsLayer = RoadsChunkLayer.CreateEmpty(
-            Resources.Load<Material>("Road"), false, true, true, false
+            Resources.Load<Material>("Road"),
+            false,
+            true,
+            true,
+            false
         );
-        resultMono._roadsLayer.transform.SetParent(resultObj.transform, false);
 
-        resultMono._water = MapMeshChunkLayer.CreateEmpty(
-            Resources.Load<Material>("Water"), false, true, false, false
+        resultMono._roadsLayer.transform.SetParent(
+            resultObj.transform,
+            false
         );
-        resultMono._water.name = "Water Layer";
-        resultMono._water.transform.SetParent(resultObj.transform, false);
 
-        resultMono._waterShore = MapMeshChunkLayer.CreateEmpty(
-            Resources.Load<Material>("WaterShore"), false, true, true, false
+        resultMono._openWaterLayer =
+            OpenWaterChunkLayer.CreateEmpty(
+                Resources.Load<Material>("Water"),
+                false,
+                true,
+                false,
+                false
         );
-        resultMono._waterShore.name = "Water Shore Layer";
-        resultMono._waterShore.transform.SetParent(resultObj.transform, false);
 
-        resultMono._estuaries = MapMeshChunkLayer.CreateEmpty(
-            Resources.Load<Material>("Estuary"), false, true, true, true
+        resultMono._openWaterLayer.transform.SetParent(
+            resultObj.transform,
+            false
         );
-        resultMono._estuaries.name = "Estuaries Layer";
-        resultMono._estuaries.transform.SetParent(resultObj.transform, false);
+
+        resultMono._waterShoreLayer =
+            WaterShoreChunkLayer.CreateEmpty(
+                Resources.Load<Material>("WaterShore"),
+                false,
+                true,
+                true,
+                false
+            );
+
+        resultMono._waterShoreLayer.transform.SetParent(
+            resultObj.transform,
+            false
+        );
+
+        resultMono._estuariesLayer = EstuariesChunkLayer.CreateEmpty(
+            Resources.Load<Material>("Estuary"),
+            false,
+            true,
+            true,
+            true
+        );
+
+        resultMono._estuariesLayer.transform.SetParent(
+            resultObj.transform,
+            false
+        );
 
         MapMeshChunkLayer walls = MapMeshChunkLayer.CreateEmpty(
-            Resources.Load<Material>("Urban"), false, false, false, false
+            Resources.Load<Material>("Urban"),
+            false,
+            false,
+            false,
+            false
         );
-        walls.transform.SetParent(resultObj.transform, false);
-        walls.name = "Walls Layer";
 
-        resultMono._features = FeatureContainer.GetFeatureContainer(walls);
-        resultMono._features.transform.SetParent(resultObj.transform, false);
+        walls.name = "Walls Layer";
+        walls.transform.SetParent(resultObj.transform, false);
+
+        resultMono._features = FeatureContainer.GetFeatureContainer(
+            walls
+        );
+        
+        resultMono._features.transform.SetParent(
+            resultObj.transform,
+            false
+        );
+        
         resultMono._features.name = "Features Layer";
 
         return resultMono;
@@ -160,9 +230,9 @@ public class MapMeshChunk : MonoBehaviour {
         _terrainLayer.Clear();
         _riversLayer.Clear();
         _roadsLayer.Clear();
-        _water.Clear();
-        _waterShore.Clear();
-        _estuaries.Clear();
+        _openWaterLayer.Clear();
+        _waterShoreLayer.Clear();
+        _estuariesLayer.Clear();
         _features.Clear();
 
         for(int i = 0; i < Hexes.Length; i++) {
@@ -195,9 +265,9 @@ public class MapMeshChunk : MonoBehaviour {
                     _terrainLayer,
                     _riversLayer,
                     _roadsLayer,
-                    _water,
-                    _waterShore,
-                    _estuaries,
+                    _openWaterLayer,
+                    _waterShoreLayer,
+                    _estuariesLayer,
                     _features
                 );
             }
@@ -206,16 +276,16 @@ public class MapMeshChunk : MonoBehaviour {
         _terrainLayer.Draw();
         _riversLayer.Draw();
         _roadsLayer.Draw();
-        _water.Draw();
-        _waterShore.Draw();
-        _estuaries.Draw();
+        _openWaterLayer.Draw();
+        _waterShoreLayer.Draw();
+        _estuariesLayer.Draw();
         _features.Apply();
     }
     
     /// <summary>
     /// Triangulate the mesh geometry of an individual hex.
     /// </summary>
-    /// <param name="hex">
+    /// <param name="source">
     /// The hex to whose mesh geometry is to be triangluated.
     /// </param>
     /// <param name="hexOuterRadius">
@@ -229,7 +299,7 @@ public class MapMeshChunk : MonoBehaviour {
     /// <param name="elevationDigraph"></param>
     /// <param name="wrapSize"></param>
     private void TriangulateHex(
-        Hex hex,
+        Hex source,
         Dictionary<HexDirections, Hex> neighbors,
         List<HexDirections> borderDirections,
         float hexOuterRadius,
@@ -240,23 +310,37 @@ public class MapMeshChunk : MonoBehaviour {
         TerrainChunkLayer terrainLayer,
         RiversChunkLayer riversLayer,
         RoadsChunkLayer roadsLayer,
-        MapMeshChunkLayer water,
-        MapMeshChunkLayer waterShore,
-        MapMeshChunkLayer estuaries,
+        OpenWaterChunkLayer openWaterLayer,
+        WaterShoreChunkLayer waterShoreLayer,
+        EstuariesChunkLayer estuariesLayer,
         FeatureContainer features
     ) { 
         foreach (
             KeyValuePair<HexDirections, Hex> pair in neighbors
         ) {
+            // Initialize triangulation data.
             HexDirections direction = pair.Key;
             Hex neighbor = pair.Value;
             
-            TriangulationData triangulationData = new TriangulationData();
-            triangulationData.terrainCenter = hex.Position;
+            TriangulationData triangulationData =
+                new TriangulationData();
 
+            triangulationData.terrainCenter =
+                source.Position;
+
+            triangulationData = GetWaterData(
+                source,
+                neighbor,
+                triangulationData,
+                direction,
+                hexOuterRadius,
+                wrapSize
+            );
+
+            // Triangulate layers for non-border edge.
             triangulationData =
                 terrainLayer.TriangulateHexTerrainEdge(
-                    hex,
+                    source,
                     neighbor,
                     triangulationData,
                     neighbors,
@@ -271,7 +355,7 @@ public class MapMeshChunk : MonoBehaviour {
 
             triangulationData =
                 roadsLayer.TriangulateHexRoadEdge(
-                    hex,
+                    source,
                     neighbor,
                     triangulationData,
                     direction,
@@ -285,7 +369,7 @@ public class MapMeshChunk : MonoBehaviour {
 
             triangulationData =
                 riversLayer.TriangulateHexRiverEdge(
-                    hex,
+                    source,
                     neighbor,
                     direction,
                     roadEdges,
@@ -295,46 +379,39 @@ public class MapMeshChunk : MonoBehaviour {
                     wrapSize
                 );
 
-            triangulationData = TriangulateHexWater(
-                hex,
-                neighbor,
-                neighbors,
-                direction,
-                riverData,
-                triangulationData,
-                water,
-                waterShore,
-                estuaries,
-                hexOuterRadius,
-                wrapSize
-            );
-        }
+            triangulationData =
+                openWaterLayer.TriangulateHexOpenWaterEdge(
+                    source,
+                    neighbor,
+                    neighbors,
+                    direction,
+                    triangulationData,
+                    hexOuterRadius,
+                    wrapSize
+                );
 
-        for (int i = 0; i < borderDirections.Count; i++) {
-            TriangulationData triangulationData = new TriangulationData();
-            triangulationData.terrainCenter = hex.Position;
-
-            EdgeVertices centerEdgeVertices = GetCenterEdgeVertices(
-                borderDirections[i],
-                triangulationData,
-                hexOuterRadius
-            );
-
-            triangulationData = TriangulateWaterCenter(
-                hex,
-                triangulationData,
-                borderDirections[i],
-                hexOuterRadius,
-                wrapSize,
-                water
-            );
-
-            TriangulateBorderConnection(
-                hex,
-                borderDirections[i],
-                centerEdgeVertices,
-                hexOuterRadius
-            );
+            triangulationData =
+                waterShoreLayer.TriangulateHexWaterShoreEdge(
+                    source,
+                    neighbor,
+                    neighbors,
+                    direction,
+                    riverData,
+                    triangulationData,
+                    hexOuterRadius,
+                    wrapSize
+                );
+            
+            triangulationData =
+                estuariesLayer.TriangulateHexEstuaryEdge(
+                    source,
+                    neighbor,
+                    direction,
+                    riverData,
+                    triangulationData,
+                    hexOuterRadius,
+                    wrapSize
+                );
         }
 
         bool anyEdge = false;
@@ -346,23 +423,24 @@ public class MapMeshChunk : MonoBehaviour {
             }
         }
 
-        if (!hex.IsUnderwater) {
+        // Add feature or special to hex.
+        if (!source.IsUnderwater) {
             if (
                 !riverData.HasRiver &&
                 !anyEdge
             ) {
                 features.AddFeature(
-                    hex,
-                    hex.Position,
+                    source,
+                    source.Position,
                     hexOuterRadius,
                     wrapSize
                 );
             }
 
-            if (hex.IsSpecial) {
+            if (source.IsSpecial) {
                 features.AddSpecialFeature(
-                    hex,
-                    hex.Position,
+                    source,
+                    source.Position,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -370,102 +448,80 @@ public class MapMeshChunk : MonoBehaviour {
         }
     }
 
-    private TriangulationData TriangulateHexWater(
+    private TriangulationData GetWaterData(
         Hex source,
         Hex neighbor,
-        Dictionary<HexDirections, Hex> neighbors,
+        TriangulationData triangulationData,
+        HexDirections direction,
+        float hexOuterRadius,
+        int wrapSize
+    ) {
+        triangulationData.waterSurfaceCenter = source.Position;
+        triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
+
+        triangulationData.sourceWaterEdge = new EdgeVertices(
+            triangulationData.waterSurfaceCenter +
+            HexagonPoint.GetFirstWaterCorner(
+                direction,
+                hexOuterRadius
+            ),
+            triangulationData.waterSurfaceCenter +
+            HexagonPoint.GetSecondWaterCorner(
+                direction,
+                hexOuterRadius
+            )
+        );
+
+        Vector3 neighborCenter = neighbor.Position;
+
+        float hexInnerRadius =
+            HexagonPoint.OuterToInnerRadius(hexOuterRadius);
+        
+        float hexInnerDiameter = hexInnerRadius * 2f;
+// TODO: This will not work once the column index is removed from
+//       Hex class.
+// If the neighbor outside the wrap boundaries, adjust accordingly.
+        if (neighbor.ColumnIndex < source.ColumnIndex - 1) {
+            neighborCenter.x += 
+                wrapSize * hexInnerDiameter;
+        }
+        else if (neighbor.ColumnIndex > source.ColumnIndex + 1) {
+            neighborCenter.x -=
+                wrapSize * hexInnerDiameter;
+        }
+
+        neighborCenter.y = triangulationData.waterSurfaceCenter.y;
+
+        triangulationData.neighborWaterEdge = new EdgeVertices(
+            neighborCenter + HexagonPoint.GetSecondSolidCorner(
+                direction.Opposite(),
+                hexOuterRadius
+            ),
+            neighborCenter + HexagonPoint.GetFirstSolidCorner(
+                direction.Opposite(),
+                hexOuterRadius
+            )
+        );
+
+        return triangulationData;
+    }
+
+    private TriangulationData TriangulateHexEstuaryEdge(
+        Hex source,
+        Hex neighbor,
         HexDirections direction,
         HexRiverData riverData,
         TriangulationData triangulationData,
-        MapMeshChunkLayer water,
-        MapMeshChunkLayer waterShore,
         MapMeshChunkLayer estuaries,
         float hexOuterRadius,
         int wrapSize
     ) {
         if (source.IsUnderwater) {
-            triangulationData.waterSurfaceCenter = source.Position;
-            triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
-
-            if (
-                !neighbor.IsUnderwater
-            ) {
-                EdgeVertices edge1 = new EdgeVertices(
-                    triangulationData.waterSurfaceCenter +
-                    HexagonPoint.GetFirstWaterCorner(
-                        direction,
-                        hexOuterRadius
-                    ),
-                    triangulationData.waterSurfaceCenter +
-                    HexagonPoint.GetSecondWaterCorner(
-                        direction,
-                        hexOuterRadius
-                    )
-                );
-
-                triangulationData = TriangulateWaterShoreWater(
-                    source,
-                    neighbor,
-                    triangulationData.waterSurfaceCenter,
-                    edge1,
-                    hexOuterRadius,
-                    wrapSize,
-                    water,
-                    triangulationData
-                );
-
-                Vector3 center2 = neighbor.Position;
-
-                float hexInnerRadius =
-                    HexagonPoint.OuterToInnerRadius(hexOuterRadius);
-                
-                float hexInnerDiameter = hexInnerRadius * 2f;
-        // TODO: This will not work once the column index is removed from
-        //       Hex class.
-        // If the neighbor outside the wrap boundaries, adjust accordingly.
-                if (neighbor.ColumnIndex < source.ColumnIndex - 1) {
-                    center2.x += 
-                        wrapSize * hexInnerDiameter;
-                }
-                else if (neighbor.ColumnIndex > source.ColumnIndex + 1) {
-                    center2.x -=
-                        wrapSize * hexInnerDiameter;
-                }
-
-                center2.y = triangulationData.waterSurfaceCenter.y;
-
-                EdgeVertices edge2 = new EdgeVertices(
-                    center2 + HexagonPoint.GetSecondSolidCorner(
-                        direction.Opposite(),
-                        hexOuterRadius
-                    ),
-                    center2 + HexagonPoint.GetFirstSolidCorner(
-                        direction.Opposite(),
-                        hexOuterRadius
-                    )
-                );
-
-
-                TriangulateWaterShore(
-                    source,
-                    neighbor,
-                    triangulationData.waterSourceRelativeHexIndices,
-                    direction,
-                    neighbors,
-                    riverData,
-                    triangulationData.waterSurfaceCenter,
-                    hexOuterRadius,
-                    wrapSize,
-                    waterShore,
-                    edge1,
-                    edge2,
-                    hexInnerDiameter
-                );
-
+            if (!neighbor.IsUnderwater) {
                 if (riverData.HasRiverInDirection(direction)) {
                     TriangulateEstuary(
-                        edge1,
-                        edge2,
+                        triangulationData.sourceWaterEdge,
+                        triangulationData.neighborWaterEdge,
                         riverData.HasIncomingRiverInDirection(direction),
                         triangulationData.waterSourceRelativeHexIndices,
                         hexOuterRadius,
@@ -474,29 +530,6 @@ public class MapMeshChunk : MonoBehaviour {
                     );
                 }
             }
-            else {
-                triangulationData = TriangulateWaterCenter(
-                    source,
-                    triangulationData,
-                    direction,
-                    hexOuterRadius,
-                    wrapSize,
-                    water
-                );
-
-                TriangulateWaterConnection(
-                    source,
-                    neighbor,
-                    direction,
-                    neighbors,
-                    triangulationData.waterSurfaceCornerLeft,
-                    triangulationData.waterSurfaceCornerRight,
-                    triangulationData.terrainSourceRelativeHexIndices,
-                    hexOuterRadius,
-                    wrapSize,
-                    water
-                );
-            }      
         }
 
         return triangulationData;
@@ -523,29 +556,6 @@ public class MapMeshChunk : MonoBehaviour {
         return edgeVertices;
     }
 
-    private EdgeVertices GetConnectionEdgeVertices(
-        Hex source,
-        Hex neighbor,
-        HexDirections direction,
-        EdgeVertices centerEdgeVertices,
-        float hexOuterRadius
-    ) {
-
-        Vector3 bridge = HexagonPoint.GetBridge(
-            direction,
-            hexOuterRadius
-        );
-
-        bridge.y = neighbor.Position.y - source.Position.y;
-
-        EdgeVertices result = new EdgeVertices(
-            centerEdgeVertices.vertex1 + bridge,
-            centerEdgeVertices.vertex5 + bridge
-        );
-
-        return result;
-    }
-
     private EdgeVertices TriangulateBorderConnection(
         Hex source,
         HexDirections direction,
@@ -565,439 +575,6 @@ public class MapMeshChunk : MonoBehaviour {
         );
 
         return result;
-    }
-
-    private void TriangulateRoadSegment (
-        Vector3 vertex1,
-        Vector3 vertex2,
-        Vector3 vertex3,
-        Vector3 vertex4,
-        Vector3 vertex5,
-        Vector3 vertex6,
-        Color weight1,
-        Color weight2,
-        Vector3 indices,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer roads
-    ) {
-        roads.AddQuadPerturbed(
-            vertex1,
-            vertex2,
-            vertex4,
-            vertex5,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        roads.AddQuadPerturbed(
-            vertex2,
-            vertex3,
-            vertex5,
-            vertex6,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        roads.AddQuadUV(0f, 1f, 0f, 0f);
-        roads.AddQuadUV(1f, 0f, 0f, 0f);
-
-        roads.AddQuadHexData(indices, weight1, weight2);
-        roads.AddQuadHexData(indices, weight1, weight2);
-    }
-
-    private TriangulationData TriangulateWaterCenter(
-        Hex source,
-        TriangulationData triangulationData,
-        HexDirections direction,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer water
-    ) {
-        triangulationData.waterSurfaceCenter = source.Position;
-        triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
-
-        triangulationData.waterSurfaceCornerLeft =
-            triangulationData.waterSurfaceCenter +
-            HexagonPoint.GetFirstWaterCorner(
-                direction,
-                hexOuterRadius
-            );
-
-        triangulationData.waterSurfaceCornerRight =
-            triangulationData.waterSurfaceCenter +
-            HexagonPoint.GetSecondWaterCorner(
-                direction,
-                hexOuterRadius
-            );
-
-        water.AddTrianglePerturbed(
-            triangulationData.waterSurfaceCenter,
-            triangulationData.waterSurfaceCornerLeft,
-            triangulationData.waterSurfaceCornerRight,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        triangulationData.waterSourceRelativeHexIndices = new Vector3(
-            source.Index,
-            source.Index,
-            source.Index
-        );
-
-        water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
-            _weights1
-        );
-
-        return triangulationData;
-    }
-
-    private void TriangulateWaterConnection(
-        Hex source,
-        Hex target,
-        HexDirections direction,
-        Dictionary<HexDirections, Hex> neighbors,
-        Vector3 center1,
-        Vector3 center2,
-        Vector3 indices,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer water
-    ) {
-        if (
-            direction <= HexDirections.Southeast
-        ) {
-            Vector3 bridge = HexagonPoint.GetWaterBridge(
-                direction,
-                hexOuterRadius
-            );
-
-            Vector3 edge1 = center1 + bridge;
-            Vector3 edge2 = center2 + bridge;
-
-            water.AddQuadPerturbed(
-                center1,
-                center2,
-                edge1,
-                edge2,
-                hexOuterRadius,
-                wrapSize
-            );
-            
-            indices.y = target.Index;
-            water.AddQuadHexData(indices, _weights1, _weights2);
-
-            if (direction <= HexDirections.East) {
-                Hex nextNeighbor;
-
-//                    hex.GetNeighbor(direction.NextClockwise());
-                if (
-                    neighbors.TryGetValue(
-                        direction.NextClockwise(),
-                        out nextNeighbor
-                    ) &&
-                    nextNeighbor.IsUnderwater
-                ) {
-                    water.AddTrianglePerturbed(
-                        center2, 
-                        edge2, 
-                        center2 + HexagonPoint.GetWaterBridge(
-                            direction.NextClockwise(),
-                            hexOuterRadius
-                        ),
-                        hexOuterRadius,
-                        wrapSize
-                    );
-
-                    indices.z = nextNeighbor.Index;
-
-                    water.AddTriangleHexData(
-                        indices, _weights1, _weights2, _weights3
-                    );
-                }
-            }
-        }
-    }
-
-    private TriangulationData TriangulateWaterShoreWater(
-        Hex source,
-        Hex target,
-        Vector3 center,
-        EdgeVertices edge1,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer water,
-        TriangulationData triangulationData
-    ) {
-        water.AddTrianglePerturbed(
-            center,
-            edge1.vertex1,
-            edge1.vertex2,
-            hexOuterRadius,
-            wrapSize
-        );
-        
-        water.AddTrianglePerturbed(
-            center,
-            edge1.vertex2,
-            edge1.vertex3,
-            hexOuterRadius,
-            wrapSize
-        );
-        
-        water.AddTrianglePerturbed(
-            center,
-            edge1.vertex3,
-            edge1.vertex4,
-            hexOuterRadius,
-            wrapSize
-        );
-        
-        water.AddTrianglePerturbed(
-            center,
-            edge1.vertex4,
-            edge1.vertex5,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        triangulationData.waterSourceRelativeHexIndices = new Vector3(
-            source.Index,
-            target.Index,
-            source.Index
-        );
-
-        water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
-            _weights1
-        );
-        
-        water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
-            _weights1
-        );
-        
-        water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
-            _weights1
-        );
-        
-        water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
-            _weights1
-        );
-
-        return triangulationData;
-    }
-
-    private void TriangulateWaterShore(
-        Hex source,
-        Hex target,
-        Vector3 indices,
-        HexDirections direction,
-        Dictionary<HexDirections, Hex> neighbors,
-        HexRiverData riverData,
-        Vector3 center,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer waterShore,
-        EdgeVertices edge1,
-        EdgeVertices edge2,
-        float hexInnerDiameter
-    ) {
-//          hex.HasRiverThroughEdge(direction)
-        if (riverData.HasRiverInDirection(direction)) {
-            TriangulateWaterShoreWithRiver(
-                edge1,
-                edge2,
-                riverData.HasIncomingRiverInDirection(direction),
-                indices,
-                hexOuterRadius,
-                wrapSize,
-                waterShore
-            );
-        }
-        else {
-            waterShore.AddQuadPerturbed(
-                edge1.vertex1,
-                edge1.vertex2,
-                edge2.vertex1,
-                edge2.vertex2,
-                hexOuterRadius,
-                wrapSize
-            );
-
-            waterShore.AddQuadPerturbed(
-                edge1.vertex2,
-                edge1.vertex3,
-                edge2.vertex2,
-                edge2.vertex3,
-                hexOuterRadius,
-                wrapSize
-            );
-
-            waterShore.AddQuadPerturbed(
-                edge1.vertex3,
-                edge1.vertex4,
-                edge2.vertex3,
-                edge2.vertex4,
-                hexOuterRadius,
-                wrapSize
-            );
-
-            waterShore.AddQuadPerturbed(
-                edge1.vertex4,
-                edge1.vertex5,
-                edge2.vertex4,
-                edge2.vertex5,
-                hexOuterRadius,
-                wrapSize
-            );
-
-            waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-            waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-            waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-            waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-
-            waterShore.AddQuadHexData(
-                indices,
-                _weights1,
-                _weights2
-            );
-            
-            waterShore.AddQuadHexData(
-                indices,
-                _weights1,
-                _weights2
-            );
-            
-            waterShore.AddQuadHexData(
-                indices,
-                _weights1,
-                _weights2
-            );
-
-            waterShore.AddQuadHexData(
-                indices,
-                _weights1,
-                _weights2
-            );
-        }
-        
-        Hex nextNeighbor;
-//            hex.GetNeighbor(direction.NextClockwise());
-
-        if (
-            neighbors.TryGetValue(
-                direction.NextClockwise(),
-                out nextNeighbor
-            )
-        ) {
-            Vector3 center3 = nextNeighbor.Position;
-
-            if (nextNeighbor.ColumnIndex < source.ColumnIndex - 1) {
-                center3.x += wrapSize * hexInnerDiameter;
-            }
-            else if (nextNeighbor.ColumnIndex > source.ColumnIndex + 1) {
-                center3.x -= wrapSize * hexInnerDiameter;
-            }
-
-// Work backward from the shore to obtain the triangle if the neighbor is
-// underwater, otherwise obtain normal triangle.
-
-            Vector3 vertex3 = 
-                center3 + (
-                    nextNeighbor.IsUnderwater ?
-                    HexagonPoint.GetFirstWaterCorner(
-                        direction.PreviousClockwise(),
-                        hexOuterRadius
-                    ) :
-                    HexagonPoint.GetFirstSolidCorner(
-                        direction.PreviousClockwise(),
-                        hexOuterRadius
-                    )
-                );
-
-            vertex3.y = center.y;
-
-            waterShore.AddTrianglePerturbed (
-                edge1.vertex5,
-                edge2.vertex5,
-                vertex3,
-                hexOuterRadius,
-                wrapSize
-            );
-
-            indices.z = nextNeighbor.Index;
-
-            waterShore.AddTriangleHexData (
-                indices,
-                _weights1,
-                _weights2,
-                _weights3
-            );
-
-            waterShore.AddTriangleUV (
-                new Vector2(0f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(0f, nextNeighbor.IsUnderwater ? 0f : 1f)
-            );
-        }
-    }
-
-    private void TriangulateWaterShoreWithRiver(
-        EdgeVertices edge1,
-        EdgeVertices edge2,
-        bool incomingRiver,
-        Vector3 indices,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer waterShore
-    ) {
-        waterShore.AddTrianglePerturbed(
-            edge2.vertex1,
-            edge1.vertex2,
-            edge1.vertex1,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        waterShore.AddTrianglePerturbed(
-            edge2.vertex5,
-            edge1.vertex5,
-            edge1.vertex4,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        waterShore.AddTriangleUV
-        (
-            new Vector2(0f, 1f), 
-            new Vector2(0f, 0f), 
-            new Vector2(0f, 0f)
-        );
-
-        waterShore.AddTriangleUV
-        (
-            new Vector2(0f, 1f),
-            new Vector2(0f, 0f),
-            new Vector2(0f, 0f)
-        );
-
-        waterShore.AddTriangleHexData(
-            indices, 
-            _weights2, 
-            _weights1, 
-            _weights1
-        );
-
-        waterShore.AddTriangleHexData(
-            indices,
-            _weights2,
-            _weights1,
-            _weights1
-        );
     }
 
     private void TriangulateEstuary(
