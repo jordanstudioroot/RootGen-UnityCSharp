@@ -35,6 +35,50 @@ public class MapMeshChunk : MonoBehaviour {
         get; private set;
     }
 
+    protected TriangulationData GetConnectionEdgeVertices(
+        Hex source,
+        Hex neighbor,
+        HexDirections direction,
+        TriangulationData data,
+        float hexOuterRadius
+    ) {
+
+        Vector3 bridge = HexagonPoint.GetBridge(
+            direction,
+            hexOuterRadius
+        );
+
+        bridge.y = neighbor.Position.y - source.Position.y;
+
+        data.connectionEdgeVertices = new EdgeVertices(
+            data.centerEdgeVertices.vertex1 + bridge,
+            data.centerEdgeVertices.vertex5 + bridge
+        );
+
+        return data;
+    }
+
+    protected TriangulationData GetCenterEdgeVertices(
+        HexDirections direction,
+        TriangulationData data,
+        float hexOuterRadius
+    ) {
+    // Triangle edge.
+        data.centerEdgeVertices = new EdgeVertices(
+            data.terrainCenter + HexagonPoint.GetFirstSolidCorner(
+                direction,
+                hexOuterRadius
+            ),
+            data.terrainCenter +
+            HexagonPoint.GetSecondSolidCorner(
+                direction,
+                hexOuterRadius
+            )
+        );
+
+        return data;
+    }
+
     public static MapMeshChunk CreateEmpty() {
         GameObject resultObj = new GameObject("Map Mesh Chunk");
         MapMeshChunk resultMono = resultObj.AddComponent<MapMeshChunk>();
@@ -328,6 +372,22 @@ public class MapMeshChunk : MonoBehaviour {
             triangulationData.terrainCenter =
                 source.Position;
 
+            triangulationData = GetCenterEdgeVertices(
+                direction,
+                triangulationData,
+                hexOuterRadius
+            );
+
+            if (direction <= HexDirections.Southeast) {
+                triangulationData = GetConnectionEdgeVertices(
+                    source,
+                    neighbor,
+                    direction,
+                    triangulationData,
+                    hexOuterRadius
+                );
+            }
+
             triangulationData = GetWaterData(
                 source,
                 neighbor,
@@ -504,184 +564,5 @@ public class MapMeshChunk : MonoBehaviour {
         );
 
         return triangulationData;
-    }
-
-    private TriangulationData TriangulateHexEstuaryEdge(
-        Hex source,
-        Hex neighbor,
-        HexDirections direction,
-        HexRiverData riverData,
-        TriangulationData triangulationData,
-        MapMeshChunkLayer estuaries,
-        float hexOuterRadius,
-        int wrapSize
-    ) {
-        if (source.IsUnderwater) {
-            if (!neighbor.IsUnderwater) {
-                if (riverData.HasRiverInDirection(direction)) {
-                    TriangulateEstuary(
-                        triangulationData.sourceWaterEdge,
-                        triangulationData.neighborWaterEdge,
-                        riverData.HasIncomingRiverInDirection(direction),
-                        triangulationData.waterSourceRelativeHexIndices,
-                        hexOuterRadius,
-                        wrapSize,
-                        estuaries
-                    );
-                }
-            }
-        }
-
-        return triangulationData;
-    }
-
-    private EdgeVertices GetCenterEdgeVertices(
-        HexDirections direction,
-        TriangulationData data,
-        float hexOuterRadius
-    ) {
-// Triangle edge.
-        EdgeVertices edgeVertices = new EdgeVertices(
-            data.terrainCenter + HexagonPoint.GetFirstSolidCorner(
-                direction,
-                hexOuterRadius
-            ),
-            data.terrainCenter +
-            HexagonPoint.GetSecondSolidCorner(
-                direction,
-                hexOuterRadius
-            )
-        );
-
-        return edgeVertices;
-    }
-
-    private EdgeVertices TriangulateBorderConnection(
-        Hex source,
-        HexDirections direction,
-        EdgeVertices centerEdgeVertices,
-        float hexOuterRadius
-    ) {
-        Vector3 bridge = HexagonPoint.GetBridge(
-            direction,
-            hexOuterRadius
-        );
-
-        bridge.y = source.Position.y;
-
-        EdgeVertices result = new EdgeVertices(
-            centerEdgeVertices.vertex1 + bridge,
-            centerEdgeVertices.vertex5 + bridge
-        );
-
-        return result;
-    }
-
-    private void TriangulateEstuary(
-        EdgeVertices edge1,
-        EdgeVertices edge2,
-        bool incomingRiver,
-        Vector3 indices,
-        float hexOuterRadius,
-        int wrapSize,
-        MapMeshChunkLayer estuaries
-    ) {
-        estuaries.AddQuadPerturbed(
-            edge2.vertex1, 
-            edge1.vertex2, 
-            edge2.vertex2, 
-            edge1.vertex3,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        estuaries.AddTrianglePerturbed(
-            edge1.vertex3, 
-            edge2.vertex2, 
-            edge2.vertex4,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        estuaries.AddQuadPerturbed(
-            edge1.vertex3, 
-            edge1.vertex4, 
-            edge2.vertex4, 
-            edge2.vertex5,
-            hexOuterRadius,
-            wrapSize
-        );
-
-        estuaries.AddQuadUV(
-            new Vector2(0f, 1f), 
-            new Vector2(0f, 0f), 
-            new Vector2(1f, 1f), 
-            new Vector2(0f, 0f)
-        );
-
-        estuaries.AddQuadHexData(
-            indices, _weights2, _weights1, _weights2, _weights1
-        );
-
-        estuaries.AddTriangleHexData(indices, _weights1, _weights2, _weights2);
-        estuaries.AddQuadHexData(indices, _weights1, _weights2);
-
-        estuaries.AddTriangleUV(
-            new Vector2(0f, 0f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 1f)
-        );
-
-        estuaries.AddQuadUV(
-            new Vector2(0f, 0f), 
-            new Vector2(0f, 0f),
-            new Vector2(1f, 1f), 
-            new Vector2(0f, 1f)
-        );
-
-        if (incomingRiver) {
-            estuaries.AddQuadUV2(
-                new Vector2(1.5f, 1f),
-                new Vector2(0.7f, 1.15f),
-                new Vector2(1f, 0.8f),
-                new Vector2(0.5f, 1.1f)
-            );
-
-            estuaries.AddTriangleUV2(
-                new Vector2(0.5f, 1.1f),
-                new Vector2(1f, 0.8f),
-                new Vector2(0f, 0.8f)
-            );
-            
-            estuaries.AddQuadUV2(
-                new Vector2(0.5f, 1.1f),
-                new Vector2(0.3f, 1.15f),
-                new Vector2(0f, 0.8f),
-                new Vector2(-0.5f, 1f)
-            );
-
-        }
-        else {
-            estuaries.AddQuadUV2(
-                new Vector2(-0.5f, -0.2f), 
-                new Vector2(0.3f, -0.35f),
-                new Vector2(0f, 0f), 
-                new Vector2(0.5f, -0.3f)
-            );
-
-            estuaries.AddTriangleUV2(
-                new Vector2(0.5f, -0.3f),
-                new Vector2(0f, 0f),
-                new Vector2(1f, 0f)
-            );
-
-            estuaries.AddQuadUV2(
-                new Vector2(0.5f, -0.3f), 
-                new Vector2(0.7f, -0.35f),
-                new Vector2(1f, 0f), 
-                new Vector2(1.5f, -0.2f)
-            );
-
-        }
     }
 }

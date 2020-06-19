@@ -36,9 +36,6 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
         int wrapSize
     ) {
         if (source.IsUnderwater) {
-            triangulationData.waterSurfaceCenter = source.Position;
-            triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
-
             if (
                 !neighbor.IsUnderwater
             ) {
@@ -63,14 +60,12 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                     this
                 );
 
-                TriangulateOpenWaterConnection(
+                triangulationData = TriangulateOpenWaterConnection(
                     source,
                     neighbor,
                     direction,
+                    triangulationData,
                     neighbors,
-                    triangulationData.waterSurfaceCornerLeft,
-                    triangulationData.waterSurfaceCornerRight,
-                    triangulationData.terrainSourceRelativeHexIndices,
                     hexOuterRadius,
                     wrapSize,
                     this
@@ -84,41 +79,41 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
     private TriangulationData TriangulateShoreOpenWater(
         Hex source,
         Hex target,
-        Vector3 center,
-        EdgeVertices edge1,
+        Vector3 waterSurfaceCenter,
+        EdgeVertices sourceWaterEdge,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer water,
         TriangulationData triangulationData
     ) {
         water.AddTrianglePerturbed(
-            center,
-            edge1.vertex1,
-            edge1.vertex2,
+            waterSurfaceCenter,
+            sourceWaterEdge.vertex1,
+            sourceWaterEdge.vertex2,
             hexOuterRadius,
             wrapSize
         );
         
         water.AddTrianglePerturbed(
-            center,
-            edge1.vertex2,
-            edge1.vertex3,
+            waterSurfaceCenter,
+            sourceWaterEdge.vertex2,
+            sourceWaterEdge.vertex3,
             hexOuterRadius,
             wrapSize
         );
         
         water.AddTrianglePerturbed(
-            center,
-            edge1.vertex3,
-            edge1.vertex4,
+            waterSurfaceCenter,
+            sourceWaterEdge.vertex3,
+            sourceWaterEdge.vertex4,
             hexOuterRadius,
             wrapSize
         );
         
         water.AddTrianglePerturbed(
-            center,
-            edge1.vertex4,
-            edge1.vertex5,
+            waterSurfaceCenter,
+            sourceWaterEdge.vertex4,
+            sourceWaterEdge.vertex5,
             hexOuterRadius,
             wrapSize
         );
@@ -160,9 +155,6 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
         int wrapSize,
         MapMeshChunkLayer water
     ) {
-        triangulationData.waterSurfaceCenter = source.Position;
-        triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
-
         triangulationData.waterSurfaceCornerLeft =
             triangulationData.waterSurfaceCenter +
             HexagonPoint.GetFirstWaterCorner(
@@ -199,14 +191,12 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private void TriangulateOpenWaterConnection(
+    private TriangulationData TriangulateOpenWaterConnection(
         Hex source,
         Hex target,
         HexDirections direction,
+        TriangulationData data,
         Dictionary<HexDirections, Hex> neighbors,
-        Vector3 center1,
-        Vector3 center2,
-        Vector3 indices,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer water
@@ -219,20 +209,24 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                 hexOuterRadius
             );
 
-            Vector3 edge1 = center1 + bridge;
-            Vector3 edge2 = center2 + bridge;
+            Vector3 edge1 = data.waterSurfaceCornerLeft + bridge;
+            Vector3 edge2 = data.waterSurfaceCornerRight + bridge;
 
             water.AddQuadPerturbed(
-                center1,
-                center2,
+                data.waterSurfaceCornerLeft,
+                data.waterSurfaceCornerRight,
                 edge1,
                 edge2,
                 hexOuterRadius,
                 wrapSize
             );
             
-            indices.y = target.Index;
-            water.AddQuadHexData(indices, _weights1, _weights2);
+            data.terrainSourceRelativeHexIndices.y = target.Index;
+            water.AddQuadHexData(
+                data.terrainSourceRelativeHexIndices,
+                _weights1,
+                _weights2
+            );
 
             if (direction <= HexDirections.East) {
                 Hex nextNeighbor;
@@ -246,9 +240,10 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                     nextNeighbor.IsUnderwater
                 ) {
                     water.AddTrianglePerturbed(
-                        center2, 
+                        data.waterSurfaceCornerRight, 
                         edge2, 
-                        center2 + HexagonPoint.GetWaterBridge(
+                        data.waterSurfaceCornerRight +
+                        HexagonPoint.GetWaterBridge(
                             direction.NextClockwise(),
                             hexOuterRadius
                         ),
@@ -256,13 +251,19 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                         wrapSize
                     );
 
-                    indices.z = nextNeighbor.Index;
+                    data.terrainSourceRelativeHexIndices.z =
+                        nextNeighbor.Index;
 
                     water.AddTriangleHexData(
-                        indices, _weights1, _weights2, _weights3
+                        data.terrainSourceRelativeHexIndices,
+                        _weights1,
+                        _weights2,
+                        _weights3
                     );
                 }
             }
         }
+
+        return data;
     }
 }

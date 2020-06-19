@@ -97,10 +97,9 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
                 TriangulateRoadAdjacentToRiver(
                     source,
                     direction,
-                    data.terrainCenter,
+                    data,
                     riverData,
                     roadEdges,
-                    data.centerEdgeVertices,
                     hexOuterRadius,
                     wrapSize,
                     roads,
@@ -149,10 +148,6 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         int wrapSize,
         MapMeshChunkLayer roads
     ) {
-        if (riverData.HasRiverInDirection(direction)) {
-            data.connectionEdgeVertices.vertex3.y = neighbor.StreamBedY;
-        }
-
         bool hasRoad = roadEdges[direction];
 
         if (
@@ -512,13 +507,12 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         );
     }
 
-    private void TriangulateRoadAdjacentToRiver(
+    private TriangulationData TriangulateRoadAdjacentToRiver(
         Hex source,
         HexDirections direction, 
-        Vector3 center,
+        TriangulationData data,
         HexRiverData riverData,
         Dictionary<HexDirections, bool> roadEdges,
-        EdgeVertices edgeVertices,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer roads,
@@ -545,7 +539,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
             roadEdges
         );
 
-        Vector3 roadCenter = center;
+        Vector3 roadCenter = data.terrainCenter;
 
 //        if (hex.HasRiverBeginOrEnd) {
         if (riverData.HasRiverStartOrEnd) {
@@ -571,7 +565,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
 //                    !hex.HasRoadThroughEdge(direction.Next())
                     !roadEdges[direction.NextClockwise()]
                 ) {
-                    return;
+                    return data;
                 }
                 corner = HexagonPoint.GetSecondSolidCorner(
                     direction,
@@ -586,7 +580,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
 //                    !hex.HasRoadThroughEdge(direction.Previous())
                     !roadEdges[direction.PreviousClockwise()]
                 ) {
-                    return;
+                    return data;
                 }
 
                 corner = HexagonPoint.GetFirstSolidCorner(
@@ -610,13 +604,13 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
             ) {
                 features.AddBridge(
                     roadCenter,
-                    center - corner * 0.5f,
+                    data.terrainCenter - corner * 0.5f,
                     hexOuterRadius,
                     wrapSize
                 );
             }
             
-            center += corner * 0.25f;
+            data.terrainCenter += corner * 0.25f;
         }
 
 // If the river has a zigzag, then the incoming river will be the on the
@@ -651,7 +645,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
 
         else if(previousHasRiver && nextHasRiver) { 
             if (!hasRoadThroughEdge) {
-                return;
+                return data;
             }
 
 // Must account for difference in scale between corners and middles by
@@ -665,7 +659,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
                 HexagonConstants.INNER_TO_OUTER_RATIO;
             
             roadCenter += offset * 0.7f;
-            center += offset * 0.5f;
+            data.terrainCenter += offset * 0.5f;
         }
 
 // The only remaining case is that the hex lies on the outside of a
@@ -698,7 +692,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
 //                !hex.HasRoadThroughEdge(middle.Next())
                 !roadEdges[middle.NextClockwise()]
             ) {
-                return;
+                return data;
             }
 
             Vector3 offset = HexagonPoint.GetSolidEdgeMiddle(
@@ -715,7 +709,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
             ) {
                 features.AddBridge (
                     roadCenter,
-                    center - offset * (
+                    data.terrainCenter - offset * (
                         HexagonConstants.INNER_TO_OUTER_RATIO * 0.7f
                     ),
                     hexOuterRadius,
@@ -725,15 +719,24 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         }
 
         Vector3 middleLeft = 
-            Vector3.Lerp(roadCenter, edgeVertices.vertex1, interpolators.x);
+            Vector3.Lerp(
+                roadCenter,
+                data.centerEdgeVertices.vertex1,
+                interpolators.x
+            );
+        
         Vector3 middleRight =
-            Vector3.Lerp(roadCenter, edgeVertices.vertex5, interpolators.y);
+            Vector3.Lerp(
+                roadCenter,
+                data.centerEdgeVertices.vertex5,
+                interpolators.y
+            );
 
         TriangulateRoad(
             roadCenter,
             middleLeft,
             middleRight,
-            edgeVertices,
+            data.centerEdgeVertices,
             hasRoadThroughEdge,
             source.Index,
             hexOuterRadius,
@@ -744,7 +747,7 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         if (previousHasRiver) {
             TriangulateRoadEdge(
                 roadCenter,
-                center,
+                data.terrainCenter,
                 middleLeft,
                 source.Index,
                 hexOuterRadius,
@@ -757,12 +760,14 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
             TriangulateRoadEdge(
                 roadCenter,
                 middleRight,
-                center,
+                data.terrainCenter,
                 source.Index,
                 hexOuterRadius,
                 wrapSize,
                 roads
             );
         }
+        
+        return data;
     }
 }

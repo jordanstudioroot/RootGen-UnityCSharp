@@ -51,14 +51,14 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         );
 
         if (direction <= HexDirections.Southeast) {
-            triangulationData.connectionEdgeVertices =
+            /*triangulationData =
                 GetConnectionEdgeVertices(
                     hex,
                     neighbor,
                     direction,
-                    triangulationData.centerEdgeVertices,
+                    triangulationData,
                     hexOuterRadius
-                );
+                );*/
             
         // Adjust the other edge of the connection  if there is a river through
         // that edge.
@@ -97,7 +97,6 @@ public class RiversChunkLayer : MapMeshChunkLayer {
                     if (!source.IsUnderwater) {
                         data = TriangulateRiverBeginOrEndRiver(
                             source,
-                            data.terrainCenter,
                             data,
                             riverData,
                             hexOuterRadius,
@@ -125,13 +124,13 @@ public class RiversChunkLayer : MapMeshChunkLayer {
 
     private TriangulationData TriangulateRiverBeginOrEndRiver(
         Hex source,
-        Vector3 center,
         TriangulationData triangulationData,
         HexRiverData riverData,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer rivers
     ) {
+        Vector3 riverSurfaceCenter = triangulationData.terrainCenter;
 //            bool reversed = hex.HasIncomingRiver;
         bool reversed = riverData.HasIncomingRiver;
 
@@ -155,13 +154,13 @@ public class RiversChunkLayer : MapMeshChunkLayer {
             rivers
         );
 
-        center.y =
+        riverSurfaceCenter.y =
             triangulationData.middleEdgeVertices.vertex2.y =
             triangulationData.middleEdgeVertices.vertex4.y =
             source.RiverSurfaceY;
 
         rivers.AddTrianglePerturbed(
-            center,
+            riverSurfaceCenter,
             triangulationData.middleEdgeVertices.vertex2,
             triangulationData.middleEdgeVertices.vertex4,
             hexOuterRadius,

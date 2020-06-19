@@ -486,27 +486,6 @@ public class MapMeshChunkLayer : MonoBehaviour {
         }
     }
 
-    protected EdgeVertices GetCenterEdgeVertices(
-        HexDirections direction,
-        TriangulationData data,
-        float hexOuterRadius
-    ) {
-    // Triangle edge.
-        EdgeVertices edgeVertices = new EdgeVertices(
-            data.terrainCenter + HexagonPoint.GetFirstSolidCorner(
-                direction,
-                hexOuterRadius
-            ),
-            data.terrainCenter +
-            HexagonPoint.GetSecondSolidCorner(
-                direction,
-                hexOuterRadius
-            )
-        );
-
-        return edgeVertices;
-    }
-
     protected void TriangulateRoadSegment (
         Vector3 vertex1,
         Vector3 vertex2,
@@ -595,29 +574,6 @@ public class MapMeshChunkLayer : MonoBehaviour {
         terrain.AddTriangleHexData(indices, _weights1);
         terrain.AddTriangleHexData(indices, _weights1);
         terrain.AddTriangleHexData(indices, _weights1);
-    }
-
-    protected EdgeVertices GetConnectionEdgeVertices(
-        Hex source,
-        Hex neighbor,
-        HexDirections direction,
-        EdgeVertices centerEdgeVertices,
-        float hexOuterRadius
-    ) {
-
-        Vector3 bridge = HexagonPoint.GetBridge(
-            direction,
-            hexOuterRadius
-        );
-
-        bridge.y = neighbor.Position.y - source.Position.y;
-
-        EdgeVertices result = new EdgeVertices(
-            centerEdgeVertices.vertex1 + bridge,
-            centerEdgeVertices.vertex5 + bridge
-        );
-
-        return result;
     }
 
     protected void TriangulateBoundaryTriangle(

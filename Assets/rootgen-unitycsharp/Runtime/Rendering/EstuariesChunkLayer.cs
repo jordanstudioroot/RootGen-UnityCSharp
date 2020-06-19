@@ -57,7 +57,7 @@ public class EstuariesChunkLayer : MapMeshChunkLayer {
         EdgeVertices edge1,
         EdgeVertices edge2,
         bool incomingRiver,
-        Vector3 indices,
+        Vector3 waterSourceRelativeHexIndices,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer estuaries
@@ -96,11 +96,11 @@ public class EstuariesChunkLayer : MapMeshChunkLayer {
         );
 
         estuaries.AddQuadHexData(
-            indices, _weights2, _weights1, _weights2, _weights1
+            waterSourceRelativeHexIndices, _weights2, _weights1, _weights2, _weights1
         );
 
-        estuaries.AddTriangleHexData(indices, _weights1, _weights2, _weights2);
-        estuaries.AddQuadHexData(indices, _weights1, _weights2);
+        estuaries.AddTriangleHexData(waterSourceRelativeHexIndices, _weights1, _weights2, _weights2);
+        estuaries.AddQuadHexData(waterSourceRelativeHexIndices, _weights1, _weights2);
 
         estuaries.AddTriangleUV(
             new Vector2(0f, 0f),

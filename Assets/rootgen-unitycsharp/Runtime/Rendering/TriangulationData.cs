@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public struct TriangulationData {
+public class TriangulationData {
     /// <summary>
     /// The center of the terrain surface for the hex being triangulated.
     /// </summary>
@@ -89,29 +89,4 @@ public struct TriangulationData {
     }
 
     public Vector3 waterSourceRelativeHexIndices;
-
-    public int waterSourceHexIndex {
-        get {
-            return (int)waterSourceRelativeHexIndices.x;
-        }
-        set {
-            waterSourceRelativeHexIndices.x = value;
-        }
-    }
-    public int waterLeftHexIndex {
-        get {
-            return (int)waterSourceRelativeHexIndices.y;
-        }
-        set {
-            waterSourceRelativeHexIndices.y = value;
-        }
-    }
-    public int waterRightHexIndex {
-        get {
-            return (int)waterSourceRelativeHexIndices.z;
-        }
-        set {
-            waterSourceRelativeHexIndices.z = value;
-        }
-    }
 }

@@ -37,9 +37,6 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
         int wrapSize
     ) {
         if (source.IsUnderwater) {
-            triangulationData.waterSurfaceCenter = source.Position;
-            triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
-
             if (
                 !neighbor.IsUnderwater
             ) {
@@ -75,7 +72,7 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
     private void TriangulateWaterShore(
         Hex source,
         Hex target,
-        Vector3 indices,
+        Vector3 waterSourceRelativeHexIndices,
         HexDirections direction,
         Dictionary<HexDirections, Hex> neighbors,
         HexRiverData riverData,
@@ -93,7 +90,7 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
                 edge1,
                 edge2,
                 riverData.HasIncomingRiverInDirection(direction),
-                indices,
+                waterSourceRelativeHexIndices,
                 hexOuterRadius,
                 wrapSize,
                 waterShore
@@ -142,25 +139,25 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
             waterShore.AddQuadUV(0f, 0f, 0f, 1f);
 
             waterShore.AddQuadHexData(
-                indices,
+                waterSourceRelativeHexIndices,
                 _weights1,
                 _weights2
             );
             
             waterShore.AddQuadHexData(
-                indices,
+                waterSourceRelativeHexIndices,
                 _weights1,
                 _weights2
             );
             
             waterShore.AddQuadHexData(
-                indices,
+                waterSourceRelativeHexIndices,
                 _weights1,
                 _weights2
             );
 
             waterShore.AddQuadHexData(
-                indices,
+                waterSourceRelativeHexIndices,
                 _weights1,
                 _weights2
             );
@@ -210,10 +207,10 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
                 wrapSize
             );
 
-            indices.z = nextNeighbor.Index;
+            waterSourceRelativeHexIndices.z = nextNeighbor.Index;
 
             waterShore.AddTriangleHexData (
-                indices,
+                waterSourceRelativeHexIndices,
                 _weights1,
                 _weights2,
                 _weights3
