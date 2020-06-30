@@ -10,11 +10,10 @@ cd to new or existing project directory and `npm install jordanstudioroot/RootGe
 ## TODO
 - [x] Finish extracting RootEdit to separate package.
 - [ ] Separate data generation and rendering into separate libraries or packages.
+- [ ] Tests
 
 ## Criticisms, Suggestions, Pull Requests
 Email: [jordannelson@protonmail.com](mailto:jordannelson@protonmail.com)
-
-[Pull Requests](https://github.com/jordanstudioroot/PROJECT_NAME/pulls)
 
 ## Bugs
 Report on [issues](https://github.com/jordanstudioroot/PROJECT_NAME/issues).
