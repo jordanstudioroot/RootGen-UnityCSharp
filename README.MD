@@ -20,21 +20,41 @@ RootGen creates elevation regions based on provided parameters, using these over
 
 RootGen uses a simplified model of atmospheric moisture propagation to determine the movement of clouds and precipitation.
 
+### Camera
+
+RootGen currently only implements a standard top down camera with rotation and zoom.
+
 ## Requirements
 
 Initialize new or existing Unity3D project as npm package.
 
 ## Installation and Usage
 
-cd to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition. If you don't want to use the assembly definitions, simply delete all .asmdef files in the directory.
+### Installation
+
+cd to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition.
+
+If you don't want to use the assembly definitions, simply delete all .asmdef files in the rootgen-unitycsharp directory and all subdirectories.
 
 ### Instantiating RootGen.
 
-Once RootGen has been added to the project, instantiate an instance: `RootGen rootGen = new RootGen()`
+Once RootGen has been added to the project, instantiate an instance: `RootGen rootGen = new RootGen()`. This can be done in a MonoBehaviour or regular class. Multiple instances of RootGen are not currently supported, and using multiple instances may result in unexpected behavior.
 
 ### Creating a RootGenConfig
 
 Create a new RootGenConfig scriptable object by right clicking in the project pane and clicking Create -> RootGenConfig -> Default Config.
+
+### Generating A Map Using a RootGenConfig
+
+To jump right in to playing with RootGen, load the scene `ExampleScene` in `rootgen-unitycsharp/Runtime/Scenes`. Make sure that the `ExampleApp` object has an assigned RootGenConfig. If not, use the default config located at `rootgen-unitycsharp/Runtime/ScriptableObject/Resources`. Once this is done, simply hit play to see an example of RootGen in action.
+
+Otherwise, to implement RootGen yourself on a MonoBehaviour, declare a public RootGenConfig variable `RootGenConfig rootGenConfig`, drag and drop the scriptable object into the inspector field, and call `rootGen.GenerateMap(rootGenConfig)` in the MonoBehaviour.
+
+To populate an instance of RootGenConfig which has been declared in something other than a MonoBehaviour, make sure the instance of the RootGenConfig scriptable object is contained in a `Resources` directory and populate the declaration using Resources.Load: `RootGenConfig rootGenConfig = Resources.Load<RootGenConfig>([scriptable object instance file name])`.
+
+### Attaching the Camera
+
+The camera is attached automatically to the most recently generated map.
 
 ### Description Of RootGenConfigParameters
 
@@ -111,6 +131,7 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 ## TODO
 
 - [x] Finish extracting RootEdit to separate package.
+- [ ] Re-implementation of runtime map editor.
 - [ ] More robust parameter support. (JSON, struct, class, MonoBehaviour, raw arguments)
 - [ ] More robust support for retrieving map data. (JSON, graph, list, array)
 - [ ] Support for attaching GameObjects, MonoBehaviours, and simple classes as static and interactive features of the map.
@@ -118,12 +139,13 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 - [ ] Support for providing custom flora assets.
 - [ ] Support for empty tiles and floating landmasses.
 - [ ] Separate data generation and rendering into separate libraries or packages.
-- [ ] Tests
+- [ ] Replace all calls to Resources.Load with an AssetBundle implementaiton, or some other higher-performance implementation.
+- [ ] Tests.
 
 ## Criticisms, Suggestions, Pull Requests
 
 Email: [jordannelson@protonmail.com](mailto:jordannelson@protonmail.com)
 
-## Bugs
+## Defects
 
 Report on [issues](https://github.com/jordanstudioroot/PROJECT_NAME/issues).
