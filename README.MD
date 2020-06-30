@@ -1,5 +1,5 @@
 ## RootGen
-Procedural 3D landscape generator for Unity3D, based heavily on Jasper Flick's [hex map](https://catlikecoding.com/unity/tutorials/hex-map/) series on [[Catlike Coding](https://catlikecoding.com/).
+Procedural 3D landscape generator for Unity3D, based heavily on Jasper Flick's [hex map](https://catlikecoding.com/unity/tutorials/hex-map/) series on [Catlike Coding](https://catlikecoding.com/).
 
 ## Requirements
 Initialize new or existing Unity3D project as npm package.
