@@ -56,6 +56,10 @@ To populate an instance of RootGenConfig which has been declared in something ot
 
 The camera is attached automatically to the most recently generated map.
 
+### Moving The Camera
+
+The camera can be used using standard WASD controls for longitudinal (A, D key) and latitudinal (S, W key) movement. Rotate the camera using Q (left rotation) and E (right rotation). Zoom the camera in and out using the mouse scroll wheel. 
+
 ### Description Of RootGenConfigParameters
 
 - **Width:** The width of the map.
