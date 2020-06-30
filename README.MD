@@ -11,7 +11,7 @@ Currently, RootGen only supports providing parameters using a scriptable object,
 
 ### Climate
 
-RootGen uses a simplified version of the [holdridge life zones](https://en.wikipedia.org/wiki/Holdridge_life_zones) to generate the climate of individual hexes.
+RootGen uses a simplified version of the [holdridge life zones](https://en.wikipedia.org/wiki/Holdridge_life_zones) to interpret the climate of individual hexes from their temperature and moisture level.
 
 ### Topography
 
