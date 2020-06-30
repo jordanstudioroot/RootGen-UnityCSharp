@@ -111,6 +111,12 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 ## TODO
 
 - [x] Finish extracting RootEdit to separate package.
+- [ ] More robust parameter support. (JSON, struct, class, MonoBehaviour, raw arguments)
+- [ ] More robust support for retrieving map data. (JSON, graph, list, array)
+- [ ] Support for attaching GameObjects, MonoBehaviours, and simple classes as static and interactive features of the map.
+- [ ] Support for providing custom terrain textures.
+- [ ] Support for providing custom flora assets.
+- [ ] Support for empty tiles and floating landmasses.
 - [ ] Separate data generation and rendering into separate libraries or packages.
 - [ ] Tests
 
