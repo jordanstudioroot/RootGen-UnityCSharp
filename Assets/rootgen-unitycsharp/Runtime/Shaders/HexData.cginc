@@ -20,23 +20,36 @@ float4 FilterHexData(float4 data) {
 	return data;
 }
 
-// Retrieve the texture data for a hex at the specified vertex represented
-// by appdata_full corresponding to the index stored in the vertices' uv3
-// coordinate.
-float4 GetHexData(appdata_full v, int index) {
+// Retrive the texure data for one of three possible Hexes
+// touching the vertex described by v, corresonding to one
+// of three possible indices specified by uv3Index [0/1/2].
+float4 GetHexData(appdata_full v, int uv3Index) {
 	float2 uv;
 	
-	// Three row-major array indices in the form of (column * Columns) + row
-	// for all 3 possible hexes touching v are contained in v.texcoord2.
-	//
-	// The U coordinate for the hex with the specified vector3 index [index]
-	// is obtained by multiplying the corresponding row major index (with an
-	// offset of .5) with the width of the texture and flooring the result.
-	// Multiplying the row (also with an offset of .5) by the texture height
-	// produces the v coordiante. 
-	uv.x = (v.texcoord2[index] + 0.5) * _hexData_TexelSize.x;
+	// Becaue a texture is being sampled, the UV coordinates
+	// need to be aligned with the centers of pixels.
+	// Therefore all row major indices are offset by
+	// 0.5f.
+
+	// Multiplying by _hexData_TexelSize.x is equivalent
+	// to dividing by the width of the map texture.
+	// The result is a number in the form of Z.U,
+	// 	Example: 3.4, 3rd row, U coordiante = 4
+	uv.x = 
+		(v.texcoord2[uv3Index] + 0.5) *
+		_hexData_TexelSize.x;
+
+	// Extract the row by flooring the number in the form
+	// Z.U to obtain Z.
 	float row = floor(uv.x);
+
+	// Extract the U coordinate by subtracting the row
+	// component from Z.U to obtain U.
 	uv.x -= row;
+
+	// Obtain the V coordinate by dividing the
+	// row by the texture height (multiplying by
+	// _hexData_TexelSize.y)
 	uv.y = (row + 0.5) * _hexData_TexelSize.y;
 
 	// After obtaining the texture uv coordinates, the global 2d texture

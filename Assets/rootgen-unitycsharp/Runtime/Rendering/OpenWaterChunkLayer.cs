@@ -26,12 +26,13 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
 
-    public TriangulationData TriangulateHexOpenWaterEdge(
+    public WaterTriangulationData TriangulateHexOpenWaterEdge(
         Hex source,
         Hex neighbor,
         Dictionary<HexDirections, Hex> neighbors,
         HexDirections direction,
-        TriangulationData triangulationData,
+        WaterTriangulationData waterTriData,
+        TerrainTriangulationData terrainTriData,
         float hexOuterRadius,
         int wrapSize
     ) {
@@ -39,32 +40,33 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             if (
                 !neighbor.IsUnderwater
             ) {
-                triangulationData = TriangulateShoreOpenWater(
+                waterTriData = TriangulateShoreOpenWater(
                     source,
                     neighbor,
-                    triangulationData.waterSurfaceCenter,
-                    triangulationData.sourceWaterEdge,
+                    waterTriData.waterSurfaceCenter,
+                    waterTriData.sourceWaterEdge,
                     hexOuterRadius,
                     wrapSize,
                     this,
-                    triangulationData
+                    waterTriData
                 );
             }
             else {
-                triangulationData = TriangulateOpenWaterCenter(
+                waterTriData = TriangulateOpenWaterCenter(
                     source,
-                    triangulationData,
+                    waterTriData,
                     direction,
                     hexOuterRadius,
                     wrapSize,
                     this
                 );
 
-                triangulationData = TriangulateOpenWaterConnection(
+                waterTriData = TriangulateOpenWaterConnection(
                     source,
                     neighbor,
                     direction,
-                    triangulationData,
+                    waterTriData,
+                    terrainTriData,
                     neighbors,
                     hexOuterRadius,
                     wrapSize,
@@ -73,10 +75,10 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             }  
         }
 
-        return triangulationData;
+        return waterTriData;
     }
 
-    private TriangulationData TriangulateShoreOpenWater(
+    private WaterTriangulationData TriangulateShoreOpenWater(
         Hex source,
         Hex target,
         Vector3 waterSurfaceCenter,
@@ -84,7 +86,7 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer water,
-        TriangulationData triangulationData
+        WaterTriangulationData triangulationData
     ) {
         water.AddTrianglePerturbed(
             waterSurfaceCenter,
@@ -118,38 +120,47 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             wrapSize
         );
 
-        triangulationData.waterSourceRelativeHexIndices = new Vector3(
-            source.Index,
-            target.Index,
-            source.Index
-        );
+        //            / | y
+        //           /  |
+        //           |  |
+        //source x/z |  | target
+        //           |  |
+        //           \  |
+        //            \ | y
+        
+        Vector3 waterShoreHexIndices;
+        
+        waterShoreHexIndices.x =
+            waterShoreHexIndices.z = source.Index;
+
+        waterShoreHexIndices.y = target.Index;
 
         water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
+            waterShoreHexIndices,
             _weights1
         );
         
         water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
+            waterShoreHexIndices,
             _weights1
         );
         
         water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
+            waterShoreHexIndices,
             _weights1
         );
         
         water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
+            waterShoreHexIndices,
             _weights1
         );
 
         return triangulationData;
     }
 
-    private TriangulationData TriangulateOpenWaterCenter(
+    private WaterTriangulationData TriangulateOpenWaterCenter(
         Hex source,
-        TriangulationData triangulationData,
+        WaterTriangulationData triangulationData,
         HexDirections direction,
         float hexOuterRadius,
         int wrapSize,
@@ -177,25 +188,27 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             wrapSize
         );
 
-        triangulationData.waterSourceRelativeHexIndices = new Vector3(
-            source.Index,
-            source.Index,
-            source.Index
-        );
+        Vector3 openWaterCenterIndices;
+
+        openWaterCenterIndices.x =
+            openWaterCenterIndices.y =
+                openWaterCenterIndices.z =
+                    source.Index;
 
         water.AddTriangleHexData(
-            triangulationData.waterSourceRelativeHexIndices,
+            openWaterCenterIndices,
             _weights1
         );
 
         return triangulationData;
     }
 
-    private TriangulationData TriangulateOpenWaterConnection(
+    private WaterTriangulationData TriangulateOpenWaterConnection(
         Hex source,
         Hex target,
         HexDirections direction,
-        TriangulationData data,
+        WaterTriangulationData waterTriData,
+        TerrainTriangulationData terrainTriData,
         Dictionary<HexDirections, Hex> neighbors,
         float hexOuterRadius,
         int wrapSize,
@@ -209,21 +222,27 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                 hexOuterRadius
             );
 
-            Vector3 edge1 = data.waterSurfaceCornerLeft + bridge;
-            Vector3 edge2 = data.waterSurfaceCornerRight + bridge;
+            Vector3 edge1 = waterTriData.waterSurfaceCornerLeft + bridge;
+            Vector3 edge2 = waterTriData.waterSurfaceCornerRight + bridge;
 
             water.AddQuadPerturbed(
-                data.waterSurfaceCornerLeft,
-                data.waterSurfaceCornerRight,
+                waterTriData.waterSurfaceCornerLeft,
+                waterTriData.waterSurfaceCornerRight,
                 edge1,
                 edge2,
                 hexOuterRadius,
                 wrapSize
             );
-            
-            data.terrainSourceRelativeHexIndices.y = target.Index;
+
+            Vector3 openWaterIndices;
+            openWaterIndices.x =
+                openWaterIndices.z =
+                    source.Index;
+
+            openWaterIndices.y = target.Index;
+                        
             water.AddQuadHexData(
-                data.terrainSourceRelativeHexIndices,
+                openWaterIndices,
                 _weights1,
                 _weights2
             );
@@ -231,7 +250,6 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             if (direction <= HexDirections.East) {
                 Hex nextNeighbor;
 
-//                    hex.GetNeighbor(direction.NextClockwise());
                 if (
                     neighbors.TryGetValue(
                         direction.NextClockwise(),
@@ -240,9 +258,9 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                     nextNeighbor.IsUnderwater
                 ) {
                     water.AddTrianglePerturbed(
-                        data.waterSurfaceCornerRight, 
+                        waterTriData.waterSurfaceCornerRight, 
                         edge2, 
-                        data.waterSurfaceCornerRight +
+                        waterTriData.waterSurfaceCornerRight +
                         HexagonPoint.GetWaterBridge(
                             direction.NextClockwise(),
                             hexOuterRadius
@@ -251,11 +269,11 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
                         wrapSize
                     );
 
-                    data.terrainSourceRelativeHexIndices.z =
+                    openWaterIndices.z =
                         nextNeighbor.Index;
 
                     water.AddTriangleHexData(
-                        data.terrainSourceRelativeHexIndices,
+                        openWaterIndices,
                         _weights1,
                         _weights2,
                         _weights3
@@ -264,6 +282,6 @@ public class OpenWaterChunkLayer : MapMeshChunkLayer {
             }
         }
 
-        return data;
+        return waterTriData;
     }
 }

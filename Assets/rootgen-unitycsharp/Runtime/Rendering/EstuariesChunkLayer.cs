@@ -25,23 +25,38 @@ public class EstuariesChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
 
-    public TriangulationData TriangulateHexEstuaryEdge(
+    public WaterTriangulationData TriangulateHexEstuaryEdge(
         Hex source,
         Hex neighbor,
         HexDirections direction,
         HexRiverData riverData,
-        TriangulationData triangulationData,
+        WaterTriangulationData triangulationData,
         float hexOuterRadius,
         int wrapSize
     ) {
         if (source.IsUnderwater) {
             if (!neighbor.IsUnderwater) {
                 if (riverData.HasRiverInDirection(direction)) {
+                    //            / | y
+                    //           /  |
+                    //           |  |
+                    //source x/z |  | target
+                    //           |  |
+                    //           \  |
+                    //            \ | y
+                    
+                    Vector3 waterShoreHexIndices;
+                    
+                    waterShoreHexIndices.x =
+                        waterShoreHexIndices.z = source.Index;
+
+                    waterShoreHexIndices.y = neighbor.Index;
+
                     TriangulateEstuary(
                         triangulationData.sourceWaterEdge,
                         triangulationData.neighborWaterEdge,
                         riverData.HasIncomingRiverInDirection(direction),
-                        triangulationData.waterSourceRelativeHexIndices,
+                        waterShoreHexIndices,
                         hexOuterRadius,
                         wrapSize,
                         this

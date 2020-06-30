@@ -30,7 +30,7 @@ public class HexMapShaderData : MonoBehaviour {
             );
         }
         else {
-            _hexTexture = new Texture2D (
+            _hexTexture = new Texture2D(
                 hexMapColumns,
                 hexMapRows,
                 TextureFormat.RGBA32,
@@ -196,7 +196,8 @@ public class HexMapShaderData : MonoBehaviour {
             }
         }
 
-        // Update the global texture data for the hex map with 
+        // Update the global texture data for the hex map with
+        // the current terrain data
         _hexTexture.SetPixels32(_hexTerrainData);
         _hexTexture.Apply();
         enabled = _transitioningHexes.Count > 0;

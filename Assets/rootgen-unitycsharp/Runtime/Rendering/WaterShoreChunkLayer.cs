@@ -26,13 +26,13 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
 
-    public TriangulationData TriangulateHexWaterShoreEdge(
+    public WaterTriangulationData TriangulateHexWaterShoreEdge(
         Hex source,
         Hex neighbor,
         Dictionary<HexDirections, Hex> neighbors,
         HexDirections direction,
         HexRiverData riverData,
-        TriangulationData triangulationData,
+        WaterTriangulationData triangulationData,
         float hexOuterRadius,
         int wrapSize
     ) {
@@ -47,11 +47,25 @@ public class WaterShoreChunkLayer : MapMeshChunkLayer {
                 
                 float hexInnerDiameter = hexInnerRadius * 2f;
 
+                //            / | y
+                //           /  |
+                //           |  |
+                //source x/z |  | target
+                //           |  |
+                //           \  |
+                //            \ | y
+                
+                Vector3 waterShoreHexIndices;
+                
+                waterShoreHexIndices.x =
+                    waterShoreHexIndices.z = source.Index;
 
+                waterShoreHexIndices.y = neighbor.Index;
+                
                 TriangulateWaterShore(
                     source,
                     neighbor,
-                    triangulationData.waterSourceRelativeHexIndices,
+                    waterShoreHexIndices,
                     direction,
                     neighbors,
                     riverData,

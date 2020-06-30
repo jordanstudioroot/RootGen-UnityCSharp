@@ -28,10 +28,10 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
  
-    public TriangulationData TriangulateHexTerrainEdge(
+    public TerrainTriangulationData TriangulateHexTerrainEdge(
         Hex hex,
         Hex neighbor,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         Dictionary<HexDirections, Hex> neighbors,
         HexDirections direction,
         HexRiverData riverData,
@@ -41,14 +41,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         float hexOuterRadius,
         int wrapSize
     ) {          
-        /*triangulationData.centerEdgeVertices =
-            GetCenterEdgeVertices(
-                direction,
-                triangulationData,
-                hexOuterRadius
-            );*/
-
-        triangulationData = TriangulateCenterRiverBed(
+        triangulationData = TriangulateTerrainCenter(
             riverData,
             direction,
             hex,
@@ -61,15 +54,6 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         );
 
         if (direction <= HexDirections.Southeast) {
-            /*triangulationData =
-                GetConnectionEdgeVertices(
-                    hex,
-                    neighbor,
-                    direction,
-                    triangulationData,
-                    hexOuterRadius
-                );*/
-            
             triangulationData = TriangulateTerrainConnection(
                 hex,
                 neighbor,
@@ -102,11 +86,11 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TriangulateCenterRiverBed(
+    private TerrainTriangulationData TriangulateTerrainCenter(
         HexRiverData riverData,
         HexDirections direction,
         Hex source,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain,
@@ -189,9 +173,9 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateRiverBeginOrEndTerrain(
+    private TerrainTriangulationData TriangulateRiverBeginOrEndTerrain(
         Hex source,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain
@@ -235,10 +219,10 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateTerrainConnection(
+    private TerrainTriangulationData TriangulateTerrainConnection(
         Hex source,
         Hex neighbor,
-        TriangulationData data,
+        TerrainTriangulationData data,
         HexDirections direction,
         HexRiverData riverData,
         Dictionary<HexDirections, bool> roadEdges,
@@ -296,8 +280,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateRiverBanks(
-        TriangulationData data,
+    private TerrainTriangulationData TriangulateRiverBanks(
+        TerrainTriangulationData data,
         HexRiverData riverData,
         HexDirections direction,
         float hexOuterRadius
@@ -435,9 +419,9 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateRiverTerrain(
+    private TerrainTriangulationData TriangulateRiverTerrain(
         Hex source,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain
@@ -488,38 +472,40 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             wrapSize
         );
 
-        triangulationData.terrainSourceHexIndex =
-            triangulationData.terrainLeftHexIndex =
-                triangulationData.terrainRightHexIndex =
+        Vector3 centerHexIndices;
+
+        centerHexIndices.x =
+            centerHexIndices.y =
+                centerHexIndices.z =
                     source.Index;
 
         terrain.AddTriangleHexData(
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             _weights1
         );
 
         terrain.AddQuadHexData(
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             _weights1
         );
 
         terrain.AddQuadHexData(
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             _weights1
         );
 
         terrain.AddTriangleHexData(
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             _weights1
         );
 
         return triangulationData;
     }
 
-    private TriangulationData TriangulateTerrainAdjacentToRiver(
+    private TerrainTriangulationData TriangulateTerrainAdjacentToRiver(
         Hex source,
         HexDirections direction,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         Dictionary<HexDirections, bool> roadEdges,
         HexRiverData riverData,
         float hexOuterRadius,
@@ -622,10 +608,10 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TryTriangulateNeighborTerrainCorner(
+    private TerrainTriangulationData TryTriangulateNeighborTerrainCorner(
         Hex source,
         Hex neighbor,
-        TriangulationData data,
+        TerrainTriangulationData data,
         HexDirections direction,
         Dictionary<HexDirections, Hex> neighbors,
         float hexOuterRadius,
@@ -658,12 +644,12 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateNeighborTerrainCorner(
+    private TerrainTriangulationData TriangulateNeighborTerrainCorner(
         Hex source,
         Hex neighbor,
         Hex nextNeighbor,
         HexDirections direction,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer terrain,
@@ -749,8 +735,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
     }
 
     private void TriangulateTerrainCorner(
-        Vector3 bottom,
-        Hex bottomHex,
+        Vector3 begin,
+        Hex beginHex,
         Vector3 left,
         Hex leftHex,
         Vector3 right,
@@ -760,16 +746,16 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         MapMeshChunkLayer terrain,
         FeatureContainer features
     ) {
-        ElevationEdgeTypes leftEdgeType = bottomHex.GetEdgeType(leftHex);
-        ElevationEdgeTypes rightEdgeType = bottomHex.GetEdgeType(rightHex);
+        ElevationEdgeTypes leftEdgeType = beginHex.GetEdgeType(leftHex);
+        ElevationEdgeTypes rightEdgeType = beginHex.GetEdgeType(rightHex);
 
         if (leftEdgeType == ElevationEdgeTypes.Slope) {
             if (rightEdgeType == ElevationEdgeTypes.Slope) {
 
 // Corner is also a terrace. Slope-Slope-Flat.
                 TriangulateCornerTerraces(
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     left,
                     leftHex,
                     right,
@@ -788,8 +774,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                     leftHex,
                     right,
                     rightHex,
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     hexOuterRadius,
                     wrapSize,
                     terrain
@@ -801,8 +787,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * because slope on left and flat on right.
 */
                 TriangulateCornerTerracesCliff (
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     left,
                     leftHex,
                     right,
@@ -822,8 +808,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 TriangulateCornerTerraces (
                     right,
                     rightHex,
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     left,
                     leftHex,
                     hexOuterRadius,
@@ -837,8 +823,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 * slope on right and flat on left.
 */
                 TriangulateCornerCliffTerraces(
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     left,
                     leftHex,
                     right,
@@ -861,8 +847,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                 TriangulateCornerCliffTerraces(
                     right,
                     rightHex,
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     left,
                     leftHex,
                     hexOuterRadius,
@@ -878,8 +864,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
                     leftHex,
                     right,
                     rightHex,
-                    bottom,
-                    bottomHex,
+                    begin,
+                    beginHex,
                     hexOuterRadius,
                     wrapSize,
                     terrain
@@ -890,7 +876,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 // Else all edges are cliffs. Simply draw a triangle.
         else {
             terrain.AddTrianglePerturbed(
-                bottom,
+                begin,
                 left,
                 right,
                 hexOuterRadius,
@@ -898,7 +884,7 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
             );
 
             Vector3 indices;
-            indices.x = bottomHex.Index;
+            indices.x = beginHex.Index;
             indices.y = leftHex.Index;
             indices.z = rightHex.Index;
 
@@ -911,8 +897,8 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
         }
 
         features.AddWall(
-            bottom,
-            bottomHex,
+            begin,
+            beginHex,
             left,
             leftHex,
             right,
@@ -1051,11 +1037,16 @@ public class TerrainChunkLayer : MapMeshChunkLayer {
 
         Vector3 indices;
 
+        //      begin hex
+        //        | x
+        //      vertex
+        //    /y      \z
+        // left hex   right hex
         indices.x = beginHex.Index;
         indices.y = leftHex.Index;
         indices.z = rightHex.Index;
 
-        TriangulateBoundaryTriangle (
+        TriangulateBoundaryTriangle(
             begin,
             _weights1,
             left,

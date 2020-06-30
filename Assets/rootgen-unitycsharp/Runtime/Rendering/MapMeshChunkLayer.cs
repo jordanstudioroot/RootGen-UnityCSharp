@@ -71,7 +71,7 @@ public class MapMeshChunkLayer : MonoBehaviour {
     /// <summary>
     /// A list of Vector3s used to map the hex positions to the UV map.
     /// </summary>
-    [NonSerialized] protected List<Vector3> _cellIndexToUV3;
+    [NonSerialized] protected List<Vector3> _hexIndices;
 
     protected Mesh _mesh;
     protected MeshCollider _meshCollider;
@@ -324,9 +324,9 @@ public class MapMeshChunkLayer : MonoBehaviour {
     /// Add hex data to the mesh corresponding to a particular set of hex
     /// indicies represented as a collection by a Vector3.
     /// </summary>
-    /// <param name="terrainTypes">
-    /// A Vector3 containing the terrain type of each vertex which composes
-    /// the triangle, where the terrain type is represented as an integer.
+    /// <param name="hexIndices">
+    /// A Vector3 containing the row-major indices in which
+    /// the vertices of the triangle fall.
     /// </param>
     /// <param name="firstTextureWeight">
     /// 
@@ -338,51 +338,70 @@ public class MapMeshChunkLayer : MonoBehaviour {
     /// The weight of the terrain texture for the third corner.
     /// </param>
     public void AddTriangleHexData(
-        Vector3 terrainTypes, 
+        Vector3 hexIndices, 
         Color firstTextureWeight, 
         Color secondTextureWeight, 
         Color thirdTextureWeight
     ) {
-        _cellIndexToUV3.Add(terrainTypes);
-        _cellIndexToUV3.Add(terrainTypes);
-        _cellIndexToUV3.Add(terrainTypes);
+        _hexIndices.Add(hexIndices);
+        _hexIndices.Add(hexIndices);
+        _hexIndices.Add(hexIndices);
         
         _textureWeights.Add(firstTextureWeight);
         _textureWeights.Add(secondTextureWeight);
         _textureWeights.Add(thirdTextureWeight);
     }
 
-    public void AddTriangleHexData(Vector3 indices, Color weights) {
-        AddTriangleHexData(indices, weights, weights, weights);
+    public void AddTriangleHexData(
+        Vector3 hexIndices, Color weights
+    ) {
+        AddTriangleHexData(
+            hexIndices,
+            weights,
+            weights,
+            weights
+        );
     }
 
     public void AddQuadHexData(
-        Vector3 indices,
+        Vector3 hexIndices, 
+        Color weights1, 
+        Color weights2
+    ) {
+        AddQuadHexData(
+            hexIndices,
+            weights1,
+            weights1,
+            weights2,
+            weights2
+        );
+    }
+
+    public void AddQuadHexData(Vector3 indices, Color weights) {
+        AddQuadHexData(
+            indices,
+            weights,
+            weights,
+            weights,
+            weights
+        );
+    }
+
+    public void AddQuadHexData(
+        Vector3 hexIndices,
         Color weights1, 
         Color weights2, 
         Color weights3, 
         Color weights4
     ) {
-        _cellIndexToUV3.Add(indices);
-        _cellIndexToUV3.Add(indices);
-        _cellIndexToUV3.Add(indices);
-        _cellIndexToUV3.Add(indices);
+        _hexIndices.Add(hexIndices);
+        _hexIndices.Add(hexIndices);
+        _hexIndices.Add(hexIndices);
+        _hexIndices.Add(hexIndices);
         _textureWeights.Add(weights1);
         _textureWeights.Add(weights2);
         _textureWeights.Add(weights3);
         _textureWeights.Add(weights4);
-    }
-
-    public void AddQuadHexData(
-        Vector3 indices, 
-        Color weights1, 
-        Color weights2
-    ) {
-        AddQuadHexData(indices, weights1, weights1, weights2, weights2);
-    }
-
-    public void AddQuadHexData(Vector3 indices, Color weights) {
-        AddQuadHexData(indices, weights, weights, weights, weights);
     }
 
     public void AddTriangleUV(Vector2 uv1, Vector2 uv2, Vector3 uv3) {
@@ -435,7 +454,7 @@ public class MapMeshChunkLayer : MonoBehaviour {
 
         if (_useHexData) {
             _textureWeights = ListPool<Color>.Get();
-            _cellIndexToUV3 = ListPool<Vector3>.Get();
+            _hexIndices = ListPool<Vector3>.Get();
         }
 
         if (_useUVCoordinates) {
@@ -463,8 +482,8 @@ public class MapMeshChunkLayer : MonoBehaviour {
             ListPool<Color>.Add(_textureWeights);
 
             // Set the uv3 coordinates to represent cell indices.
-            _mesh.SetUVs(2, _cellIndexToUV3);
-            ListPool<Vector3>.Add(_cellIndexToUV3);
+            _mesh.SetUVs(2, _hexIndices);
+            ListPool<Vector3>.Add(_hexIndices);
         }
 
         if (_useUVCoordinates) {
@@ -621,7 +640,12 @@ public class MapMeshChunkLayer : MonoBehaviour {
             boundary
         );
 
-        terrain.AddTriangleHexData(indices, beginWeights, weight2, boundaryWeights);
+        terrain.AddTriangleHexData(
+            indices,
+            beginWeights,
+            weight2,
+            boundaryWeights
+        );
 
         for (int i = 2; i < HexagonPoint.terraceSteps; i++) {
 

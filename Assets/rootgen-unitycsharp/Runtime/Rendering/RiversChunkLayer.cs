@@ -28,13 +28,13 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
 
-    public TriangulationData TriangulateHexRiverEdge(
+    public TerrainTriangulationData TriangulateHexRiverEdge(
         Hex hex,
         Hex neighbor,
         HexDirections direction,
         Dictionary<HexDirections, bool> roadEdges,
         HexRiverData riverData,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         float hexOuterRadius,
         int wrapSize
     ) {
@@ -79,11 +79,11 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TriangulateCenterRiverSurface(
+    private TerrainTriangulationData TriangulateCenterRiverSurface(
         HexRiverData riverData,
         HexDirections direction,
         Hex source,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer rivers,
@@ -122,9 +122,9 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateRiverBeginOrEndRiver(
+    private TerrainTriangulationData TriangulateRiverBeginOrEndRiver(
         Hex source,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         HexRiverData riverData,
         float hexOuterRadius,
         int wrapSize,
@@ -187,9 +187,9 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TriangulateCenterRiverQuads(
+    private TerrainTriangulationData TriangulateCenterRiverQuads(
         Hex source,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         HexDirections direction,
         HexRiverData riverData,
         float hexOuterRadius,
@@ -200,6 +200,13 @@ public class RiversChunkLayer : MapMeshChunkLayer {
                 direction
             );
 
+        Vector3 centerHexIndices;
+
+        centerHexIndices.x =
+            centerHexIndices.y =
+                centerHexIndices.z =
+                    source.Index;
+
         TriangulateRiverQuad(
             triangulationData.riverCenterLeft,
             triangulationData.riverCenterRight,
@@ -208,7 +215,7 @@ public class RiversChunkLayer : MapMeshChunkLayer {
             source.RiverSurfaceY,
             0.4f,
             reversed,
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             hexOuterRadius,
             wrapSize,
             rivers
@@ -222,7 +229,7 @@ public class RiversChunkLayer : MapMeshChunkLayer {
             source.RiverSurfaceY,
             0.6f,
             reversed,
-            triangulationData.terrainSourceRelativeHexIndices,
+            centerHexIndices,
             hexOuterRadius,
             wrapSize,
             rivers
@@ -231,10 +238,10 @@ public class RiversChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TriangulateRiverConnection(
+    private TerrainTriangulationData TriangulateRiverConnection(
         Hex source,
         Hex neighbor,
-        TriangulationData data,
+        TerrainTriangulationData data,
         HexDirections direction,
         HexRiverData riverData,
         float hexOuterRadius,

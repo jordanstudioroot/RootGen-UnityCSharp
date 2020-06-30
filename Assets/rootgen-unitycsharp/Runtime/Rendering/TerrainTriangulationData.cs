@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class TriangulationData {
+public class TerrainTriangulationData {
     /// <summary>
     /// The center of the terrain surface for the hex being triangulated.
     /// </summary>
@@ -48,45 +48,4 @@ public class TriangulationData {
     /// The edge vertices between the center and the connection.
     /// </summary>
     public EdgeVertices middleEdgeVertices;
-
-    /// <summary>
-    /// A vector 3 containing the cell indices relative to the source
-    /// cell of the triangulation, where
-    ///  x = source index,
-    ///  y = left of source
-    ///  z = right of source
-    /// </summary>
-    public Vector3 terrainSourceRelativeHexIndices;
-    public EdgeVertices sourceWaterEdge;
-    public EdgeVertices neighborWaterEdge;
-
-    public int terrainSourceHexIndex {
-        get {
-            return (int)terrainSourceRelativeHexIndices.x; 
-        } 
-
-        set {
-            terrainSourceRelativeHexIndices.x = value;
-        }
-    }
-
-    public int terrainLeftHexIndex {
-        get {
-            return (int)terrainSourceRelativeHexIndices.y;
-        }
-        set {
-            terrainSourceRelativeHexIndices.y = value;
-        }
-    }
-
-    public int terrainRightHexIndex {
-        get {
-            return (int)terrainSourceRelativeHexIndices.z;
-        }
-        set {
-            terrainSourceRelativeHexIndices.z = value;
-        }
-    }
-
-    public Vector3 waterSourceRelativeHexIndices;
 }

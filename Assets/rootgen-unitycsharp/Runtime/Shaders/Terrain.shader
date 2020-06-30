@@ -54,41 +54,44 @@
 		void vert(inout appdata_full v, out Input data) {
 			UNITY_INITIALIZE_OUTPUT(Input, data);
 
-			// Get the texture data cooresponding to the 3 hexes touching
-			// the mesh vertex.
+			// Get the hex data for the three hexes touching each side of the
+			// triangle which the vertex is contained within.
 			float4 hex0 = GetHexData(v, 0);
 			float4 hex1 = GetHexData(v, 1);
 			float4 hex2 = GetHexData(v, 2);
 
-			// Store the terrain values for the 3 hexes touching the mesh
-			// vertex in the Input struct.
+			// Get the terrain value from the w channel of the hex data.
 			data.terrain.x = hex0.w;
 			data.terrain.y = hex1.w;
 			data.terrain.z = hex2.w;
 
-			// Store the visibility values for the 3 hexes touching the
-			// mesh vertex in the Input struct. (???)
+			// Get the visibility value from the x channel of the hex data.
 			data.visibility.x = hex0.x;
 			data.visibility.y = hex1.x;
 			data.visibility.z = hex2.x;
 
-			// Transition from 25 percent to 100 percent visibilty
-			// for the three hexes touching the mesh vertex by
-			// their current combined visibility values. (???)
-			data.visibility.xyz = lerp(0.25, 1, data.visibility.xyz);
+			// Scale the visibility values between .25 and 1.
+			data.visibility.xyz = lerp(
+				0.25,
+				1,
+				data.visibility.xyz
+			);
 			
+			// Set the w channel of visibility to represent the exploration
+			// state for the vertex, which is represented by the y channel
+			// of the hex data.
 			data.visibility.w =
-				hex0.y *
-				v.color.x + hex1.y *
-				v.color.y + hex2.y *
-				v.color.z;
+				hex0.y * v.color.x +
+				hex1.y * v.color.y +
+				hex2.y * v.color.z;
 
+			// If map data metrics are to be shown, retrieve the mapData value
+			// from z channel of the hex data.
 			#if defined(SHOW_MAP_DATA)
 				data.mapData =
-					hex0.z *
-					v.color.x + hex1.z *
-					v.color.y + hex2.z *
-					v.color.z;
+					hex0.z * v.color.x +
+					hex1.z * v.color.y +
+					hex2.z * v.color.z;
 			#endif
 		}
 
@@ -97,10 +100,13 @@
 		fixed4 _Color;
 		half3 _BackgroundColor;
 
-		// Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-		// See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-		// #pragma instancing_options assumeuniformscaling
+		// Add instancing support for this shader. You need to check 'Enable
+		// Instancing' on materials that use the shader. See
+		// https://docs.unity3d.com/Manual/GPUInstancing.html for more
+		// information about instancing. #pragma instancing_options
+		// assumesuniformscaling
 		UNITY_INSTANCING_BUFFER_START(Props)
+		
 		// put more per-instance properties here
 		UNITY_INSTANCING_BUFFER_END(Props)
 
@@ -110,7 +116,12 @@
 				IN.terrain[index]
 			);
 
+			// Sample the main texture array, using the w component to specify
+			// the index of the specific texture.
 			float4 c = UNITY_SAMPLE_TEX2DARRAY(_MainTex, uvw);
+
+			// Adjust the texture for color and visibily for the specific
+			// hex.
 			return c * (IN.color[index] * IN.visibility[index]);
 		}
 
@@ -126,11 +137,10 @@
 
 			fixed4 grid = 1;
 
-			// Have to scale gridUV so that it matches the texture, which
-			// is approximately a 2 Hex x 2 Hex square. Therfore, adjust
-			// the "u" coord of the UV by four times the inner radius and
-			// the "v" coord by twice the distance between adjacent hexes.
-
+			// Have to scale grid UV so that it matches the texture, which is
+			// approximately a 2 Hex x 2 Hex square. Therfore, adjust the "u"
+			// coord of the UV by four times the inner radius and the "v" coord
+			// by twice the distance between adjacent hexes.
 			#if defined(GRID_ON)
 				float2 gridUV = IN.worldPos.xz;
 				gridUV.x *= 1 / (4 * 8.66025404);

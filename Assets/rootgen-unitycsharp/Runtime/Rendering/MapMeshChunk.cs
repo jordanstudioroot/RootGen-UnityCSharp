@@ -35,11 +35,11 @@ public class MapMeshChunk : MonoBehaviour {
         get; private set;
     }
 
-    protected TriangulationData GetConnectionEdgeVertices(
+    protected TerrainTriangulationData GetConnectionEdgeVertices(
         Hex source,
         Hex neighbor,
         HexDirections direction,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius
     ) {
 
@@ -58,9 +58,9 @@ public class MapMeshChunk : MonoBehaviour {
         return data;
     }
 
-    protected TriangulationData GetCenterEdgeVertices(
+    protected TerrainTriangulationData GetCenterEdgeVertices(
         HexDirections direction,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius
     ) {
     // Triangle edge.
@@ -366,43 +366,34 @@ public class MapMeshChunk : MonoBehaviour {
             HexDirections direction = pair.Key;
             Hex neighbor = pair.Value;
             
-            TriangulationData triangulationData =
-                new TriangulationData();
+            TerrainTriangulationData terrainTriData =
+                new TerrainTriangulationData();
 
-            triangulationData.terrainCenter =
+            terrainTriData.terrainCenter =
                 source.Position;
 
-            triangulationData = GetCenterEdgeVertices(
+            terrainTriData = GetCenterEdgeVertices(
                 direction,
-                triangulationData,
+                terrainTriData,
                 hexOuterRadius
             );
 
             if (direction <= HexDirections.Southeast) {
-                triangulationData = GetConnectionEdgeVertices(
+                terrainTriData = GetConnectionEdgeVertices(
                     source,
                     neighbor,
                     direction,
-                    triangulationData,
+                    terrainTriData,
                     hexOuterRadius
                 );
             }
 
-            triangulationData = GetWaterData(
-                source,
-                neighbor,
-                triangulationData,
-                direction,
-                hexOuterRadius,
-                wrapSize
-            );
-
             // Triangulate layers for non-border edge.
-            triangulationData =
+            terrainTriData =
                 terrainLayer.TriangulateHexTerrainEdge(
                     source,
                     neighbor,
-                    triangulationData,
+                    terrainTriData,
                     neighbors,
                     direction,
                     riverData,
@@ -413,11 +404,11 @@ public class MapMeshChunk : MonoBehaviour {
                     wrapSize
                 );
 
-            triangulationData =
+            terrainTriData =
                 roadsLayer.TriangulateHexRoadEdge(
                     source,
                     neighbor,
-                    triangulationData,
+                    terrainTriData,
                     direction,
                     riverData,
                     features,
@@ -427,48 +418,61 @@ public class MapMeshChunk : MonoBehaviour {
                     wrapSize
                 );
 
-            triangulationData =
+            terrainTriData =
                 riversLayer.TriangulateHexRiverEdge(
                     source,
                     neighbor,
                     direction,
                     roadEdges,
                     riverData,
-                    triangulationData,
+                    terrainTriData,
                     hexOuterRadius,
                     wrapSize
                 );
 
-            triangulationData =
+            WaterTriangulationData waterTriData =
+                new WaterTriangulationData();
+
+            waterTriData = GetWaterData(
+                source,
+                neighbor,
+                waterTriData,
+                direction,
+                hexOuterRadius,
+                wrapSize
+            );
+
+            waterTriData =
                 openWaterLayer.TriangulateHexOpenWaterEdge(
                     source,
                     neighbor,
                     neighbors,
                     direction,
-                    triangulationData,
+                    waterTriData,
+                    terrainTriData,
                     hexOuterRadius,
                     wrapSize
                 );
 
-            triangulationData =
+            waterTriData =
                 waterShoreLayer.TriangulateHexWaterShoreEdge(
                     source,
                     neighbor,
                     neighbors,
                     direction,
                     riverData,
-                    triangulationData,
+                    waterTriData,
                     hexOuterRadius,
                     wrapSize
                 );
             
-            triangulationData =
+            waterTriData =
                 estuariesLayer.TriangulateHexEstuaryEdge(
                     source,
                     neighbor,
                     direction,
                     riverData,
-                    triangulationData,
+                    waterTriData,
                     hexOuterRadius,
                     wrapSize
                 );
@@ -508,24 +512,24 @@ public class MapMeshChunk : MonoBehaviour {
         }
     }
 
-    private TriangulationData GetWaterData(
+    private WaterTriangulationData GetWaterData(
         Hex source,
         Hex neighbor,
-        TriangulationData triangulationData,
+        WaterTriangulationData waterTriData,
         HexDirections direction,
         float hexOuterRadius,
         int wrapSize
     ) {
-        triangulationData.waterSurfaceCenter = source.Position;
-        triangulationData.waterSurfaceCenter.y = source.WaterSurfaceY;
+        waterTriData.waterSurfaceCenter = source.Position;
+        waterTriData.waterSurfaceCenter.y = source.WaterSurfaceY;
 
-        triangulationData.sourceWaterEdge = new EdgeVertices(
-            triangulationData.waterSurfaceCenter +
+        waterTriData.sourceWaterEdge = new EdgeVertices(
+            waterTriData.waterSurfaceCenter +
             HexagonPoint.GetFirstWaterCorner(
                 direction,
                 hexOuterRadius
             ),
-            triangulationData.waterSurfaceCenter +
+            waterTriData.waterSurfaceCenter +
             HexagonPoint.GetSecondWaterCorner(
                 direction,
                 hexOuterRadius
@@ -550,9 +554,9 @@ public class MapMeshChunk : MonoBehaviour {
                 wrapSize * hexInnerDiameter;
         }
 
-        neighborCenter.y = triangulationData.waterSurfaceCenter.y;
+        neighborCenter.y = waterTriData.waterSurfaceCenter.y;
 
-        triangulationData.neighborWaterEdge = new EdgeVertices(
+        waterTriData.neighborWaterEdge = new EdgeVertices(
             neighborCenter + HexagonPoint.GetSecondSolidCorner(
                 direction.Opposite(),
                 hexOuterRadius
@@ -563,6 +567,6 @@ public class MapMeshChunk : MonoBehaviour {
             )
         );
 
-        return triangulationData;
+        return waterTriData;
     }
 }

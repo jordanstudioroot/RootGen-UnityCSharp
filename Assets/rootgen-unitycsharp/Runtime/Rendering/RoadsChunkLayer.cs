@@ -28,10 +28,10 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         return resultMono;
     }
 
-    public TriangulationData TriangulateHexRoadEdge(
+    public TerrainTriangulationData TriangulateHexRoadEdge(
         Hex hex,
         Hex neighbor,
-        TriangulationData triangulationData,
+        TerrainTriangulationData triangulationData,
         HexDirections direction,
         HexRiverData riverData,
         FeatureContainer features,
@@ -70,11 +70,11 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         return triangulationData;
     }
 
-    private TriangulationData TriangulateCenterRiverRoad(
+    private TerrainTriangulationData TriangulateCenterRiverRoad(
         HexRiverData riverData,
         HexDirections direction,
         Hex source,
-        TriangulationData data,
+        TerrainTriangulationData data,
         float hexOuterRadius,
         int wrapSize,
         MapMeshChunkLayer roads,
@@ -136,10 +136,10 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         return data;
     }
 
-    private TriangulationData TriangulateTerrainConnectionRoads(
+    private TerrainTriangulationData TriangulateTerrainConnectionRoads(
         Hex source,
         Hex neighbor,
-        TriangulationData data,
+        TerrainTriangulationData data,
         HexDirections direction,
         HexRiverData riverData,
         Dictionary<HexDirections, bool> roadEdges,
@@ -507,10 +507,10 @@ public class RoadsChunkLayer : MapMeshChunkLayer {
         );
     }
 
-    private TriangulationData TriangulateRoadAdjacentToRiver(
+    private TerrainTriangulationData TriangulateRoadAdjacentToRiver(
         Hex source,
         HexDirections direction, 
-        TriangulationData data,
+        TerrainTriangulationData data,
         HexRiverData riverData,
         Dictionary<HexDirections, bool> roadEdges,
         float hexOuterRadius,
