@@ -15,7 +15,7 @@ RootGen uses a simplified version of the [holdridge life zones](https://en.wikip
 
 ### Topography
 
-RootGen creates elevation regions based on provided parameters, using these overlapping elevation regions in combination with other elevation parameters such as maximum and minimum elevation to generate a semi-realistic simulation of tectonic shift.
+RootGen creates elevation regions based on provided parameters, using these overlapping elevation regions in combination with other elevation parameters such as minimum and maximum elevation to generate a semi-realistic simulation of tectonic shift.
 
 ### Weather
 
