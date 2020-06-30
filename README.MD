@@ -1,23 +1,43 @@
 ## RootGen
+
 A procedural 3D landscape generator for Unity3D, based with permission on Jasper Flick's [hex map](https://catlikecoding.com/unity/tutorials/hex-map/) series on [Catlike Coding](https://catlikecoding.com/).
 
-The goal of RootGen is to provide an implimentation of hex map generation in Unity3D that is as implementation-agnostic as possible, allowing developers to provide a set of generation parameters in whichever format that they choose, render the resulting hex map, and retrieve data about the map in whichever format they find to be the most useful (graph, matrix, list, etc).
+The goal of RootGen is to provide an implementation of hex map generation in Unity3D that is as implementation-agnostic as possible, allowing developers to provide a set of generation parameters in whichever format that they choose, render the resulting hex map, and retrieve data about the map in whichever format they find to be the most useful (graph, matrix, list, etc).
 
 Currently, RootGen only supports providing parameters using a scriptable object, and retrieving the map as a custom matrix class. See todo for a prioritized list of planned features.
 
+## Implementation
+
+### Climate
+
+RootGen uses a simplified version of the [holdridge life zones](https://en.wikipedia.org/wiki/Holdridge_life_zones) to generate the climate of individual hexes.
+
+### Topography
+
+RootGen creates elevation regions based on provided parameters, using these overlapping elevation regions in combination with other elevation parameters such as maximum and minimum elevation to generate a semi-realistic simulation of tectonic shift.
+
+### Weather
+
+RootGen uses a simplified model of atmospheric moisture propagation to determine the movement of clouds and precipitation.
+
 ## Requirements
+
 Initialize new or existing Unity3D project as npm package.
 
 ## Installation and Usage
-cd to new or existing project directory initializsed with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly defintiion. If you don't want to use the assembly definitions, simply delete all .asmdef files in the directory.
+
+cd to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition. If you don't want to use the assembly definitions, simply delete all .asmdef files in the directory.
 
 ### Instantiating RootGen.
+
 Once RootGen has been added to the project, instantiate an instance: `RootGen rootGen = new RootGen()`
 
 ### Creating a RootGenConfig
+
 Create a new RootGenConfig scriptable object by right clicking in the project pane and clicking Create -> RootGenConfig -> Default Config.
 
 ### Description Of RootGenConfigParameters
+
 - **Width:** The width of the map.
 
 - **Height:** The height of the map.
@@ -64,13 +84,13 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 
 - **Precipitation Factor:** The percent of precipitation to be applied to the map. Larger values will result in more rivers and lakes.
 
-- **Runoff Factor:** The percent of runoff to be applied to the map. Larger values will result in more rivers occuring as a result of runoff calculations.
+- **Runoff Factor:** The percent of runoff to be applied to the map. Larger values will result in more rivers occurring as a result of runoff calculations.
 
 - **Seepage Factor:** The percent of seepage to be applied to the map. Larger values will result in hexes obtaining more moisture from their neighbors as a result of moisture seepage from adjacent tiles with a high amount of moisture.
 
-- **Wind Direction:** The global direction of the wind. Erosion will occur in this direction, and precipitation will propegate around moutains in the opposite direction.
+- **Wind Direction:** The global direction of the wind. Erosion will occur in this direction, and precipitation will propagate around mountains in the opposite direction.
 
-- **Wind Strength:** The strength of the wind. Determines how far precitpitation propegates and how much erosion occurs.
+- **Wind Strength:** The strength of the wind. Determines how far precipitation propagates and how much erosion occurs.
 
 - **Starting Moisture:** The global starting moisture for all hex tiles. The higher this value is, the "wetter" the map will be.
 
@@ -80,7 +100,7 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 
 - **High Temperature:** The maximum temperature of the map. Lower values will result in the hottest hexes being colder.
 
-- **Temperature Jitter:** The amount that the temperature algorthm will "jitter". Higher values will result in more chaotic variations in climate.
+- **Temperature Jitter:** The amount that the temperature algorithm will "jitter". Higher values will result in more chaotic variations in climate.
 
 - **Num Initial Rivers:** The number of initial rivers.
 
@@ -89,12 +109,15 @@ Create a new RootGenConfig scriptable object by right clicking in the project pa
 - **Hemisphere:** The hemisphere of the map, either north, south, or both. North and south will simulate their corresponding hemisphere, with a cold pole on either the top of bottom of the map. Both will result in both hemispheres being simulated, with a north an south pole.
 
 ## TODO
+
 - [x] Finish extracting RootEdit to separate package.
 - [ ] Separate data generation and rendering into separate libraries or packages.
 - [ ] Tests
 
 ## Criticisms, Suggestions, Pull Requests
+
 Email: [jordannelson@protonmail.com](mailto:jordannelson@protonmail.com)
 
 ## Bugs
+
 Report on [issues](https://github.com/jordanstudioroot/PROJECT_NAME/issues).
