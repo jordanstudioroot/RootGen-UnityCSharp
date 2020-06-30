@@ -8,45 +8,31 @@ The goal of RootGen is to provide an implementation of hex map generation in Uni
 Currently, RootGen only supports providing parameters using a scriptable object, and retrieving the map as a custom matrix class. See todo for a prioritized list of planned features.
 
 ## Implementation
-
 ### Climate
-
 RootGen uses a simplified version of the [holdridge life zones](https://en.wikipedia.org/wiki/Holdridge_life_zones) to interpret the climate of individual hexes from their temperature and moisture level.
 
 ### Topography
-
 RootGen creates overlapping elevation regions, using them in combination with other elevation parameters such as minimum and maximum global elevation to generate a semi-realistic simulation of tectonic shift.
 
 ### Weather
-
 RootGen uses a simplified model of atmospheric moisture propagation to determine the movement of clouds and precipitation, which determines rainfall with respect to wind direction and land elevation.
 
 ### Camera
-
 RootGen currently only implements a standard top down camera with rotation and zoom.
 
-## Requirements
-
-Initialize new or existing Unity3D project as npm package.
-
 ## Installation and Usage
-
 ### Installation
-
-cd to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition.
+`cd` to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition.
 
 If you don't want to use the assembly definitions, simply delete all .asmdef files in the rootgen-unitycsharp directory and all subdirectories.
 
 ### Instantiating RootGen.
-
 Once RootGen has been added to the project, instantiate an instance: `RootGen rootGen = new RootGen()`. This can be done in a MonoBehaviour or regular class. Multiple instances of RootGen are not currently supported, and using multiple instances may result in unexpected behavior.
 
 ### Creating a RootGenConfig
-
 Create a new RootGenConfig scriptable object by right clicking in the project pane and clicking Create -> RootGenConfig -> Default Config.
 
 ### Generating A Map Using a RootGenConfig
-
 To jump right in to playing with RootGen, load the scene `ExampleScene` in `rootgen-unitycsharp/Runtime/Scenes`. Make sure that the `ExampleApp` object has an assigned RootGenConfig. If not, use the default config located at `rootgen-unitycsharp/Runtime/ScriptableObject/Resources`. Once this is done, simply hit play to see an example of RootGen in action.
 
 Otherwise, to implement RootGen yourself on a MonoBehaviour, declare a public RootGenConfig variable `RootGenConfig rootGenConfig`, drag and drop the scriptable object into the inspector field, and call `rootGen.GenerateMap(rootGenConfig)` in the MonoBehaviour.
@@ -54,15 +40,12 @@ Otherwise, to implement RootGen yourself on a MonoBehaviour, declare a public Ro
 To populate an instance of RootGenConfig which has been declared in something other than a MonoBehaviour, make sure the instance of the RootGenConfig scriptable object is contained in a `Resources` directory and populate the declaration using Resources.Load: `RootGenConfig rootGenConfig = Resources.Load<RootGenConfig>([scriptable object instance file name])`.
 
 ### Attaching the Camera
-
 The camera is attached automatically to the most recently generated map.
 
 ### Moving The Camera
-
 The camera can be used using standard WASD controls for longitudinal (A, D key) and latitudinal (S, W key) movement. Rotate the camera using Q (left rotation) and E (right rotation). Zoom the camera in and out using the mouse scroll wheel. 
 
 ### Description Of RootGenConfigParameters
-
 - **Width:** The width of the map.
 
 - **Height:** The height of the map.
@@ -146,9 +129,7 @@ The camera can be used using standard WASD controls for longitudinal (A, D key) 
 - [ ] Tests.
 
 ## Criticisms, Suggestions, Pull Requests
-
 Email: [jordannelson@protonmail.com](mailto:jordannelson@protonmail.com)
 
 ## Defects
-
 Report on [issues](https://github.com/jordanstudioroot/PROJECT_NAME/issues).
