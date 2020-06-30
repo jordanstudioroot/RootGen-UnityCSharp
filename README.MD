@@ -133,8 +133,6 @@ The camera can be used using standard WASD controls for longitudinal (A, D key) 
 - **Hemisphere:** The hemisphere of the map, either north, south, or both. North and south will simulate their corresponding hemisphere, with a cold pole on either the top of bottom of the map. Both will result in both hemispheres being simulated, with a north an south pole.
 
 ## TODO
-
-- [x] Finish extracting RootEdit to separate package.
 - [ ] Re-implementation of runtime map editor.
 - [ ] More robust parameter support. (JSON, struct, class, MonoBehaviour, raw arguments)
 - [ ] More robust support for retrieving map data. (JSON, graph, list, array)
