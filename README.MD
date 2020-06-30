@@ -19,7 +19,7 @@ RootGen creates overlapping elevation regions, using them in combination with ot
 
 ### Weather
 
-RootGen uses a simplified model of atmospheric moisture propagation to determine the movement of clouds and precipitation.
+RootGen uses a simplified model of atmospheric moisture propagation to determine the movement of clouds and precipitation, which determines rainfall with respect to wind direction and land elevation.
 
 ### Camera
 
