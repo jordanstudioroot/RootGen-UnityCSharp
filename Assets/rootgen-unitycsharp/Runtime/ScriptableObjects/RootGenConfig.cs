@@ -84,9 +84,6 @@ public class RootGenConfig : ScriptableObject
     [Range(0f, 1f)]
     public float startingMoisture = 0.1f;
 
-    [Range(0, 20)]
-    public int riverPercentage = 10;
-
     [Range(0f, 1f)]
     public float extraLakeProbability = 0.25f;
 

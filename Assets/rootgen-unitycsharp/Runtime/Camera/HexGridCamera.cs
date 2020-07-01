@@ -183,14 +183,15 @@ public class HexGridCamera : MonoBehaviour
 // ~ Non-Static
 
 // ~~ public
-    public static void AttachCamera(HexMap grid, float hexOuterRadius) {
+
+    public static void AttachCamera(HexMap map, float hexSize) {
         HexGridCamera resultMono;
-        _hexOuterRadius = hexOuterRadius;
+        _hexOuterRadius = hexSize; 
 
         if (InstanceValidation.InstanceExists<HexGridCamera>()) {
             resultMono = InstanceValidation.GetFirstInstance<HexGridCamera>();
-            resultMono.transform.SetParent(grid.transform, false);
-            resultMono.TargetGrid = grid;
+            resultMono.transform.SetParent(map.transform, false);
+            resultMono.TargetGrid = map;
             resultMono.enabled = true;
             if (InstanceValidation.SingleInstanceExists<HexGridCamera>()) {
                 RootLog.Log(
@@ -212,8 +213,8 @@ public class HexGridCamera : MonoBehaviour
         else {
             GameObject resultObj = new GameObject("HexGridCamera");
             resultMono = resultObj.AddComponent<HexGridCamera>();
-            resultMono.transform.SetParent(grid.transform, false);
-            resultMono.TargetGrid = grid;
+            resultMono.transform.SetParent(map.transform, false);
+            resultMono.TargetGrid = map;
             resultMono.enabled = true;
             
             GameObject swivelObj = new GameObject("Swivel");
@@ -241,17 +242,21 @@ public class HexGridCamera : MonoBehaviour
             cameraMono.farClipPlane = 1000f;
             cameraMono.depth = -1f;
 
-            resultMono.transform.SetParent(grid.transform, false);
+            resultMono.transform.SetParent(map.transform, false);
 
-            if (grid.GridCenter) {
+            if (map.GridCenter) {
                 resultMono.SetPosition(
-                    grid,
-                    grid.GridCenter.transform.position.x,
-                    grid.GridCenter.transform.position.z,
-                    hexOuterRadius
+                    map,
+                    map.GridCenter.transform.position.x,
+                    map.GridCenter.transform.position.z,
+                    _hexOuterRadius
                 );
             }
         }
+    }
+
+    public static void AttachCamera(HexMap grid, RootGenConfig config) {
+        AttachCamera(grid, config.hexSize);
     }
 
     public void ValidatePosition(HexMap grid, float hexOuterRadius) {

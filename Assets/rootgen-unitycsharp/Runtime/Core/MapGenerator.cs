@@ -38,7 +38,7 @@ public class MapGenerator {
     /// </returns>
     public HexMap GenerateMap(
         RootGenConfig config,
-        bool editMode
+        bool editMode = true
     ) {
         string diagnostics = "Generate Map Performance Diagnostics\n\n";
 

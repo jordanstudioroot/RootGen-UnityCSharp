@@ -20,7 +20,7 @@ public class RootGenExampleApp : MonoBehaviour {
     // Start is called before the first frame update
     void Start() {
         if (config) {
-            _hexMap = _rootGen.GenerateMap(config, true);
+            _hexMap = _rootGen.GenerateMap(config);
             _hexMap.Draw(config.hexSize);
         }
         else {
@@ -34,7 +34,7 @@ public class RootGenExampleApp : MonoBehaviour {
     {
         if (Input.GetKeyUp(KeyCode.R)) {
             if (config) {
-                _hexMap = _rootGen.GenerateMap(config, true);
+                _hexMap = _rootGen.GenerateMap(config);
                 _hexMap.Draw(config.hexSize);
             }
             else {

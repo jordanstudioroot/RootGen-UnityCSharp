@@ -36,16 +36,15 @@ public class RootGen {
 /// </returns>
     public HexMap GenerateMap(
         RootGenConfig config,
-        bool editMode
+        bool editMode = true
     ) {
         Destroy.DestroyAll<HexMap>();
 
         HexMap result = _mapGenerator.GenerateMap(
-            config,
-            editMode
+            config
         );
 
-        HexGridCamera.AttachCamera(result, config.hexSize);
+        HexGridCamera.AttachCamera(result, config);
         return result;
     }
 
