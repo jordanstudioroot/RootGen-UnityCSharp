@@ -22,7 +22,9 @@ RootGen currently only implements a standard top down camera with rotation and z
 
 ## Installation and Usage
 ### Installation
-`cd` to new or existing project directory initialized with NPM and `npm install jordanstudioroot/RootGen-UnityCSharp`, or clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition.
+Use [Windows Subsystem For Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) to `cd` to new or existing Unity project directory and initialize it with NPM, then run `npm install jordanstudioroot/RootGen-UnityCSharp`.
+
+Alternatively clone this repository into the Assets folder and link the root assembly definition in your projects assembly definition.
 
 If you don't want to use the assembly definitions, simply delete all .asmdef files in the rootgen-unitycsharp directory and all subdirectories.
 
