@@ -3,7 +3,7 @@
 
 A procedural 3D landscape generator for Unity3D, based with permission on Jasper Flick's [hex map](https://catlikecoding.com/unity/tutorials/hex-map/) series on [Catlike Coding](https://catlikecoding.com/).
 
-The goal of RootGen is to provide an implementation of hex map generation in Unity3D that is as implementation-agnostic as possible, allowing developers to provide a set of generation parameters in whichever format that they choose, render the resulting hex map, and retrieve data about the map in whichever format they find to be the most useful (graph, matrix, list, etc).
+The goal of RootGen is to provide hex map generation in Unity3D that is as implementation-agnostic as possible, allowing developers to provide a set of generation parameters in whichever format that they choose, render the resulting hex map, and retrieve data about the map in whichever format they find to be the most useful (graph, matrix, list, etc).
 
 Currently, RootGen only supports providing parameters using a scriptable object, and retrieving the map as a custom matrix class. See todo for a prioritized list of planned features.
 
