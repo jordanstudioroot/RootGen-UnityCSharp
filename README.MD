@@ -134,4 +134,4 @@ The camera can be used using standard WASD controls for longitudinal (A, D key) 
 Email: [jordannelson@protonmail.com](mailto:jordannelson@protonmail.com)
 
 ## Defects
-Report on [issues](https://github.com/jordanstudioroot/PROJECT_NAME/issues).
+Report on [issues](https://github.com/jordanstudioroot/RootGen-UnityCSharp/issues).
